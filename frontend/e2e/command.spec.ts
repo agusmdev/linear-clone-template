@@ -6,6 +6,7 @@ import {
   addFavorite,
   createDocument,
   createIssue,
+  createTeam,
   createWorkspace,
   deleteFavorite,
   expect,
@@ -426,6 +427,23 @@ test.describe('search page', () => {
     await page.keyboard.insertText(long)
     await expect(palette(page).getByRole('option', { name: /Rocket launch/ })).toBeVisible()
     expect(tooLong).toEqual([])
+  })
+
+  test('a long issue identifier stays on one line', async ({ api, user, authedPage: page }) => {
+    const workspace = await createWorkspace(api, user)
+    // A five-letter key with two digits is wider than the old fixed identifier column.
+    const team = await createTeam(api, user, workspace.id, { name: 'Marketing', key: 'MWMWM' })
+    for (let n = 1; n < 10; n++) {
+      await createIssue(api, user, { team_id: team.id, title: `Filler ${n}` })
+    }
+    const issue = await createIssue(api, user, { team_id: team.id, title: 'Gizmo launch' })
+
+    await page.goto(`/${workspace.url_key}/search?q=gizmo`)
+    const identifier = page
+      .getByTestId('search-result')
+      .getByText(issue.identifier, { exact: true })
+    await expect(identifier).toBeVisible()
+    expect(await identifier.evaluate(el => el.getBoundingClientRect().height)).toBeLessThan(24)
   })
 
   test('an empty query shows the search prompt', async ({ api, user, authedPage: page }) => {
