@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +27,12 @@ export function DeleteCycleDialog({
   isPending,
   onConfirm,
 }: DeleteCycleDialogProps) {
+  // A double click confirms twice before `isPending` disables the button.
+  const confirmed = useRef(false)
+  useEffect(() => {
+    if (!isPending) confirmed.current = false
+  }, [isPending, open])
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -42,6 +49,8 @@ export function DeleteCycleDialog({
             disabled={isPending}
             onClick={event => {
               event.preventDefault()
+              if (confirmed.current) return
+              confirmed.current = true
               onConfirm()
             }}
           >

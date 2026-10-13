@@ -215,7 +215,7 @@ function CycleRow({
       <div className="flex min-w-0 flex-1 items-baseline gap-2">
         <Link
           to={to as '/'}
-          className="truncate text-ui font-medium text-foreground after:absolute after:inset-0 focus-visible:outline-none"
+          className="shrink-0 text-ui font-medium text-foreground after:absolute after:inset-0 focus-visible:outline-none"
         >
           {label}
         </Link>

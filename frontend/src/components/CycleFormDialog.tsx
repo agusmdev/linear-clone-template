@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@/components/ui/button'
@@ -64,12 +64,18 @@ export function CycleFormDialog({
       ? daysBetween(startsAt, endsAt) + 1
       : null
 
+  // A double click submits twice before `isPending` disables the button.
+  const inFlight = useRef(false)
   const handleSubmit = async (data: CycleFormData) => {
+    if (inFlight.current) return
+    inFlight.current = true
     try {
       await onSubmit(data)
       onOpenChange(false)
     } catch (error) {
       toastApiError(error, mode === 'create' ? 'Could not create cycle' : 'Could not update cycle')
+    } finally {
+      inFlight.current = false
     }
   }
 

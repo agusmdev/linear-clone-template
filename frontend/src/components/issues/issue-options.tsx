@@ -121,7 +121,7 @@ export function labelOptions(labels: readonly Label[]): PropertyOption[] {
 }
 
 export function ProjectIcon({ color }: { color?: string | null }) {
-  return <Hexagon className="size-3.5" style={color ? { color } : undefined} aria-hidden />
+  return <Hexagon className="size-3.5 shrink-0" style={color ? { color } : undefined} aria-hidden />
 }
 
 export function projectOptions(projects: readonly NamedRef[]): PropertyOption[] {

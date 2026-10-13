@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +26,12 @@ export function DeleteProjectDialog({
   isPending,
   onConfirm,
 }: DeleteProjectDialogProps) {
+  // A double click confirms twice before `isPending` disables the button.
+  const confirmed = useRef(false)
+  useEffect(() => {
+    if (!isPending) confirmed.current = false
+  }, [isPending, open])
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -41,6 +48,8 @@ export function DeleteProjectDialog({
             disabled={isPending}
             onClick={event => {
               event.preventDefault()
+              if (confirmed.current) return
+              confirmed.current = true
               onConfirm()
             }}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"

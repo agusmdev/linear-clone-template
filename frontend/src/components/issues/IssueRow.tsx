@@ -85,9 +85,12 @@ export function IssueRow({ issue }: { issue: Issue }) {
           />
         ) : null}
         {project ? (
-          <span className="hidden h-5 shrink-0 items-center gap-1 rounded-full border border-border px-2 text-micro text-text-secondary lg:inline-flex">
+          <span
+            title={project.name}
+            className="hidden h-5 max-w-48 shrink-0 items-center gap-1 rounded-full border border-border px-2 text-micro text-text-secondary lg:inline-flex"
+          >
             <ProjectIcon color={project.color} />
-            {project.name}
+            <span className="truncate">{project.name}</span>
           </span>
         ) : null}
         {issue.due_date ? (
