@@ -79,7 +79,10 @@ export function ColorPicker({
         <form
           className="mt-2 flex items-center gap-2 border-t border-border-subtle pt-2"
           onSubmit={event => {
+            // The popover is portaled, but React still bubbles the synthetic
+            // submit to any <form> that wraps the picker in the component tree.
             event.preventDefault()
+            event.stopPropagation()
             if (HEX_COLOR_PATTERN.test(hex)) pick(hex.toLowerCase())
           }}
         >

@@ -566,3 +566,107 @@ test.describe('account', () => {
     await expect(page).toHaveURL('/login')
   })
 })
+
+/** Types a hex code in the open color popover and presses Enter. */
+async function enterHex(page: Page, hex: string) {
+  const field = page.getByLabel('Hex color')
+  await field.fill(hex)
+  await field.press('Enter')
+  await expect(field).toHaveCount(0)
+}
+
+test.describe('color picker hex field', () => {
+  test('Enter applies the hex color but does not submit the label form', async ({
+    authedPage: page,
+    api,
+    user,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    await page.goto(`/${workspace.url_key}/settings/labels`)
+
+    await page.getByRole('button', { name: 'New label' }).click()
+    await page.getByLabel('Label name').fill('QA Label')
+    await page.getByRole('button', { name: /^Label color/ }).click()
+    await enterHex(page, '#123ABC')
+
+    await expect(page.getByRole('button', { name: 'Label color: #123abc' })).toBeVisible()
+    await expect(page.getByLabel('Label name')).toHaveValue('QA Label')
+    await expect(page.getByRole('listitem', { name: 'QA Label' })).toHaveCount(0)
+
+    await page.getByRole('button', { name: 'Create label' }).click()
+    await expect(page.getByRole('listitem', { name: 'QA Label' })).toBeVisible()
+    const labels = await listLabels(api, user, workspace.id)
+    expect(labels.filter(l => l.name === 'QA Label').map(l => l.color)).toEqual(['#123abc'])
+  })
+
+  test('Enter applies the hex color but does not add the status', async ({
+    authedPage: page,
+    api,
+    user,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const [team] = await listTeams(api, user, workspace.id)
+    await page.goto(`/${workspace.url_key}/settings/team/${team.key}`)
+    const started = page.getByRole('list', { name: 'Started statuses', exact: true })
+
+    await page.getByRole('button', { name: 'Add status to Started' }).click()
+    await page.getByLabel('Status name').fill('Shipped')
+    await page.getByRole('button', { name: /^Status color/ }).click()
+    await enterHex(page, '#abcdef')
+
+    await expect(page.getByRole('button', { name: 'Status color: #abcdef' })).toBeVisible()
+    await expect(page.getByLabel('Status name')).toHaveValue('Shipped')
+    await expect(started.getByRole('listitem', { name: 'Shipped' })).toHaveCount(0)
+
+    await page.getByRole('button', { name: 'Add status', exact: true }).click()
+    await expect(started.getByRole('listitem', { name: 'Shipped' })).toBeVisible()
+    const shipped = (await listStates(api, user, team.id)).filter(s => s.name === 'Shipped')
+    expect(shipped.map(s => s.color)).toEqual(['#abcdef'])
+  })
+
+  test('Enter applies the hex color but does not save the team settings', async ({
+    authedPage: page,
+    api,
+    user,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const [team] = await listTeams(api, user, workspace.id)
+    await page.goto(`/${workspace.url_key}/settings/team/${team.key}`)
+
+    await page.getByLabel('Team name').fill('Renamed')
+    await page.getByRole('button', { name: /^Team color/ }).click()
+    await enterHex(page, '#abcdef')
+    await expect(page.getByRole('button', { name: 'Team color: #abcdef' })).toBeVisible()
+
+    // Only the explicit save sends the update: exactly one "Team updated" toast.
+    await page.getByRole('button', { name: 'Save changes' }).click()
+    await expect(page.getByText('Team updated').first()).toBeVisible()
+    await expect(page.getByText('Team updated')).toHaveCount(1)
+    expect(await getTeam(api, user, team.id)).toMatchObject({ name: 'Renamed', color: '#abcdef' })
+  })
+
+  test('Enter applies the hex color but does not create the team', async ({
+    authedPage: page,
+    api,
+    user,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const name = `Hex ${suffix()}`
+    await page.goto(`/${workspace.url_key}/settings/teams`)
+
+    await page.getByRole('button', { name: 'Create team' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Create a team' })
+    await dialog.getByLabel('Team name').fill(name)
+    await dialog.getByRole('button', { name: /^Team color/ }).click()
+    await enterHex(page, '#abcdef')
+
+    await expect(dialog.getByRole('button', { name: 'Team color: #abcdef' })).toBeVisible()
+    await expect(page).toHaveURL(`/${workspace.url_key}/settings/teams`)
+    expect((await listTeams(api, user, workspace.id)).map(t => t.name)).not.toContain(name)
+
+    await dialog.getByRole('button', { name: 'Create team' }).click()
+    await expect(page).toHaveURL(`/${workspace.url_key}/settings/team/HEX`)
+    const created = (await listTeams(api, user, workspace.id)).find(t => t.name === name)
+    expect(created?.color).toBe('#abcdef')
+  })
+})
