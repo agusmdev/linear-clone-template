@@ -239,7 +239,7 @@ export function IssuesView({
     }
     if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return
     const kind = PICKER_KEYS[event.key.toLowerCase()]
-    if (kind && issue && (kind !== 'labels' || issue.labels.length > 0)) {
+    if (kind && issue) {
       event.preventDefault()
       setOpenPicker({ issueId: issue.id, kind })
     }

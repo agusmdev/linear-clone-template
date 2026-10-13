@@ -1375,6 +1375,33 @@ test.describe('issues list', () => {
     }).toPass()
   })
 
+  test('L opens the label picker on an issue with no labels (ISS-2)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { team, key } = await seedWorkspace(api, user)
+    const bare = await createIssue(api, user, { team_id: team.id, title: 'No labels yet' })
+
+    const page = await loginAs(user)
+    await page.goto(`/${key}/team/ENG/issues`)
+    await expect(row(page, 'No labels yet')).toBeVisible()
+    await issueList(page).focus()
+    await page.keyboard.press('j')
+    await expect(issueList(page)).toHaveAttribute('aria-activedescendant', new RegExp(bare.id))
+
+    await page.keyboard.press('l')
+    const labels = page.getByRole('combobox', { name: 'Labels' })
+    await expect(labels).toBeVisible()
+    await page.getByRole('option', { name: 'Bug', exact: true }).click()
+    await expect
+      .poll(async () => (await getIssue(api, user, bare.id)).labels.map(l => l.name))
+      .toEqual(['Bug'])
+    await page.keyboard.press('Escape')
+    await expect(labels).toBeHidden()
+    await expect(issueList(page)).toBeFocused()
+  })
+
   test('keyboard navigation, pickers and the context menu (ISS-2, ISS-12)', async ({
     api,
     user,
