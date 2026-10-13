@@ -1,4 +1,4 @@
-"""Project models. The API for projects is not implemented yet (see docs/API.md)."""
+"""Project models (API: routers.py in this package, contract in docs/API.md)."""
 
 import enum
 import uuid
