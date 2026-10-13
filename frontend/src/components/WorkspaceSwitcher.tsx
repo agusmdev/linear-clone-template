@@ -63,11 +63,11 @@ export function WorkspaceSwitcher({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="flex h-7 min-w-0 items-center gap-2 rounded-md px-1.5 text-ui font-semibold text-foreground outline-none hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-ring/60 data-[state=open]:bg-surface-hover"
+        className="flex h-7 max-w-full min-w-0 items-center gap-2 rounded-md px-1.5 text-ui font-semibold text-foreground outline-none hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-ring/60 data-[state=open]:bg-surface-hover"
         aria-label={`Workspace: ${current.name}`}
       >
         <WorkspaceLogo name={current.name} />
-        <span className="truncate">{current.name}</span>
+        <span className="min-w-0 truncate">{current.name}</span>
         <ChevronDown className="size-3 shrink-0 text-text-secondary" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-60">

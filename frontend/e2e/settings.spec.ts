@@ -128,6 +128,33 @@ test.describe('onboarding and home', () => {
     // The existing workspace is offered there too.
     await expect(page.getByRole('link', { name: /Menu Co/ })).toBeVisible()
   })
+
+  test('a long workspace name truncates before the sidebar actions', async ({
+    authedPage: page,
+    api,
+    user,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    const name = `QA Auth Workspace With A Long Name ${suffix()}`
+    const workspace = await createWorkspace(api, user, { name })
+    await page.goto(`/${workspace.url_key}/my-issues`)
+
+    const trigger = page.getByRole('button', { name: `Workspace: ${name}` })
+    const search = page.getByRole('button', { name: 'Search', exact: true })
+    await expect(trigger).toBeVisible()
+    await expect(search).toBeVisible()
+    const triggerBox = await trigger.boundingBox()
+    const searchBox = await search.boundingBox()
+    const chevronBox = await trigger.locator('svg').last().boundingBox()
+    if (!triggerBox || !searchBox || !chevronBox) throw new Error('No layout boxes')
+    // The trigger and its chevron end before the Search button starts.
+    expect(triggerBox.x + triggerBox.width).toBeLessThanOrEqual(searchBox.x)
+    expect(chevronBox.x + chevronBox.width).toBeLessThanOrEqual(triggerBox.x + triggerBox.width)
+    expect(chevronBox.width).toBeGreaterThan(0)
+    // The name is cut with an ellipsis.
+    const nameText = trigger.getByText(name)
+    expect(await nameText.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true)
+  })
 })
 
 test.describe('workspace settings', () => {
