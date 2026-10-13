@@ -70,6 +70,7 @@ import {
 } from '@/hooks/useIssueDetail'
 import { useTeamStates } from '@/hooks/useWorkspace'
 import { toastApiError } from '@/lib/error-handler'
+import { openCreateIssue } from '@/lib/issue-events'
 import { formatDateTime } from '@/lib/relative-time'
 import type { Issue, IssueActivity, UpdateIssueData } from '@/types/issue'
 
@@ -366,6 +367,14 @@ function IssueDetail({ issue }: { issue: Issue }) {
               subIssues={subIssuesQuery.data}
               issuePath={issuePath}
               creating={createSubIssue.isPending}
+              onOpenFullForm={() =>
+                openCreateIssue({
+                  teamId: issue.team_id,
+                  parentId: issue.id,
+                  projectId: issue.project_id ?? undefined,
+                  cycleId: issue.cycle_id ?? undefined,
+                })
+              }
               onCreate={title =>
                 createSubIssue
                   .mutateAsync({ team_id: issue.team_id, title, parent_id: issue.id })

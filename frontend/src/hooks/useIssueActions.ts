@@ -145,6 +145,15 @@ export function useIssueActions() {
         apply(issues, { label_ids_remove: labelIds }),
       setProject: (issues: Issue[], projectId: string | null) =>
         apply(issues, { project_id: projectId }),
+      archiveIssues: (issues: Issue[]) => {
+        apply(issues, { archived: true }, 'Could not archive issue')
+        if (issues.length > 0)
+          toast.success(
+            issues.length === 1
+              ? `Archived ${issues[0].identifier}`
+              : `Archived ${issues.length} issues`
+          )
+      },
       deleteIssues,
       isDeleting: bulkDelete.isPending,
     }

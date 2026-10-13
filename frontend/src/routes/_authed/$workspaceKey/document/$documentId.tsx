@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { FileText, FolderInput, Link2, MoreHorizontal, SmilePlus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -9,6 +9,7 @@ import { combineSaveStatus, DocumentSaveStatus } from '@/components/documents/Do
 import { MoveToProjectPicker, type ProjectChoice } from '@/components/documents/MoveToProjectPicker'
 import { RichTextEditor, useDebouncedAutosave } from '@/components/editor'
 import { EmptyState } from '@/components/EmptyState'
+import { FavoriteButton } from '@/components/FavoriteButton'
 import { IconButton } from '@/components/IconButton'
 import { PageHeader } from '@/components/PageHeader'
 import { buttonVariants } from '@/components/ui/button'
@@ -23,6 +24,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useCurrentWorkspace } from '@/contexts/WorkspaceContext'
 import { formatRelativeTime } from '@/features/documents/relative-time'
 import { useDeleteDocument, useDocument, useUpdateDocument } from '@/hooks/useDocuments'
+import { useProjects } from '@/hooks/useProjects'
 import { toastApiError } from '@/lib/error-handler'
 import type { Document } from '@/types/document'
 
@@ -80,7 +82,8 @@ function DocumentPage() {
 }
 
 function DocumentEditor({ document }: { document: Document }) {
-  const { path } = useCurrentWorkspace()
+  const { workspace, path } = useCurrentWorkspace()
+  const projectsQuery = useProjects(workspace.id)
   const navigate = useNavigate()
   const update = useUpdateDocument(document.id)
   const remove = useDeleteDocument(document.id)
@@ -91,6 +94,7 @@ function DocumentEditor({ document }: { document: Document }) {
   const [content, setContent] = useState(document.content)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [projectPickerOpen, setProjectPickerOpen] = useState(false)
+  const openPickerAfterMenu = useRef(false)
 
   const titleSave = useDebouncedAutosave(title, next => {
     if (deletedRef.current) return
@@ -137,8 +141,13 @@ function DocumentEditor({ document }: { document: Document }) {
     }
   }
 
-  // Projects come from the projects slice; without them, "Move to project" is hidden.
-  const projects: ProjectChoice[] | undefined = undefined
+  // "Move to project" shows once the workspace's projects are loaded.
+  const projects = useMemo<ProjectChoice[] | undefined>(
+    () =>
+      // Project icons are icon names (not emoji): the picker shows its default glyph.
+      projectsQuery.data?.map(project => ({ id: project.id, name: project.name })),
+    [projectsQuery.data]
+  )
   const editor = document.last_edited_by ?? document.creator
   const shownTitle = title.trim() || 'Untitled'
 
@@ -147,7 +156,9 @@ function DocumentEditor({ document }: { document: Document }) {
       <PageHeader
         breadcrumbs={[
           { label: 'Documents', to: path('/documents') },
-          ...(document.project ? [{ label: document.project.name }] : []),
+          ...(document.project
+            ? [{ label: document.project.name, to: path(`/project/${document.project.id}`) }]
+            : []),
         ]}
         title={shownTitle}
         icon={<DocumentIcon icon={document.icon} size={14} />}
@@ -174,14 +185,30 @@ function DocumentEditor({ document }: { document: Document }) {
                 onChange={projectId => void saveField({ project_id: projectId })}
               />
             ) : null}
+            <FavoriteButton entityType="document" entityId={document.id} />
             <IconButton label="Copy link" icon={<Link2 />} onClick={() => void copyLink()} />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <IconButton label="Document actions" icon={<MoreHorizontal />} />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuContent
+                align="end"
+                className="w-52"
+                onCloseAutoFocus={event => {
+                  // Open the picker once the menu is gone, or the menu's focus
+                  // return closes it at once.
+                  if (!openPickerAfterMenu.current) return
+                  openPickerAfterMenu.current = false
+                  event.preventDefault()
+                  setProjectPickerOpen(true)
+                }}
+              >
                 {projects ? (
-                  <DropdownMenuItem onSelect={() => setProjectPickerOpen(true)}>
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      openPickerAfterMenu.current = true
+                    }}
+                  >
                     <FolderInput />
                     Move to project…
                   </DropdownMenuItem>

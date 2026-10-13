@@ -1,15 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useQueryClient } from '@tanstack/react-query'
-import { Box, ListTodo, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
+import { Box, FileText, ListTodo, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { DeleteProjectDialog } from '@/components/DeleteProjectDialog'
+import { DocumentList } from '@/components/documents/DocumentList'
 import { EmptyState } from '@/components/EmptyState'
+import { FavoriteButton } from '@/components/FavoriteButton'
 import { IconButton } from '@/components/IconButton'
+import { IssuesView } from '@/components/issues/IssuesView'
 import { PageHeader } from '@/components/PageHeader'
 import { ProgressRing } from '@/components/ProgressRing'
 import { ProjectIcon, ProjectIconPicker } from '@/components/ProjectIcon'
-import { ProjectIssueList } from '@/components/ProjectIssueList'
 import {
   ProjectDatePicker,
   ProjectLeadPicker,
@@ -26,23 +27,34 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCurrentWorkspace } from '@/contexts/WorkspaceContext'
-import {
-  useDeleteProject,
-  useProject,
-  useProjectIssues,
-  useUpdateProject,
-} from '@/hooks/useProjects'
+import { useNewDocument } from '@/features/documents/useNewDocument'
+import { useDeleteProject, useProject, useUpdateProject } from '@/hooks/useProjects'
 import { toastApiError } from '@/lib/error-handler'
-import { queryKeys } from '@/lib/query-keys'
+import { openCreateIssue } from '@/lib/issue-events'
 import { cn } from '@/lib/utils'
+import type { IssuesParams } from '@/types/issue'
 import type { Project, UpdateProjectData } from '@/types/project'
 
-type ProjectTab = 'overview' | 'issues'
+type ProjectTab = 'overview' | 'issues' | 'documents'
 
-/** A project: header, Overview (properties, progress, description) and Issues tabs (`?tab=`). */
+const TABS: { value: ProjectTab; label: string }[] = [
+  { value: 'overview', label: 'Overview' },
+  { value: 'issues', label: 'Issues' },
+  { value: 'documents', label: 'Documents' },
+]
+
+/**
+ * A project (PRJ-3, DOC-6): header, Overview (properties, progress,
+ * description), Issues (the shared IssuesView) and Documents tabs (`?tab=`).
+ * Other search params (the IssuesView display options) pass through.
+ */
 export const Route = createFileRoute('/_authed/$workspaceKey/project/$projectId')({
-  validateSearch: (search: Record<string, unknown>): { tab?: ProjectTab } =>
-    search.tab === 'issues' ? { tab: 'issues' } : {},
+  validateSearch: (
+    search: Record<string, unknown>
+  ): Record<string, unknown> & { tab?: ProjectTab } => {
+    const { tab, ...rest } = search
+    return tab === 'issues' || tab === 'documents' ? { ...rest, tab } : rest
+  },
   component: ProjectPage,
 })
 
@@ -55,6 +67,7 @@ function ProjectPage() {
   const projectQuery = useProject(projectId)
   const deleteProject = useDeleteProject()
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const newDocument = useNewDocument({ project_id: projectId })
   const project = projectQuery.data
 
   if (projectQuery.isError) {
@@ -86,29 +99,36 @@ function ProjectPage() {
     )
   }
 
+  // Switching tabs drops the IssuesView display options of the Issues tab.
   const setTab = (next: ProjectTab) =>
     routeNavigate({ search: next === 'overview' ? {} : { tab: next } })
 
-  const newIssue = () => {
-    window.dispatchEvent(
-      new CustomEvent('linear:create-issue', {
-        detail: { projectId: project.id, teamId: project.team_ids[0] },
-      })
-    )
-  }
+  const newIssue = () => openCreateIssue({ projectId: project.id, teamId: project.team_ids[0] })
 
   return (
-    <div className="flex min-h-full flex-col">
+    <div className={cn('flex flex-col', tab === 'issues' ? 'h-full' : 'min-h-full')}>
       <PageHeader
         breadcrumbs={[{ label: 'Projects', to: path('/projects') }]}
         icon={<ProjectIcon icon={project.icon} color={project.color} />}
         title={project.name}
         actions={
           <>
+            <FavoriteButton entityType="project" entityId={project.id} />
             {tab === 'issues' ? (
               <Button size="sm" variant="outline" onClick={newIssue}>
                 <Plus />
                 New issue
+              </Button>
+            ) : null}
+            {tab === 'documents' ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => void newDocument.createAndOpen()}
+                disabled={newDocument.isPending}
+              >
+                <Plus />
+                New document
               </Button>
             ) : null}
             <DropdownMenu>
@@ -126,7 +146,7 @@ function ProjectPage() {
         }
       >
         <div role="tablist" aria-label="Project views" className="flex items-center gap-1">
-          {(['overview', 'issues'] as const).map(value => (
+          {TABS.map(({ value, label }) => (
             <button
               key={value}
               type="button"
@@ -138,7 +158,7 @@ function ProjectPage() {
                 tab === value && 'border-border bg-surface-active text-foreground'
               )}
             >
-              {value === 'overview' ? 'Overview' : 'Issues'}
+              {label}
               {value === 'issues' ? (
                 <span className="text-micro text-text-tertiary tabular-nums">
                   {project.issue_count}
@@ -151,8 +171,13 @@ function ProjectPage() {
 
       {tab === 'overview' ? (
         <ProjectOverview key={project.id} project={project} />
-      ) : (
+      ) : tab === 'issues' ? (
         <ProjectIssues project={project} onNewIssue={newIssue} />
+      ) : (
+        <ProjectDocuments
+          project={project}
+          onNewDocument={() => void newDocument.createAndOpen()}
+        />
       )}
 
       <DeleteProjectDialog
@@ -299,44 +324,56 @@ function ProjectOverview({ project }: { project: Project }) {
 }
 
 function ProjectIssues({ project, onNewIssue }: { project: Project; onNewIssue: () => void }) {
-  const { workspace, path } = useCurrentWorkspace()
-  const queryClient = useQueryClient()
-  const issuesQuery = useProjectIssues(workspace.id, project.id)
+  const { workspace } = useCurrentWorkspace()
+  const params = useMemo<IssuesParams>(
+    () => ({ workspace_id: workspace.id, project_id: project.id }),
+    [workspace.id, project.id]
+  )
+  return (
+    <IssuesView
+      params={params}
+      createDefaults={{ projectId: project.id, teamId: project.team_ids[0] }}
+      hiddenFilters={['project']}
+      emptyState={
+        <EmptyState
+          icon={<ListTodo />}
+          title="No issues in this project"
+          description="Issues added to the project show up here."
+          action={
+            <Button size="sm" onClick={onNewIssue}>
+              <Plus />
+              New issue
+            </Button>
+          }
+        />
+      }
+    />
+  )
+}
 
-  // New or changed issues change the progress: refresh the project with them.
-  const updatedAt = issuesQuery.dataUpdatedAt
-  useEffect(() => {
-    if (updatedAt)
-      queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(project.id) })
-  }, [updatedAt, project.id, queryClient])
-
-  if (issuesQuery.isPending) {
-    return (
-      <div aria-busy="true" className="flex flex-col">
-        {Array.from({ length: 3 }, (_, i) => (
-          <div key={i} className="flex h-10 items-center gap-3 border-b border-border-subtle px-4">
-            <Skeleton className="h-3 w-64" />
-          </div>
-        ))}
-      </div>
-    )
-  }
-
-  const issues = issuesQuery.data?.items ?? []
-  if (issues.length === 0) {
-    return (
-      <EmptyState
-        icon={<ListTodo />}
-        title="No issues in this project"
-        description="Issues added to the project show up here."
-        action={
-          <Button size="sm" onClick={onNewIssue}>
-            <Plus />
-            New issue
-          </Button>
-        }
-      />
-    )
-  }
-  return <ProjectIssueList issues={issues} issueHref={identifier => path(`/issue/${identifier}`)} />
+function ProjectDocuments({
+  project,
+  onNewDocument,
+}: {
+  project: Project
+  onNewDocument: () => void
+}) {
+  return (
+    <DocumentList
+      params={{ project_id: project.id }}
+      emptyState={
+        <EmptyState
+          icon={<FileText />}
+          title="No documents in this project"
+          description="Write specs, notes and plans next to the project's issues."
+          action={
+            <Button size="sm" onClick={onNewDocument}>
+              <Plus />
+              New document
+            </Button>
+          }
+        />
+      }
+    />
+  )
 }

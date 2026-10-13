@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Link } from '@tanstack/react-router'
-import { Plus } from 'lucide-react'
+import { Maximize2, Plus } from 'lucide-react'
 import { IconButton } from '@/components/IconButton'
 import { PriorityIcon } from '@/components/PriorityIcon'
 import { StatusIcon } from '@/components/StatusIcon'
@@ -15,6 +15,8 @@ interface SubIssuesSectionProps {
   /** Creates a sub-issue with this title. Resolves when it is saved. */
   onCreate: (title: string) => Promise<unknown>
   creating?: boolean
+  /** Opens the full create-issue modal for a sub-issue (all properties). */
+  onOpenFullForm?: () => void
 }
 
 /** Small ring that fills with the share of completed sub-issues. */
@@ -71,6 +73,7 @@ export function SubIssuesSection({
   issuePath,
   onCreate,
   creating,
+  onOpenFullForm,
 }: SubIssuesSectionProps) {
   const [adding, setAdding] = React.useState(false)
   const [title, setTitle] = React.useState('')
@@ -156,6 +159,18 @@ export function SubIssuesSection({
             }}
             className="h-9 min-w-0 flex-1 bg-transparent text-ui text-foreground outline-none placeholder:text-text-tertiary"
           />
+          {onOpenFullForm ? (
+            <IconButton
+              label="Create sub-issue with all properties"
+              icon={<Maximize2 />}
+              size="sm"
+              onClick={() => {
+                setTitle('')
+                setAdding(false)
+                onOpenFullForm()
+              }}
+            />
+          ) : null}
           <Button
             type="button"
             variant="ghost"

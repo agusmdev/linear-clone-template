@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import {
+  Archive,
   CircleDot,
   Copy,
   ExternalLink,
@@ -170,6 +171,10 @@ export function IssueContextMenu({ issue, children }: { issue: Issue; children: 
             <ContextMenuSeparator />
           </>
         ) : null}
+        <ContextMenuItem onSelect={() => view.actions.archiveIssues(targets)}>
+          <Archive />
+          {many ? `Archive ${targets.length} issues` : 'Archive issue'}
+        </ContextMenuItem>
         <ContextMenuItem variant="destructive" onSelect={() => view.confirmDelete(targets)}>
           <Trash2 />
           {many ? `Delete ${targets.length} issues…` : 'Delete issue…'}

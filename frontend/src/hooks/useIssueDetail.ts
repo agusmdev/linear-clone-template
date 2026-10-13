@@ -2,6 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { api } from '@/lib/api-client'
 import { API, buildIssuesListUrl } from '@/lib/api-endpoints'
 import { queryKeys } from '@/lib/query-keys'
+import { invalidateIssueCaches } from '@/hooks/useIssues'
 import type { Comment, CreateCommentData, UpdateCommentData } from '@/types/comment'
 import type {
   CreateIssueData,
@@ -67,7 +68,7 @@ export function useDeleteIssueDetail(issueId: string) {
     mutationFn: () => api.delete(API.ISSUES.DETAIL(issueId)),
     onSuccess: () => {
       queryClient.removeQueries({ queryKey: queryKeys.issues.detail(issueId) })
-      void queryClient.invalidateQueries({ queryKey: queryKeys.issues.all })
+      void invalidateIssueCaches(queryClient)
     },
   })
 }
@@ -77,7 +78,7 @@ export function useCreateSubIssue() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (data: CreateIssueData) => api.post<Issue>(API.ISSUES.CREATE, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.issues.all }),
+    onSuccess: () => invalidateIssueCaches(queryClient),
   })
 }
 

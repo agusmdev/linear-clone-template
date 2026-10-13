@@ -1,14 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { useQueryClient } from '@tanstack/react-query'
 import { IterationCcw, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { CycleActionsMenu } from '@/components/CycleActionsMenu'
 import { CycleFormDialog } from '@/components/CycleFormDialog'
 import { CycleIcon, CycleProgressBar, CycleScopeBreakdown } from '@/components/CycleProgress'
-import { CycleIssueList } from '@/components/CycleIssueList'
 import { DeleteCycleDialog } from '@/components/DeleteCycleDialog'
 import { EmptyState } from '@/components/EmptyState'
+import { IssuesView } from '@/components/issues/IssuesView'
 import { Kbd } from '@/components/Kbd'
 import { PageHeader } from '@/components/PageHeader'
 import { Badge } from '@/components/ui/badge'
@@ -17,16 +16,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useCurrentWorkspace } from '@/contexts/WorkspaceContext'
 import { cycleTiming, cycleTitle, formatRange } from '@/features/cycles/cycle-dates'
 import { cycleFormToPayload } from '@/features/cycles/cycle-schemas'
-import {
-  useCompleteCycle,
-  useCycle,
-  useCycleIssues,
-  useDeleteCycle,
-  useUpdateCycle,
-} from '@/hooks/useCycles'
-import { useTeamStates } from '@/hooks/useWorkspace'
+import { useCompleteCycle, useCycle, useDeleteCycle, useUpdateCycle } from '@/hooks/useCycles'
 import { toastApiError } from '@/lib/error-handler'
-import { queryKeys } from '@/lib/query-keys'
+import { openCreateIssue } from '@/lib/issue-events'
 import type { Cycle, CycleStatus } from '@/types/cycle'
 import type { IssuesParams } from '@/types/issue'
 
@@ -95,7 +87,6 @@ function CyclePage() {
       workspaceId={workspace.id}
       breadcrumbs={breadcrumbs}
       cyclesPath={cyclesPath}
-      issuePath={identifier => path(`/issue/${identifier}`)}
     />
   )
 }
@@ -106,43 +97,26 @@ function CycleDetail({
   workspaceId,
   breadcrumbs,
   cyclesPath,
-  issuePath,
 }: {
   cycle: Cycle
   teamId: string
   workspaceId: string
   breadcrumbs: { label: string; to: string }[]
   cyclesPath: string
-  issuePath: (identifier: string) => string
 }) {
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const [dialog, setDialog] = useState<'edit' | 'delete' | null>(null)
   const updateCycle = useUpdateCycle()
   const deleteCycle = useDeleteCycle()
   const completeCycle = useCompleteCycle()
-  const statesQuery = useTeamStates(teamId)
 
   const params = useMemo<IssuesParams>(
-    () => ({ workspace_id: workspaceId, cycle_id: cycle.id, size: 100, order_by: ['sort_order'] }),
-    [workspaceId, cycle.id]
+    () => ({ workspace_id: workspaceId, team_id: teamId, cycle_id: cycle.id }),
+    [workspaceId, teamId, cycle.id]
   )
-  const issuesQuery = useCycleIssues(params)
-
-  // The progress counts come from the server: refresh them whenever the issues change
-  // (created from the modal, moved, completed elsewhere).
-  const issuesUpdatedAt = issuesQuery.dataUpdatedAt
-  useEffect(() => {
-    if (issuesUpdatedAt) {
-      queryClient.invalidateQueries({ queryKey: queryKeys.cycles.detail(cycle.id) })
-    }
-  }, [issuesUpdatedAt, cycle.id, queryClient])
 
   const title = cycleTitle(cycle)
-  const newIssue = () =>
-    window.dispatchEvent(
-      new CustomEvent('linear:create-issue', { detail: { teamId, cycleId: cycle.id } })
-    )
+  const newIssue = () => openCreateIssue({ teamId, cycleId: cycle.id })
 
   const moveUnfinished = () =>
     completeCycle.mutate(
@@ -160,10 +134,8 @@ function CycleDetail({
       }
     )
 
-  const issues = issuesQuery.data?.items ?? []
-
   return (
-    <>
+    <div className="flex h-full flex-col">
       <PageHeader
         breadcrumbs={breadcrumbs}
         icon={<CycleIcon status={cycle.status} percentage={cycle.progress.percentage} />}
@@ -210,37 +182,23 @@ function CycleDetail({
         <CycleScopeBreakdown progress={cycle.progress} />
       </section>
 
-      {issuesQuery.isPending ? (
-        <div className="flex flex-col" aria-busy="true">
-          {Array.from({ length: 3 }, (_, i) => (
-            <div
-              key={i}
-              className="flex h-10 items-center gap-3 border-b border-border-subtle px-4"
-            >
-              <Skeleton className="size-3.5" />
-              <Skeleton className="h-3 w-12" />
-              <Skeleton className="h-3 w-48" />
-            </div>
-          ))}
-        </div>
-      ) : issues.length === 0 ? (
-        <EmptyState
-          title="No issues in this cycle"
-          description="Add issues to the cycle to plan the work of this period."
-          action={
-            <Button size="sm" onClick={newIssue}>
-              Create new issue
-              <Kbd>C</Kbd>
-            </Button>
-          }
-        />
-      ) : (
-        <CycleIssueList
-          issues={issues}
-          states={statesQuery.data ?? []}
-          issueTo={issue => issuePath(issue.identifier)}
-        />
-      )}
+      <IssuesView
+        params={params}
+        createDefaults={{ teamId, cycleId: cycle.id }}
+        hiddenFilters={['cycle']}
+        emptyState={
+          <EmptyState
+            title="No issues in this cycle"
+            description="Add issues to the cycle to plan the work of this period."
+            action={
+              <Button size="sm" onClick={newIssue}>
+                Create new issue
+                <Kbd>C</Kbd>
+              </Button>
+            }
+          />
+        }
+      />
 
       <CycleFormDialog
         mode="edit"
@@ -274,6 +232,6 @@ function CycleDetail({
           })
         }
       />
-    </>
+    </div>
   )
 }

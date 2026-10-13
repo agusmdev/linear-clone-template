@@ -116,11 +116,23 @@ function restore(queryClient: QueryClient, snapshot: [readonly unknown[], unknow
 
 // --- mutations ----------------------------------------------------------------
 
+/**
+ * Refreshes every cache an issue change can touch: issue lists and details,
+ * and the project and cycle progress counts.
+ */
+export function invalidateIssueCaches(queryClient: QueryClient) {
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: queryKeys.issues.all }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.projects.all }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.cycles.all }),
+  ])
+}
+
 export function useCreateIssue() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (data: CreateIssueData) => api.post<Issue>(API.ISSUES.CREATE, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.issues.all }),
+    onSuccess: () => invalidateIssueCaches(queryClient),
   })
 }
 
@@ -142,7 +154,7 @@ export function useUpdateIssue() {
         issue.id === id ? ({ ...issue, ...data, ...optimistic } as Issue) : issue
       ),
     onError: (_error, _vars, snapshot) => restore(queryClient, snapshot),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.issues.all }),
+    onSettled: () => invalidateIssueCaches(queryClient),
   })
 }
 
@@ -164,7 +176,7 @@ export function useBulkUpdateIssues() {
       )
     },
     onError: (_error, _vars, snapshot) => restore(queryClient, snapshot),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.issues.all }),
+    onSettled: () => invalidateIssueCaches(queryClient),
   })
 }
 
@@ -177,6 +189,6 @@ export function useBulkDeleteIssues() {
       return patchCache(queryClient, issue => (ids.has(issue.id) ? null : issue))
     },
     onError: (_error, _vars, snapshot) => restore(queryClient, snapshot),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.issues.all }),
+    onSettled: () => invalidateIssueCaches(queryClient),
   })
 }

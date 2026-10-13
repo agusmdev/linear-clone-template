@@ -20,7 +20,7 @@ import { SettingsSidebar } from '@/components/SettingsSidebar'
 import { Sidebar, type SidebarLink } from '@/components/Sidebar'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { UserAvatar } from '@/components/UserAvatar'
-import { WorkspaceCommands, openCreateIssue } from '@/components/WorkspaceCommands'
+import { WorkspaceCommands } from '@/components/WorkspaceCommands'
 import { WorkspaceSwitcher } from '@/components/WorkspaceSwitcher'
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/contexts/AuthContext'
@@ -37,6 +37,7 @@ import {
   useWorkspaceByKey,
   useWorkspaces,
 } from '@/hooks/useWorkspace'
+import { openCreateIssue } from '@/lib/issue-events'
 
 /**
  * Layout of every workspace page: `/$workspaceKey/...`.

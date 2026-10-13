@@ -1,9 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
-import { API, buildIssuesListUrl, buildProjectsListUrl } from '@/lib/api-endpoints'
+import { API, buildProjectsListUrl } from '@/lib/api-endpoints'
 import { queryKeys } from '@/lib/query-keys'
-import type { Issue, IssuesParams } from '@/types/issue'
-import type { Page } from '@/types/page'
 import type { CreateProjectData, Project, ProjectsParams, UpdateProjectData } from '@/types/project'
 
 /** Projects of a workspace (by sort order). Progress changes with issues, so always refetch on mount. */
@@ -68,15 +66,5 @@ export function useDeleteProject() {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.issues.all })
     },
-  })
-}
-
-/** The first 100 issues of a project (top-level and sub-issues, archived left out). */
-export function useProjectIssues(workspaceId: string, projectId: string) {
-  const params: IssuesParams = { workspace_id: workspaceId, project_id: projectId, size: 100 }
-  return useQuery({
-    queryKey: queryKeys.issues.list(params),
-    queryFn: () => api.get<Page<Issue>>(buildIssuesListUrl(params)),
-    refetchOnMount: 'always',
   })
 }

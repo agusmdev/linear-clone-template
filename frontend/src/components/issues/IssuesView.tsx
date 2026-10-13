@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
-import { CircleDot, Layers, SignalHigh, Tag, Trash2, UserRound } from 'lucide-react'
+import { Archive, CircleDot, Layers, SignalHigh, Tag, Trash2, UserRound } from 'lucide-react'
 import { BulkActionBar, GroupedList, KanbanBoard, type MoveEvent } from '@/components/board'
 import { EmptyState } from '@/components/EmptyState'
 import { PropertyPicker, type PropertyOption } from '@/components/PropertyPicker'
@@ -437,6 +437,18 @@ export function IssuesView({
               </Button>
             }
           />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1.5"
+            onClick={() => {
+              actions.archiveIssues(selected)
+              clearSelection()
+            }}
+          >
+            <Archive className="size-3.5" />
+            Archive
+          </Button>
           <Button
             variant="ghost"
             size="sm"

@@ -1,6 +1,6 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
-import { API, buildIssuesListUrl } from '@/lib/api-endpoints'
+import { API } from '@/lib/api-endpoints'
 import { queryKeys } from '@/lib/query-keys'
 import type {
   CompleteCycleData,
@@ -9,8 +9,6 @@ import type {
   Cycle,
   UpdateCycleData,
 } from '@/types/cycle'
-import type { Issue, IssuesParams } from '@/types/issue'
-import type { Page } from '@/types/page'
 
 /** The cycles of a team, by start date (GET /teams/{id}/cycles). */
 export function useTeamCycles(teamId: string | undefined) {
@@ -26,16 +24,6 @@ export function useCycle(cycleId: string) {
     queryKey: queryKeys.cycles.detail(cycleId),
     queryFn: () => api.get<Cycle>(API.CYCLES.DETAIL(cycleId)),
     retry: false,
-  })
-}
-
-/** Issues of a cycle (GET /issues?cycle_id=…). Shares the issues cache keys. */
-export function useCycleIssues(params: IssuesParams, enabled = true) {
-  return useQuery({
-    queryKey: queryKeys.issues.list(params),
-    queryFn: () => api.get<Page<Issue>>(buildIssuesListUrl(params)),
-    enabled,
-    placeholderData: keepPreviousData,
   })
 }
 

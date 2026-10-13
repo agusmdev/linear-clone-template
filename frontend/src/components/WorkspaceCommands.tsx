@@ -36,20 +36,15 @@ import { useNewDocument } from '@/features/documents/useNewDocument'
 import { useDebounce } from '@/hooks/useDebounce'
 import { favoritePath, useFavorites } from '@/hooks/useFavorites'
 import { useSearch } from '@/hooks/useSearch'
+import { openCreateIssue } from '@/lib/issue-events'
 
 /** Window event that opens the command palette (any slice can dispatch it). */
 export const COMMAND_PALETTE_EVENT = 'linear:command-palette'
-/** Window event that opens the create-issue modal (built by the issues slice). */
-export const CREATE_ISSUE_EVENT = 'linear:create-issue'
 /** Window event the search page listens to: focus its input. */
 export const FOCUS_SEARCH_EVENT = 'linear:focus-search'
 
 export function openCommandPalette() {
   window.dispatchEvent(new CustomEvent(COMMAND_PALETTE_EVENT))
-}
-
-export function openCreateIssue(detail: Record<string, string | undefined> = {}) {
-  window.dispatchEvent(new CustomEvent(CREATE_ISSUE_EVENT, { detail }))
 }
 
 /** Every global shortcut, for the "?" help dialog. */
@@ -83,6 +78,33 @@ export const SHORTCUT_HELP: ShortcutHelpGroup[] = [
       { keys: 's', description: 'Change status' },
       { keys: 'p', description: 'Change priority' },
       { keys: 'a', description: 'Assign to…' },
+      { keys: 'l', description: 'Change labels' },
+      { keys: 'x', description: 'Select issue' },
+      { keys: 'mod+backspace', description: 'Delete selected issues' },
+    ],
+  },
+  {
+    heading: 'Issue page',
+    shortcuts: [
+      { keys: 's', description: 'Change status' },
+      { keys: 'p', description: 'Change priority' },
+      { keys: 'a', description: 'Assign to…' },
+      { keys: 'l', description: 'Change labels' },
+      { keys: 'i', description: 'Assign to me' },
+      { keys: 'r', description: 'Rename issue' },
+      { keys: 'shift+s', description: 'Subscribe / unsubscribe' },
+      { keys: 'mod+.', description: 'Copy issue ID' },
+      { keys: 'mod+backspace', description: 'Delete issue' },
+    ],
+  },
+  {
+    heading: 'Inbox',
+    shortcuts: [
+      { keys: 'j', description: 'Next notification' },
+      { keys: 'k', description: 'Previous notification' },
+      { keys: 'u', description: 'Mark read / unread' },
+      { keys: 'e', description: 'Archive' },
+      { keys: 'enter', description: 'Open issue' },
     ],
   },
 ]

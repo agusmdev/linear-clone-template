@@ -116,14 +116,14 @@ function ViewsPage() {
                 name: `${team.name} · Active`,
                 description: 'Issues in Todo and In Progress',
                 to: path(`/team/${team.key}/issues`),
-                search: { view: 'active' },
+                search: { tab: 'active' },
                 icon: <PlayCircle />,
               },
               {
                 name: `${team.name} · Backlog`,
                 description: 'Issues waiting in the backlog',
                 to: path(`/team/${team.key}/issues`),
-                search: { view: 'backlog' },
+                search: { tab: 'backlog' },
                 icon: <Archive />,
               },
             ]}
