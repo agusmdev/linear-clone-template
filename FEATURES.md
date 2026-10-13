@@ -71,12 +71,12 @@ left sidebar, Inter font, subtle borders, small type 13px).
 
 | ID | Feature | Status |
 |---|---|---|
-| UX-1 | Command palette (`Cmd/Ctrl+K`): navigate, create issue, search issues and documents | todo |
+| UX-1 | Command palette (`Cmd/Ctrl+K`): navigate, create issue, search issues and documents | done |
 | UX-2 | Keyboard shortcuts: `C` create issue, `/` search, `G then I` inbox, `G then M` my issues, `?` shortcuts help; in issue list `J/K` move, `Enter` open, `S` status, `P` priority, `A` assignee | todo |
 | UX-3 | Inbox / notifications: assigned to you, comment on subscribed issue, status change on subscribed issue; mark read / read all; unread badge | todo |
-| UX-4 | Global search page (issues + documents + projects) | todo |
-| UX-5 | Favorites in sidebar (issues, projects, documents) | todo |
-| UX-6 | Light / dark theme toggle (dark default) | todo |
+| UX-4 | Global search page (issues + documents + projects) | done |
+| UX-5 | Favorites in sidebar (issues, projects, documents) | done |
+| UX-6 | Light / dark theme toggle (dark default) | done |
 
 ## Validation
 
