@@ -59,7 +59,9 @@ export function BulkActionBar({
       role="toolbar"
       aria-label="Bulk actions"
       className={cn(
-        'fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-1 rounded-lg border p-1 text-[13px] shadow-2xl',
+        // w-max keeps one row on wide screens; on a phone the buttons wrap
+        // (the bar never gets wider than the viewport).
+        'fixed bottom-6 left-1/2 z-50 flex w-max max-w-[calc(100vw-1rem)] -translate-x-1/2 flex-wrap items-center justify-center gap-1 rounded-lg border p-1 text-[13px] shadow-2xl',
         'animate-in fade-in slide-in-from-bottom-2 duration-150',
         'border-[var(--border,#2a2b2e)] bg-[var(--popover,#1c1d1f)] text-[var(--foreground,#f7f8f8)]',
         className
@@ -73,12 +75,12 @@ export function BulkActionBar({
           type="button"
           onClick={onClear}
           aria-label="Clear selection"
-          className="rounded p-0.5 text-[var(--muted-foreground,#8a8f98)] hover:bg-white/5 hover:text-[var(--foreground,#f7f8f8)]"
+          className="rounded p-0.5 text-[var(--muted-foreground,#8a8f98)] hover:bg-[var(--foreground,#f7f8f8)]/5 hover:text-[var(--foreground,#f7f8f8)]"
         >
           <X className="size-3.5" />
         </button>
       </div>
-      {children ? <div className="flex items-center gap-1">{children}</div> : null}
+      {children}
     </div>
   )
 }

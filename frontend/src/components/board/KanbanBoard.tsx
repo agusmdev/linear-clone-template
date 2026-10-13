@@ -249,7 +249,7 @@ function KanbanColumn<T>({
             type="button"
             onClick={() => onAdd(column.id)}
             aria-label={`Add to ${column.title}`}
-            className="ml-auto rounded p-1 text-[var(--muted-foreground,#8a8f98)] hover:bg-white/5 hover:text-[var(--foreground,#f7f8f8)]"
+            className="ml-auto rounded p-1 text-[var(--muted-foreground,#8a8f98)] hover:bg-[var(--foreground,#f7f8f8)]/5 hover:text-[var(--foreground,#f7f8f8)]"
           >
             <Plus className="size-4" />
           </button>
@@ -260,7 +260,7 @@ function KanbanColumn<T>({
           ref={setNodeRef}
           className={cn(
             'flex min-h-24 flex-1 flex-col gap-2 rounded-md p-1 transition-colors',
-            isOver && 'bg-white/[0.03]'
+            isOver && 'bg-[var(--foreground,#f7f8f8)]/[0.04]'
           )}
         >
           {ids.map(id => {
