@@ -13,14 +13,20 @@ import {
   Trash2,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useShortcut } from '@/components/command'
 import { DeleteIssueDialog } from '@/components/DeleteIssueDialog'
+import { FavoriteButton } from '@/components/FavoriteButton'
 import { EmptyState } from '@/components/EmptyState'
 import { IconButton } from '@/components/IconButton'
 import { PageHeader } from '@/components/PageHeader'
 import { StatusIcon } from '@/components/StatusIcon'
 import { UserAvatar } from '@/components/UserAvatar'
 import { RichTextEditor, useDebouncedAutosave } from '@/components/editor'
-import { cycleLabel, IssuePropertiesPanel } from '@/components/issue-detail/IssuePropertiesPanel'
+import {
+  cycleLabel,
+  IssuePropertiesPanel,
+  type PanelPicker,
+} from '@/components/issue-detail/IssuePropertiesPanel'
 import {
   CommentComposer,
   IssueTimeline,
@@ -147,6 +153,8 @@ function IssueDetail({ issue }: { issue: Issue }) {
   const debouncedSearch = useDebounce(relationSearch, 200)
   const searchQuery = useIssueSearch(workspace.id, debouncedSearch)
   const [deleteOpen, setDeleteOpen] = React.useState(false)
+  const [openPicker, setOpenPicker] = React.useState<PanelPicker | null>(null)
+  const titleRef = React.useRef<HTMLTextAreaElement>(null)
 
   const update = (data: UpdateIssueData) =>
     updateIssue.mutate(data, { onError: error => toastApiError(error, 'Could not update issue') })
@@ -206,6 +214,21 @@ function IssueDetail({ issue }: { issue: Issue }) {
       onError: error => toastApiError(error, 'Could not delete issue'),
     })
 
+  // Linear's issue shortcuts (ignored while typing in a field).
+  // The picker opens after the key event, so the key is not typed into its search box.
+  const openPickerSoon = (picker: PanelPicker) => window.setTimeout(() => setOpenPicker(picker), 0)
+  useShortcut('s', () => openPickerSoon('status'))
+  useShortcut('p', () => openPickerSoon('priority'))
+  useShortcut('a', () => openPickerSoon('assignee'))
+  useShortcut('l', () => openPickerSoon('labels'))
+  useShortcut('i', () => {
+    if (issue.assignee_id !== me.id) update({ assignee_id: me.id })
+  })
+  useShortcut('r', () => titleRef.current?.focus())
+  useShortcut('shift+s', toggleSubscribe, { enabled: !!subscribersQuery.data })
+  useShortcut('mod+.', () => void copyId())
+  useShortcut('mod+backspace', () => setDeleteOpen(true))
+
   const parent = parentQuery.data
   const currentProject = projectsQuery.data?.find(project => project.id === issue.project_id)
   const projectName = !issue.project_id
@@ -224,14 +247,21 @@ function IssueDetail({ issue }: { issue: Issue }) {
 
   const actions = (
     <>
+      <FavoriteButton entityType="issue" entityId={issue.id} />
       <IconButton
         label={subscribed ? 'Unsubscribe' : 'Subscribe'}
+        shortcut="Shift S"
         icon={subscribed ? <BellOff /> : <Bell />}
         onClick={toggleSubscribe}
         disabled={!subscribersQuery.data || toggleSubscription.isPending}
       />
       <IconButton label="Copy issue URL" icon={<LinkIcon />} onClick={() => void copyLink()} />
-      <IconButton label="Copy issue ID" icon={<Hash />} onClick={() => void copyId()} />
+      <IconButton
+        label="Copy issue ID"
+        icon={<Hash />}
+        shortcut="⌘ ."
+        onClick={() => void copyId()}
+      />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <IconButton label="Issue actions" icon={<MoreHorizontal />} />
@@ -303,7 +333,11 @@ function IssueDetail({ issue }: { issue: Issue }) {
                   <span className="max-w-xs truncate text-foreground">{parent.title}</span>
                 </Link>
               ) : null}
-              <IssueTitleInput value={issue.title} onSave={title => update({ title })} />
+              <IssueTitleInput
+                ref={titleRef}
+                value={issue.title}
+                onSave={title => update({ title })}
+              />
               <div className="relative">
                 <RichTextEditor
                   value={description}
@@ -439,6 +473,8 @@ function IssueDetail({ issue }: { issue: Issue }) {
             projects={projectsQuery.data}
             cycleName={cycleName}
             cycles={cyclesQuery.data}
+            openPicker={openPicker}
+            onOpenPickerChange={setOpenPicker}
             onUpdate={update}
           />
         </div>

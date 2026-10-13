@@ -1,6 +1,7 @@
 import type { DocumentsParams } from '@/types/document'
 import type { IssuesParams } from '@/types/issue'
 import type { ItemsParams } from '@/types/item'
+import type { SearchParams } from '@/types/search'
 import type { ProjectsParams } from '@/types/project'
 import type { NotificationsParams } from '@/types/notification'
 
@@ -46,6 +47,14 @@ export const API = {
     /** `userId` may be "me". */
     SUBSCRIBER: (issueId: string, userId: string) => `/issues/${issueId}/subscribers/${userId}`,
     SUB_ISSUES: (issueId: string) => `/issues/${issueId}/sub-issues`,
+  },
+  SEARCH: {
+    WORKSPACE: (workspaceId: string) => `/workspaces/${workspaceId}/search`,
+  },
+  FAVORITES: {
+    LIST: (workspaceId: string) => `/workspaces/${workspaceId}/favorites`,
+    CREATE: '/favorites',
+    DETAIL: (id: string) => `/favorites/${id}`,
   },
   PROJECTS: {
     LIST: (workspaceId: string) => `/workspaces/${workspaceId}/projects`,
@@ -97,6 +106,14 @@ export function buildIssuesListUrl(params: IssuesParams): string {
     }
   }
   return `${API.ISSUES.LIST}?${queryParams.toString()}`
+}
+
+/** Builds the GET /workspaces/{id}/search URL (`types` comma-separated). */
+export function buildSearchUrl(workspaceId: string, params: SearchParams): string {
+  const queryParams = new URLSearchParams({ q: params.q })
+  if (params.types?.length) queryParams.append('types', params.types.join(','))
+  if (params.limit) queryParams.append('limit', String(params.limit))
+  return `${API.SEARCH.WORKSPACE(workspaceId)}?${queryParams.toString()}`
 }
 
 /** Builds the GET /workspaces/{id}/projects URL (optional `status` and `team_id` filters). */

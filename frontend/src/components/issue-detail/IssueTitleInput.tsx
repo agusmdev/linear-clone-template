@@ -6,6 +6,8 @@ interface IssueTitleInputProps {
   /** Called with the trimmed title on blur or Enter, only when it changed and is not empty. */
   onSave: (title: string) => void
   className?: string
+  /** Gives the page the textarea (e.g. to focus it with the R shortcut). */
+  ref?: React.Ref<HTMLTextAreaElement>
 }
 
 /**
@@ -13,10 +15,11 @@ interface IssueTitleInputProps {
  * with the text. Enter saves, Shift+Enter is ignored (titles are one line),
  * Escape restores the saved title. An empty title is not saved.
  */
-export function IssueTitleInput({ value, onSave, className }: IssueTitleInputProps) {
+export function IssueTitleInput({ value, onSave, className, ref: outerRef }: IssueTitleInputProps) {
   const [draft, setDraft] = React.useState(value)
   const [editing, setEditing] = React.useState(false)
   const ref = React.useRef<HTMLTextAreaElement>(null)
+  React.useImperativeHandle(outerRef, () => ref.current as HTMLTextAreaElement, [])
 
   // Follow outside changes while the user is not editing.
   const shown = editing ? draft : value

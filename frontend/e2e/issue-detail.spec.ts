@@ -18,6 +18,7 @@ import {
   isoDay,
   listActivity,
   listComments,
+  listFavorites,
   listLabels,
   listNotifications,
   listRelations,
@@ -430,6 +431,73 @@ test.describe('issue page', () => {
       headers: { Authorization: `Bearer ${user.token}` },
     })
     expect(response.status()).toBe(404)
+  })
+
+  test('keyboard shortcuts open the pickers, assign to me and rename', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const { workspace, team, state } = await seedWorkspace(api, user)
+    const me = await getMe(api, user)
+    const issue = await createIssue(api, user, { team_id: team.id, title: 'Keyboard first' })
+    await openIssue(page, workspace.url_key, issue.identifier)
+    const panel = page.getByRole('complementary', { name: 'Issue properties' })
+    // Wait until the page has loaded its data (subscribers come with the timeline).
+    await expect(
+      page.getByRole('region', { name: 'Activity' }).getByRole('button', { name: 'Unsubscribe' })
+    ).toBeEnabled()
+
+    await page.keyboard.press('s')
+    await expect(page.getByPlaceholder('Change status...')).toBeFocused()
+    await page.keyboard.type('Done')
+    await page.keyboard.press('Enter')
+    await expect(panel.getByRole('button', { name: 'Change status' })).toContainText('Done')
+    await expect(page.getByPlaceholder('Change status...')).toBeHidden()
+
+    await page.keyboard.press('p')
+    await expect(page.getByPlaceholder('Set priority to...')).toBeVisible()
+    // Number keys pick an option while the search box is empty.
+    await page.keyboard.press('1')
+    await expect(panel.getByRole('button', { name: 'Change priority' })).toContainText('Urgent')
+    await expect(page.getByPlaceholder('Set priority to...')).toBeHidden()
+
+    await page.keyboard.press('i')
+    await expect(panel.getByRole('button', { name: 'Change assignee' })).toContainText(
+      me.display_name || me.email
+    )
+
+    await page.keyboard.press('r')
+    const title = page.getByRole('textbox', { name: 'Issue title' })
+    await expect(title).toBeFocused()
+    await title.fill('Keyboard only')
+    await title.press('Enter')
+
+    await expect
+      .poll(async () => {
+        const saved = await getIssue(api, user, issue.id)
+        return [saved.state_id, saved.priority, saved.assignee_id, saved.title]
+      })
+      .toEqual([state('Done').id, 1, me.id, 'Keyboard only'])
+
+    await page.keyboard.press('Shift+S')
+    await expect.poll(async () => (await listSubscribers(api, user, issue.id)).length).toBe(0)
+
+    await page.keyboard.press('ControlOrMeta+Backspace')
+    await expect(page.getByRole('alertdialog')).toContainText(`Delete issue ${issue.identifier}?`)
+    await page.keyboard.press('Escape')
+  })
+
+  test('adds the issue to favorites', async ({ api, user, authedPage: page }) => {
+    const { workspace, team } = await seedWorkspace(api, user)
+    const issue = await createIssue(api, user, { team_id: team.id, title: 'Starred issue' })
+    await openIssue(page, workspace.url_key, issue.identifier)
+
+    await page.getByRole('button', { name: 'Add to favorites' }).click()
+    await expect(page.getByRole('button', { name: 'Remove from favorites' })).toBeVisible()
+    await expect
+      .poll(async () => (await listFavorites(api, user, workspace.id)).map(f => f.entity_id))
+      .toEqual([issue.id])
   })
 
   test('an unknown identifier shows "Issue not found"', async ({ api, user, authedPage: page }) => {

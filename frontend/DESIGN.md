@@ -96,6 +96,7 @@ function WorkspaceLayout() {
 | `inboxCount?` | `number` | Unread badge on Inbox (hidden when 0). |
 | `projectsTo`, `documentsTo`, `viewsTo` | `string` | "Workspace" section. |
 | `favorites?` | `SidebarLink[]` | "Favorites" section, hidden when empty. |
+| `onFavoriteMove?` | `(from, to) => void` | Makes favorite rows drag-and-drop reorderable. |
 | `teams` | `SidebarTeam[]` | "Your teams" section. Each team is collapsible with Issues, Cycles, Projects (+ `extraLinks`). |
 | `footer?` | `ReactNode` | Bottom slot (theme toggle, help, user menu). |
 
@@ -177,6 +178,14 @@ Initials on a stable per-name color. Helpers `initialsOf(name)` and `colorFor(na
 | `tooltipSide?` | `'top' \| 'right' \| 'bottom' \| 'left'` | `'bottom'` |
 
 Plus every `<button>` prop. It works as a Radix `asChild` trigger: `<DropdownMenuTrigger asChild><IconButton .../></DropdownMenuTrigger>`. It shows the open look when the trigger has `data-state="open"`. `TooltipProvider` is already in `__root.tsx`.
+
+### `FavoriteButton` (`components/FavoriteButton.tsx`)
+
+`<FavoriteButton entityType="issue" entityId={issue.id} />`: star `IconButton` ("Add to favorites" / "Remove from favorites", `aria-pressed`) that adds or removes the entity from my sidebar favorites. Only under `routes/_authed/$workspaceKey` (it reads the current workspace and the favorites query). `entityType`: `issue | project | document | team`.
+
+### `WorkspaceCommands` (`components/WorkspaceCommands.tsx`)
+
+Mounted once by the workspace layout: Cmd/Ctrl+K command palette (navigation, create, theme, log out, favorites and async search of issues/projects/documents), the global shortcuts (`C`, `/`, `?`, `G` then `I/M/P/D/S`) and the shortcuts help. Open it from anywhere with `openCommandPalette()` (= `window.dispatchEvent(new CustomEvent('linear:command-palette'))`).
 
 ### `EmptyState` (`components/EmptyState.tsx`)
 

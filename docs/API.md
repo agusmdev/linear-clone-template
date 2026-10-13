@@ -365,21 +365,29 @@ issue is created with an assignee). Other features (comments, mentions) call
 
 | Status | Method | Path | Body | Response |
 |---|---|---|---|---|
-| PLANNED | GET | `/workspaces/{workspace_id}/search?q=&types=issue,document,project&limit=10` | – | `{issues: IssueRef[], documents: {id, title, icon, project_id}[], projects: {id, name, icon, status}[]}` |
+| IMPLEMENTED | GET | `/workspaces/{workspace_id}/search?q=&types=issue,document,project&limit=10` | – | `{issues: (IssueRef & {team: TeamSummary})[], documents: {id, title, icon, project_id}[], projects: {id, name, icon, color, status}[]}` |
 
-Issue search matches title, description and identifier (`ENG-12`).
+Issue search matches title, description and identifier (`ENG-12`, or the bare
+number `12`); an exact identifier match comes first, then the newest updated;
+archived issues are left out. Documents match title or content, projects name
+or description. `limit` (1..50) is per type. An empty `q` returns empty lists.
+`%` and `_` match literally.
 
 ### Favorites (UX-5)
 
-`Favorite = {id, user_id, workspace_id, entity_type: "issue"|"project"|"document"|"team", entity_id, sort_order, name, created_at}`
-(`name` = display name: `ENG-12 Title`, project name, document title, team name.)
+`Favorite = {id, user_id, workspace_id, entity_type: "issue"|"project"|"document"|"team", entity_id, sort_order, name, identifier, icon, color, created_at}`
+(`name` = display name: `ENG-12 Title`, project name, document title, team name.
+`identifier` = issue identifier `ENG-12` or team key `ENG`, else null. `icon`/`color`
+from the project, document or team, else null. Links: issue `/<url_key>/issue/<identifier>`,
+project `/<url_key>/project/<entity_id>`, document `/<url_key>/document/<entity_id>`,
+team `/<url_key>/team/<identifier>/issues`.)
 
 | Status | Method | Path | Body | Response |
 |---|---|---|---|---|
-| PLANNED | GET | `/workspaces/{workspace_id}/favorites` | – | `Favorite[]` (mine, by `sort_order`; rows whose entity is gone are left out) |
-| PLANNED | POST | `/favorites` | `{workspace_id, entity_type, entity_id}` | 201 `Favorite` (again: 400 `duplicate_item`) |
-| PLANNED | PATCH | `/favorites/{favorite_id}` | `{sort_order}` | `Favorite` |
-| PLANNED | DELETE | `/favorites/{favorite_id}` | – | 204 |
+| IMPLEMENTED | GET | `/workspaces/{workspace_id}/favorites` | – | `Favorite[]` (mine, by `sort_order`; rows whose entity is gone are left out) |
+| IMPLEMENTED | POST | `/favorites` | `{workspace_id, entity_type, entity_id}` | 201 `Favorite`, appended last (again: 400 `duplicate_item`; entity not in the workspace: 400 `invalid_reference`) |
+| IMPLEMENTED | PATCH | `/favorites/{favorite_id}` | `{sort_order}` | `Favorite` |
+| IMPLEMENTED | DELETE | `/favorites/{favorite_id}` | – | 204 |
 
 ---
 
@@ -395,7 +403,8 @@ Issue search matches title, description and identifier (`ENG-12`).
 | `cycles` | `cycle` | models only |
 | `documents` | `document` | documents |
 | `notifications` | `notification` | notifications (inbox); `NotificationService.notify_*` = creation, used by `IssueService` |
-| `favorites` | `favorite` | models only |
+| `favorites` | `favorite` | favorites |
+| `search` | – (reads `issue`, `document`, `project`) | search |
 
 All tables exist (migration `add linear entities`). New endpoints need no
 migration unless they change a model.

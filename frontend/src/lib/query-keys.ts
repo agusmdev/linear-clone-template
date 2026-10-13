@@ -1,6 +1,7 @@
 import type { DocumentsParams } from '@/types/document'
 import type { IssuesParams } from '@/types/issue'
 import type { ItemsParams } from '@/types/item'
+import type { SearchParams } from '@/types/search'
 import type { ProjectsParams } from '@/types/project'
 import type { NotificationsParams } from '@/types/notification'
 
@@ -41,6 +42,15 @@ export const queryKeys = {
     activity: (issueId: string) => ['issues', 'detail', issueId, 'activity'] as const,
     subscribers: (issueId: string) => ['issues', 'detail', issueId, 'subscribers'] as const,
     subIssues: (issueId: string) => ['issues', 'detail', issueId, 'sub-issues'] as const,
+  },
+  search: {
+    all: ['search'] as const,
+    results: (workspaceId: string, params: SearchParams) =>
+      ['search', workspaceId, params] as const,
+  },
+  favorites: {
+    all: ['favorites'] as const,
+    list: (workspaceId: string) => ['favorites', 'list', workspaceId] as const,
   },
   projects: {
     all: ['projects'] as const,

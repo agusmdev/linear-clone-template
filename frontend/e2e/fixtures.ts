@@ -48,6 +48,7 @@ import type {
   SubIssues,
   UpdateIssueData,
 } from '../src/types/issue'
+import type { CreateFavoriteData, Favorite, UpdateFavoriteData } from '../src/types/favorite'
 import type {
   CompleteCycleData,
   CompleteCycleResult,
@@ -64,6 +65,7 @@ import type {
   UpdateNotificationData,
 } from '../src/types/notification'
 import type { Page as ApiPage } from '../src/types/page'
+import type { SearchResults } from '../src/types/search'
 import type { Team, WorkflowState } from '../src/types/team'
 import type { User, UserSummary } from '../src/types/user'
 import type { CreateWorkspaceData, Workspace, WorkspaceMember } from '../src/types/workspace'
@@ -434,6 +436,66 @@ export async function listSubIssues(
   const response = await api.get(`/issues/${issueId}/sub-issues`, { headers: authHeaders(user) })
   await expectOk(response, 'GET /issues/{id}/sub-issues')
   return (await response.json()) as SubIssues
+}
+
+// --- Search and favorites (slice "command") ---------------------------------
+
+export async function searchWorkspace(
+  api: APIRequestContext,
+  user: TestUser,
+  workspaceId: string,
+  q: string
+): Promise<SearchResults> {
+  const response = await api.get(`/workspaces/${workspaceId}/search?q=${encodeURIComponent(q)}`, {
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'GET /workspaces/{id}/search')
+  return (await response.json()) as SearchResults
+}
+
+export async function listFavorites(
+  api: APIRequestContext,
+  user: TestUser,
+  workspaceId: string
+): Promise<Favorite[]> {
+  const response = await api.get(`/workspaces/${workspaceId}/favorites`, {
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'GET /workspaces/{id}/favorites')
+  return (await response.json()) as Favorite[]
+}
+
+export async function addFavorite(
+  api: APIRequestContext,
+  user: TestUser,
+  data: CreateFavoriteData
+): Promise<Favorite> {
+  const response = await api.post('/favorites', { data, headers: authHeaders(user) })
+  await expectOk(response, 'POST /favorites')
+  return (await response.json()) as Favorite
+}
+
+export async function updateFavorite(
+  api: APIRequestContext,
+  user: TestUser,
+  favoriteId: string,
+  data: UpdateFavoriteData
+): Promise<Favorite> {
+  const response = await api.patch(`/favorites/${favoriteId}`, {
+    data,
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'PATCH /favorites/{id}')
+  return (await response.json()) as Favorite
+}
+
+export async function deleteFavorite(
+  api: APIRequestContext,
+  user: TestUser,
+  favoriteId: string
+): Promise<void> {
+  const response = await api.delete(`/favorites/${favoriteId}`, { headers: authHeaders(user) })
+  await expectOk(response, 'DELETE /favorites/{id}')
 }
 
 export async function createProject(

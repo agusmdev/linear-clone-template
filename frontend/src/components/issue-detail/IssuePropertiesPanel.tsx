@@ -14,6 +14,9 @@ import type { WorkflowState } from '@/types/team'
 import type { WorkspaceMember } from '@/types/workspace'
 
 const NONE = 'none'
+
+/** Pickers of the panel that a keyboard shortcut can open. */
+export type PanelPicker = 'status' | 'priority' | 'assignee' | 'labels'
 const CYCLE_GROUPS = { current: 'Current', upcoming: 'Upcoming', past: 'Past' } as const
 
 /** "Sprint 4" or "Cycle 3". */
@@ -34,6 +37,9 @@ interface IssuePropertiesPanelProps {
   cycles?: Cycle[]
   /** The workspace's projects; without them the project row is read-only. */
   projects?: Project[]
+  /** The open picker (keyboard shortcuts S, P, A, L open them). */
+  openPicker: PanelPicker | null
+  onOpenPickerChange: (picker: PanelPicker | null) => void
   onUpdate: (data: UpdateIssueData) => void
   className?: string
 }
@@ -64,6 +70,8 @@ export function IssuePropertiesPanel({
   cycleName,
   cycles,
   projects,
+  openPicker,
+  onOpenPickerChange,
   onUpdate,
   className,
 }: IssuePropertiesPanelProps) {
@@ -134,6 +142,8 @@ export function IssuePropertiesPanel({
       <Row label="Status">
         <PropertyPicker
           label="Status"
+          open={openPicker === 'status'}
+          onOpenChange={open => onOpenPickerChange(open ? 'status' : null)}
           placeholder="Change status..."
           options={stateOptions}
           value={issue.state_id}
@@ -150,6 +160,8 @@ export function IssuePropertiesPanel({
       <Row label="Priority">
         <PropertyPicker
           label="Priority"
+          open={openPicker === 'priority'}
+          onOpenChange={open => onOpenPickerChange(open ? 'priority' : null)}
           placeholder="Set priority to..."
           options={priorityOptions}
           value={String(issue.priority)}
@@ -170,6 +182,8 @@ export function IssuePropertiesPanel({
       <Row label="Assignee">
         <PropertyPicker
           label="Assignee"
+          open={openPicker === 'assignee'}
+          onOpenChange={open => onOpenPickerChange(open ? 'assignee' : null)}
           placeholder="Assign to..."
           options={assigneeOptions}
           value={issue.assignee_id ?? NONE}
@@ -191,6 +205,8 @@ export function IssuePropertiesPanel({
         <PropertyPicker
           multiple
           label="Labels"
+          open={openPicker === 'labels'}
+          onOpenChange={open => onOpenPickerChange(open ? 'labels' : null)}
           placeholder="Change labels..."
           options={labelOptions}
           value={issue.labels.map(label => label.id)}
