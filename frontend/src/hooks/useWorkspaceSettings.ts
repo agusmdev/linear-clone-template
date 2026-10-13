@@ -152,8 +152,10 @@ export function useUpdateTeam(teamId: string) {
     mutationFn: (data: UpdateTeamData) => api.patch<Team>(API.TEAMS.DETAIL(teamId), data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.teams.all })
-      // A new key changes every issue identifier.
+      // A new key changes every issue identifier, also in the sidebar favorites
+      // (their links use it); a new name renames a favorited team.
       queryClient.invalidateQueries({ queryKey: queryKeys.issues.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.favorites.all })
     },
   })
 }
@@ -173,6 +175,8 @@ export function useDeleteTeam(workspaceId: string, teamId: string) {
       const notOfDeletedTeam = (query: Query) => !mentions(teamId)(query)
       queryClient.invalidateQueries({ queryKey: queryKeys.teams.all, predicate: notOfDeletedTeam })
       queryClient.invalidateQueries({ queryKey: queryKeys.issues.all, predicate: notOfDeletedTeam })
+      // Favorites of the team and of its issues are gone with it.
+      queryClient.invalidateQueries({ queryKey: queryKeys.favorites.all })
     },
   })
 }
@@ -301,11 +305,9 @@ export function useUpdateMe() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (data: UpdateUserData) => api.patch<User>(API.USERS.ME, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.me.all })
-      // Embedded user names (members, assignees) change too.
-      queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.issues.all })
-    },
+    // The name is embedded in almost every resource (members, team members,
+    // assignees, comments, documents, project leads, notifications...), so
+    // refresh everything: the active queries refetch, the rest turn stale.
+    onSuccess: () => queryClient.invalidateQueries(),
   })
 }
