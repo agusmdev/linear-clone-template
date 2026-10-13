@@ -129,6 +129,28 @@ def test_search_types_limit_and_empty_query(
     assert search(owner, workspace_id, q="%")["issues"] == []
 
 
+def test_search_documents_match_visible_text_only(
+    owner: RegisteredUser, ws: dict[str, Any]
+) -> None:
+    workspace_id = ws["workspace"]["id"]
+    doc = create_document(
+        owner.client,
+        workspace_id,
+        "Notes",
+        content='<p><strong>Tom</strong> &amp; <a href="https://x.dev">Jerry</a></p>',
+    )
+
+    def found(q: str) -> list[str]:
+        body = search(owner, workspace_id, q=q, types="document")
+        return [d["id"] for d in body["documents"]]
+
+    assert found("strong") == []
+    assert found("href") == []
+    assert found("%") == []
+    assert found("_") == []
+    assert found("tom & jerry") == [doc["id"]]
+
+
 def test_search_skips_archived_issues(
     owner: RegisteredUser, ws: dict[str, Any]
 ) -> None:
