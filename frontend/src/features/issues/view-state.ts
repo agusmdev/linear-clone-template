@@ -3,8 +3,11 @@
  * search), kept in the URL search params so a view can be shared and survives
  * a reload. Defaults are left out of the URL.
  *
- *   ?layout=board&group=assignee&order=priority&subs=0&completed=0
- *   &status=<id>,<id>&priority=1,2&assignee=me,none&creator=<id>&label=<id>
+ *   ?layout=board&group=assignee&order=priority&subs=hide&completed=hide
+ *   &status=<id>,<id>&priority=urgent,high&assignee=me,none&creator=<id>&label=<id>
+ *
+ * Values are words or ids, never bare numbers or booleans: the router would
+ * JSON-quote those in the URL.
  *   &project=<id>,none&cycle=<id>&q=crash
  */
 import type { IssueOrderBy, IssuePriority, IssuesParams } from '@/types/issue'
@@ -63,6 +66,9 @@ export const FILTER_LABELS: Record<FilterKind, string> = {
 }
 
 const LAYOUTS: IssueLayout[] = ['list', 'board']
+const HIDE = 'hide'
+/** URL words of priorities 0..4. */
+const PRIORITY_SLUGS = ['none', 'urgent', 'high', 'medium', 'low']
 const GROUPINGS = Object.keys(GROUPING_LABELS) as IssueGrouping[]
 const ORDERINGS = Object.keys(ORDERING_LABELS) as IssueOrdering[]
 
@@ -97,12 +103,16 @@ export function readViewState(
   const filters = Object.fromEntries(
     FILTER_KINDS.map(kind => [kind, list(search[kind])])
   ) as IssueFilters
+  // Priorities are words in the URL ("urgent") and numbers ("1") in the app.
+  filters.priority = filters.priority
+    .map(slug => String(PRIORITY_SLUGS.indexOf(slug)))
+    .filter(value => value !== '-1')
   return {
     layout: oneOf(search.layout, LAYOUTS, defaults.layout ?? 'list'),
     grouping: oneOf(search.group, GROUPINGS, defaults.grouping ?? 'status'),
     ordering: oneOf(search.order, ORDERINGS, 'manual'),
-    showSubIssues: text(search.subs) !== '0',
-    showCompleted: text(search.completed) !== '0',
+    showSubIssues: text(search.subs) !== HIDE,
+    showCompleted: text(search.completed) !== HIDE,
     filters,
     search: text(search.q),
   }
@@ -117,12 +127,16 @@ export function viewStateToSearch(
     layout: state.layout === (defaults.layout ?? 'list') ? undefined : state.layout,
     group: state.grouping === (defaults.grouping ?? 'status') ? undefined : state.grouping,
     order: state.ordering === 'manual' ? undefined : state.ordering,
-    subs: state.showSubIssues ? undefined : '0',
-    completed: state.showCompleted ? undefined : '0',
+    subs: state.showSubIssues ? undefined : HIDE,
+    completed: state.showCompleted ? undefined : HIDE,
     q: state.search.trim() || undefined,
   }
   for (const kind of FILTER_KINDS) {
-    out[kind] = state.filters[kind].length ? state.filters[kind].join(',') : undefined
+    const values =
+      kind === 'priority'
+        ? state.filters.priority.map(value => PRIORITY_SLUGS[Number(value)]).filter(Boolean)
+        : state.filters[kind]
+    out[kind] = values.length ? values.join(',') : undefined
   }
   return out
 }

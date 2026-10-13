@@ -13,7 +13,7 @@ const TYPE_ORDER: WorkflowStateType[] = ['backlog', 'unstarted', 'started', 'com
 
 /** Status group key: states of different teams with the same name and type share a group. */
 export function statusKey(state: Pick<WorkflowState, 'type' | 'name'>): string {
-  return `${state.type}:${state.name.toLowerCase()}`
+  return `${state.type}:${state.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
 }
 
 export interface GroupingInput {
