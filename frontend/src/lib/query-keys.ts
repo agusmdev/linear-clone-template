@@ -1,3 +1,4 @@
+import type { DocumentsParams } from '@/types/document'
 import type { IssuesParams } from '@/types/issue'
 import type { ItemsParams } from '@/types/item'
 
@@ -35,5 +36,11 @@ export const queryKeys = {
     all: ['cycles'] as const,
     list: (teamId: string) => ['cycles', 'list', teamId] as const,
     detail: (cycleId: string) => ['cycles', 'detail', cycleId] as const,
+  },
+  documents: {
+    all: ['documents'] as const,
+    lists: () => ['documents', 'list'] as const,
+    list: (params: DocumentsParams) => ['documents', 'list', params] as const,
+    detail: (id: string) => ['documents', 'detail', id] as const,
   },
 }

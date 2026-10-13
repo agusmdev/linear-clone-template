@@ -43,6 +43,7 @@ import type {
   CreateCycleData,
   Cycle,
 } from '../src/types/cycle'
+import type { CreateDocumentData, Document, DocumentSummary } from '../src/types/document'
 import type { CreateIssueData, Issue, UpdateIssueData } from '../src/types/issue'
 import type { CreateItemData, Item, ItemsResponse } from '../src/types/item'
 import type { Label } from '../src/types/label'
@@ -337,6 +338,38 @@ export function isoDay(offset = 0): string {
   const day = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
   day.setUTCDate(day.getUTCDate() + offset)
   return day.toISOString().slice(0, 10)
+}
+
+export async function createDocument(
+  api: APIRequestContext,
+  user: TestUser,
+  data: CreateDocumentData
+): Promise<Document> {
+  const response = await api.post('/documents', { data, headers: authHeaders(user) })
+  await expectOk(response, 'POST /documents')
+  return (await response.json()) as Document
+}
+
+/** GET /documents?workspace_id=…: the first page (up to 100), newest edit first. */
+export async function listDocuments(
+  api: APIRequestContext,
+  user: TestUser,
+  workspaceId: string
+): Promise<ApiPage<DocumentSummary>> {
+  const response = await api.get(`/documents?workspace_id=${workspaceId}&size=100`, {
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'GET /documents')
+  return (await response.json()) as ApiPage<DocumentSummary>
+}
+
+/** GET /documents/{id}: the response itself, so a spec can also check a 404. */
+export function fetchDocument(
+  api: APIRequestContext,
+  user: TestUser,
+  documentId: string
+): Promise<APIResponse> {
+  return api.get(`/documents/${documentId}`, { headers: authHeaders(user) })
 }
 
 // ---------------------------------------------------------------------------
