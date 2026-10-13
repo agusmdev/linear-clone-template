@@ -1,4 +1,4 @@
-import type { Cycle } from '@/types/cycle'
+import type { Cycle, CycleStatus } from '@/types/cycle'
 
 /** Cycle dates are calendar days (`YYYY-MM-DD`). All math runs in UTC so time zones never shift a day. */
 
@@ -48,6 +48,26 @@ export function formatRange(startsAt: string, endsAt: string): string {
 /** "Cycle 3", or the custom name. */
 export function cycleTitle(cycle: Pick<Cycle, 'name' | 'number'>): string {
   return cycle.name || `Cycle ${cycle.number}`
+}
+
+/**
+ * Current / upcoming / past on the user's calendar. The API's `status` uses the UTC date,
+ * which is a day off for hours every day outside UTC.
+ */
+export function cycleStatus(
+  cycle: Pick<Cycle, 'starts_at' | 'ends_at'>,
+  today: string = todayDay()
+): CycleStatus {
+  if (cycle.starts_at > today) return 'upcoming'
+  if (cycle.ends_at < today) return 'past'
+  return 'current'
+}
+
+/** The cycle with `status` from the user's local date (see `cycleStatus`). */
+export function withLocalStatus<T extends Pick<Cycle, 'starts_at' | 'ends_at' | 'status'>>(
+  cycle: T
+): T {
+  return { ...cycle, status: cycleStatus(cycle) }
 }
 
 /** A short line about where the cycle is in time: "5 days left", "Starts in 3 days", "Ended Oct 2". */

@@ -84,6 +84,47 @@ test.describe('cycles API', () => {
 })
 
 test.describe('cycles page', () => {
+  test('current, upcoming and past follow the local date, not the UTC date', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { workspace, team, states } = await seedWorkspace(api, user)
+    // A time zone whose date differs from the UTC date right now: UTC+14 from 10:00 UTC,
+    // else UTC-12 (until 12:00 UTC). The cycle runs up to or from the local today only.
+    const ahead = new Date().getUTCHours() >= 10
+    const today = isoDay(ahead ? 1 : -1)
+    const cycle = await createCycle(api, user, team.id, {
+      starts_at: ahead ? today : isoDay(-14),
+      ends_at: ahead ? isoDay(14) : today,
+    })
+    // The server (UTC) sees it as upcoming or past.
+    expect(cycle.status).toBe(ahead ? 'upcoming' : 'past')
+    const issue = await createIssue(api, user, {
+      team_id: team.id,
+      title: 'Local day issue',
+      state_id: states['Todo'].id,
+    })
+
+    const page = await loginAs(user, { timezoneId: ahead ? 'Pacific/Kiritimati' : 'Etc/GMT+12' })
+    await page.goto(`/${workspace.url_key}/team/${team.key}/cycles`)
+    const current = page.getByRole('region', { name: /^Current/ })
+    await expect(current.getByTestId('cycle-row')).toHaveCount(1)
+    await expect(current.getByTestId('cycle-row')).toContainText(
+      ahead ? '13 days left' : 'Last day'
+    )
+    await expect(page.getByRole('region', { name: /^(Upcoming|Past)/ })).toHaveCount(0)
+
+    await current.getByRole('link', { name: 'Cycle 1' }).click()
+    await expect(page.getByRole('region', { name: 'Cycle summary' })).toContainText('Current')
+
+    // The issue cycle picker lists it (past cycles are left out).
+    await page.goto(`/${workspace.url_key}/issue/${issue.identifier}`)
+    await page.getByRole('button', { name: 'Change cycle' }).click()
+    await page.getByRole('option', { name: 'Cycle 1' }).click()
+    await expect.poll(async () => (await getIssue(api, user, issue.id)).cycle_id).toBe(cycle.id)
+  })
+
   test('a team without cycles shows the empty state and creates the first cycle', async ({
     api,
     user,
@@ -108,7 +149,7 @@ test.describe('cycles page', () => {
     await dialog.getByRole('button', { name: 'Create cycle' }).click()
 
     await expect(dialog).toBeHidden()
-    const current = page.getByRole('region', { name: 'Current' })
+    const current = page.getByRole('region', { name: /^Current/ })
     await expect(current.getByTestId('cycle-row')).toHaveCount(1)
     await expect(cycleRow(page, 'Cycle 1')).toContainText('Kickoff')
     await expect(cycleRow(page, 'Cycle 1')).toContainText('0 issues')

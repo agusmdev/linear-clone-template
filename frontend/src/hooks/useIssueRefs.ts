@@ -1,7 +1,6 @@
 import { useQueries } from '@tanstack/react-query'
+import { fetchTeamCycles } from '@/hooks/useCycles'
 import { useProjects } from '@/hooks/useProjects'
-import { api } from '@/lib/api-client'
-import { API } from '@/lib/api-endpoints'
 import { queryKeys } from '@/lib/query-keys'
 import type { Cycle } from '@/types/cycle'
 
@@ -39,7 +38,7 @@ export function useCycleRefs(teamIds: string[]): NamedRef[] {
   return useQueries({
     queries: teamIds.map(teamId => ({
       queryKey: queryKeys.cycles.list(teamId),
-      queryFn: () => api.get<Cycle[]>(API.CYCLES.TEAM(teamId)),
+      queryFn: () => fetchTeamCycles(teamId),
     })),
     combine: results => results.flatMap(result => (result.data ?? []).map(cycleRef)),
   })
