@@ -60,10 +60,36 @@ Bugs found by earlier QA rounds. Do not re-report one unless it still reproduces
 - inbox-search: inbox unusable at phone width (preview pane hidden)
 - inbox-search: status_changed notifications showed the current status instead of the one at the time
 
+## Round 3 (all fixed)
+
+- auth: auth state not synced across tabs (sign-in as another user / sign-out in another tab)
+- auth: onboarding "open one of your workspaces" row hid the name at 390px
+- settings: sidebar "Your teams" listed teams the user never joined (now `?joined=true`)
+- settings: team key change / team delete left stale favorites; display name change not shown until reload
+- settings: Teams list cut names at 390px; API accepted line breaks in names
+- issues-list: identifier search ignored the team key (DES-2 matched ENG-2)
+- issues-list: bulk action bar wider than a phone screen; no row hover/focus or drop highlight in light theme
+- create-issue: command palette opened stale search results from an earlier query
+- create-issue: global shortcuts (C, G S, ?, I/S/P) fired behind open modals and menus
+- issue-detail: relation type menu not keyboard-usable; hover-only controls invisible on touch
+- issue-detail: identifier cut to "EN…" and parent link wrapping at 390px; sub-issue input had no length limit
+- documents: "UTF-8", "ISO-9001" etc. became issue links to 404 pages
+- documents: renamed/deleted project stayed stale on its documents; New document did not focus the title
+- documents: list showed the last editor instead of the author (DOC-1)
+- projects-cycles: long project name pushed the issue title out of the row
+- projects-cycles: C / palette "Create new issue" did not prefill the page's project or cycle
+- projects-cycles: double-click on Delete / Create cycle showed false errors; long cycle names hid "Cycle N" at 390px
+- projects-cycles: removed project lead showed as none on the project page
+- inbox-search: comment notifications did not show the comment
+- inbox-search: mark all read also counted archived notifications
+- e2e: the first test on a cold Vite server rendered a blank page (now a warm-up project runs first)
+
 ## Known and accepted (not bugs to re-report)
 
 - A tab left open after another admin removes you shows "Workspace <id> not found".
 - The last completed status of a team can be deleted.
 - Deleting the last cycle frees its number for reuse.
 - "Move unfinished" can target a past cycle when the next cycle is also past.
-- The first Playwright test on a cold Vite dev server can render a blank page in slow containers.
+- An anonymous visit to `/my-issues` (no workspace in the URL) ends at `/login?redirect=/my-issues/my-issues`.
+- Label clicks less than ~150 ms apart in the issue panel can drop one.
+- Very long passwords and names up to the schema limits are accepted.
