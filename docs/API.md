@@ -339,10 +339,18 @@ the actor.
 
 | Status | Method | Path | Body | Response |
 |---|---|---|---|---|
-| PLANNED | GET | `/notifications?workspace_id=..&unread=&include_archived=` | – | `Page<Notification>` (newest first, mine only) |
-| PLANNED | GET | `/notifications/unread-count?workspace_id=..` | – | `{count}` |
-| PLANNED | PATCH | `/notifications/{notification_id}` | `{read?, archived?}` | `Notification` |
-| PLANNED | POST | `/notifications/mark-all-read` | `{workspace_id}` | `{updated}` |
+| IMPLEMENTED | GET | `/notifications?workspace_id=..&unread=&include_archived=&type=&issue_id=` | – | `Page<Notification>` (newest first, mine only; archived left out unless `include_archived=true`; `unread=true` only unread, `false` only read) |
+| IMPLEMENTED | GET | `/notifications/unread-count?workspace_id=..` | – | `{count}` (unread and not archived) |
+| IMPLEMENTED | PATCH | `/notifications/{notification_id}` | `{read?, archived?}` | `Notification` (`true` sets `read_at`/`archived_at` to now, `false` clears it) |
+| IMPLEMENTED | POST | `/notifications/mark-all-read` | `{workspace_id}` | `{updated}` |
+| IMPLEMENTED | DELETE | `/notifications/{notification_id}` | – | 204 |
+
+Another user's notification is a 404 (`not_found`), like a missing one. A
+non-member of the workspace gets 404 on list, count and mark-all-read.
+Creation: `NotificationService` (`backend/app/modules/notifications/service.py`)
+is called by `IssueService` after a create/update (`assigned` also when an
+issue is created with an assignee). Other features (comments, mentions) call
+`NotificationService.notify_subscribers(...)` or insert rows themselves.
 
 ### Search (UX-1, UX-4)
 
@@ -377,7 +385,7 @@ Issue search matches title, description and identifier (`ENG-12`).
 | `projects` | `project`, `project_team` | models only |
 | `cycles` | `cycle` | models only |
 | `documents` | `document` | documents |
-| `notifications` | `notification` | models only |
+| `notifications` | `notification` | notifications (inbox); `NotificationService.notify_*` = creation, used by `IssueService` |
 | `favorites` | `favorite` | models only |
 
 All tables exist (migration `add linear entities`). New endpoints need no

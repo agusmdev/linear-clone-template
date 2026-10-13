@@ -1,6 +1,7 @@
 import type { DocumentsParams } from '@/types/document'
 import type { IssuesParams } from '@/types/issue'
 import type { ItemsParams } from '@/types/item'
+import type { NotificationsParams } from '@/types/notification'
 
 export const API = {
   AUTH: {
@@ -33,6 +34,12 @@ export const API = {
     DETAIL: (id: string) => `/issues/${id}`,
     BY_IDENTIFIER: (workspaceId: string, identifier: string) =>
       `/workspaces/${workspaceId}/issues/by-identifier/${identifier}`,
+  },
+  NOTIFICATIONS: {
+    LIST: '/notifications',
+    UNREAD_COUNT: '/notifications/unread-count',
+    MARK_ALL_READ: '/notifications/mark-all-read',
+    DETAIL: (id: string) => `/notifications/${id}`,
   },
   CYCLES: {
     TEAM: (teamId: string) => `/teams/${teamId}/cycles`,
@@ -73,6 +80,16 @@ export function buildIssuesListUrl(params: IssuesParams): string {
     }
   }
   return `${API.ISSUES.LIST}?${queryParams.toString()}`
+}
+
+/** Builds the GET /notifications URL (newest first). Undefined keys are left out. */
+export function buildNotificationsListUrl(params: NotificationsParams): string {
+  const queryParams = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '') continue
+    queryParams.append(key, String(value))
+  }
+  return `${API.NOTIFICATIONS.LIST}?${queryParams.toString()}`
 }
 
 /** Builds the GET /documents URL (default order: most recently updated first). */

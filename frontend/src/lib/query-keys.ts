@@ -1,6 +1,7 @@
 import type { DocumentsParams } from '@/types/document'
 import type { IssuesParams } from '@/types/issue'
 import type { ItemsParams } from '@/types/item'
+import type { NotificationsParams } from '@/types/notification'
 
 export const queryKeys = {
   items: {
@@ -31,6 +32,11 @@ export const queryKeys = {
     detail: (id: string) => ['issues', 'detail', id] as const,
     byIdentifier: (workspaceId: string, identifier: string) =>
       ['issues', 'by-identifier', workspaceId, identifier] as const,
+  },
+  notifications: {
+    all: ['notifications'] as const,
+    list: (params: NotificationsParams) => ['notifications', 'list', params] as const,
+    unreadCount: (workspaceId: string) => ['notifications', 'unread-count', workspaceId] as const,
   },
   cycles: {
     all: ['cycles'] as const,
