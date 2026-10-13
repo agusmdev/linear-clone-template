@@ -279,7 +279,7 @@ test.describe('session', () => {
   })
 
   test('logout ends the session on the backend too', async ({ authedPage: page, user, api }) => {
-    await page.goto('/')
+    await page.goto('/items')
     await logoutButton(page).click()
 
     await expect(page).toHaveURL('/login')
