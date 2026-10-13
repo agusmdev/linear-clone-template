@@ -492,6 +492,19 @@ export async function inviteMember(
   return (await response.json()) as WorkspaceMember
 }
 
+/** DELETE /workspaces/{id}/members/{member_id}: removes a member (admins) or leaves. */
+export async function removeMember(
+  api: APIRequestContext,
+  admin: TestUser,
+  workspaceId: string,
+  memberId: string
+): Promise<void> {
+  const response = await api.delete(`/workspaces/${workspaceId}/members/${memberId}`, {
+    headers: authHeaders(admin),
+  })
+  await expectOk(response, 'DELETE /workspaces/{id}/members/{member_id}')
+}
+
 /** PATCH /workspaces/{id}/members/{member_id}: changes the role (admins). */
 export async function updateMemberRole(
   api: APIRequestContext,

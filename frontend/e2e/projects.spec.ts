@@ -6,16 +6,21 @@
 import {
   type Page,
   addFavorite,
+  addWorkspaceMember,
   createIssue,
   createProject,
   createWorkspace,
+  errorToast,
   expect,
   getIssue,
   getMe,
   getProject,
+  listMembers,
   listProjects,
   listStates,
   listTeams,
+  registerUser,
+  removeMember,
   test,
   updateIssue,
   updateProject,
@@ -469,4 +474,104 @@ test('saves a project description typed just before a reload (keepalive flush on
     .toBe('<p>Start QUICKRELOAD</p>')
   await page.reload()
   await expect(description).toHaveText('Start QUICKRELOAD')
+})
+
+test('C on the project page creates the issue in the project', async ({
+  authedPage: page,
+  api,
+  user,
+}) => {
+  const workspace = await createWorkspace(api, user)
+  const [team] = await listTeams(api, user, workspace.id)
+  const project = await createProject(api, user, {
+    workspace_id: workspace.id,
+    name: 'Shortcut target',
+    team_ids: [team.id],
+  })
+
+  await page.goto(`/${workspace.url_key}/project/${project.id}`)
+  await expect(page.getByRole('heading', { level: 1, name: 'Shortcut target' })).toBeVisible()
+  await page.keyboard.press('c')
+  const dialog = page.getByRole('dialog', { name: 'New issue' })
+  await expect(dialog.getByRole('button', { name: 'Project: Shortcut target' })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+
+  await page.getByRole('tab', { name: /Issues/ }).click()
+  await expect(page.getByText('No issues in this project')).toBeVisible()
+  await page.keyboard.press('c')
+  await expect(dialog.getByRole('button', { name: 'Project: Shortcut target' })).toBeVisible()
+  await page.keyboard.type('Filed with C')
+  await dialog.getByRole('button', { name: /Create issue/ }).click()
+  await expect(
+    page.getByRole('listbox', { name: 'Issues' }).getByRole('option', { name: /Filed with C/ })
+  ).toBeVisible()
+})
+
+test('a long project name does not push the issue title out of its row', async ({
+  authedPage: page,
+  api,
+  user,
+}) => {
+  const workspace = await createWorkspace(api, user)
+  const [team] = await listTeams(api, user, workspace.id)
+  const project = await createProject(api, user, {
+    workspace_id: workspace.id,
+    name: 'Longwordwithoutspaces'.repeat(12),
+    team_ids: [team.id],
+  })
+  await createIssue(api, user, { team_id: team.id, title: 'Short title', project_id: project.id })
+
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.goto(`/${workspace.url_key}/team/${team.key}/issues`)
+  const row = page.getByRole('listbox', { name: 'Issues' }).getByRole('option', {
+    name: /Short title/,
+  })
+  await expect(row.getByText('Short title', { exact: true })).toBeVisible()
+  // The project chip is truncated, with the full name as its tooltip.
+  await expect(row.getByTitle(project.name)).toBeVisible()
+})
+
+test('a lead who left the workspace still shows on the project page', async ({
+  authedPage: page,
+  api,
+  user,
+}) => {
+  const workspace = await createWorkspace(api, user)
+  const other = await registerUser(api)
+  const lead = await addWorkspaceMember(api, user, workspace.id, other)
+  const project = await createProject(api, user, {
+    workspace_id: workspace.id,
+    name: 'Orphaned lead',
+    lead_id: lead.id,
+  })
+  const member = (await listMembers(api, user, workspace.id)).find(m => m.user_id === lead.id)!
+  await removeMember(api, user, workspace.id, member.id)
+
+  await page.goto(`/${workspace.url_key}/project/${project.id}`)
+  await expect(
+    page.getByRole('region', { name: 'Properties' }).getByRole('button', {
+      name: `Lead: ${lead.display_name || lead.email}`,
+    })
+  ).toBeVisible()
+})
+
+test('a double click on Delete project deletes it without an error', async ({
+  authedPage: page,
+  api,
+  user,
+}) => {
+  const workspace = await createWorkspace(api, user)
+  const project = await createProject(api, user, { workspace_id: workspace.id, name: 'Twice' })
+
+  await page.goto(`/${workspace.url_key}/project/${project.id}`)
+  await page.getByRole('button', { name: 'Project options' }).click()
+  await page.getByRole('menuitem', { name: 'Delete project' }).click()
+  await page
+    .getByRole('alertdialog', { name: 'Delete project?' })
+    .getByRole('button', { name: 'Delete project' })
+    .dblclick()
+  await expect(page).toHaveURL(`/${workspace.url_key}/projects`)
+  await expect(page.getByText('Project deleted')).toBeVisible()
+  await expect(errorToast(page)).toHaveCount(0)
 })

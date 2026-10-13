@@ -238,6 +238,41 @@ test.describe('cycles page', () => {
     expect(await listCycles(api, user, team.id)).toEqual([])
   })
 
+  test('a long cycle name never hides the cycle number at phone width', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const { workspace, team } = await seedWorkspace(api, user)
+    await createCycle(api, user, team.id, {
+      starts_at: isoDay(-3),
+      ends_at: isoDay(10),
+      name: 'A very long cycle name that does not fit on a phone screen',
+    })
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto(`/${workspace.url_key}/team/${team.key}/cycles`)
+    const label = cycleRow(page, 'Cycle 1').getByRole('link', { name: 'Cycle 1' })
+    await expect(label).toBeVisible()
+    // Not cut down to "C…": the custom name gets truncated instead.
+    expect(await label.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+  })
+
+  test('a double click on Create cycle creates one cycle without an error', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const { workspace, team } = await seedWorkspace(api, user)
+    await page.goto(`/${workspace.url_key}/team/${team.key}/cycles`)
+    await page.getByRole('button', { name: 'New cycle' }).click()
+    const dialog = page.getByRole('dialog', { name: 'New cycle' })
+    await dialog.getByRole('button', { name: 'Create cycle' }).dblclick()
+    await expect(dialog).toBeHidden()
+    await expect(cycleRow(page, 'Cycle 1')).toBeVisible()
+    await expect(errorToast(page)).toHaveCount(0)
+    expect(await listCycles(api, user, team.id)).toHaveLength(1)
+  })
+
   test('an unknown team key shows a message', async ({ api, user, authedPage: page }) => {
     const { workspace } = await seedWorkspace(api, user)
     await page.goto(`/${workspace.url_key}/team/NOPE/cycles`)
@@ -381,6 +416,58 @@ test.describe('cycle page', () => {
     await expect(
       page.getByRole('listbox', { name: 'Issues' }).getByRole('option', { name: /Late fix/ })
     ).toBeVisible()
+  })
+
+  test('C on the cycle page creates the issue in the cycle', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const { workspace, team } = await seedWorkspace(api, user)
+    const cycle = await createCycle(api, user, team.id, {
+      starts_at: isoDay(-3),
+      ends_at: isoDay(10),
+    })
+    await page.goto(`/${workspace.url_key}/team/${team.key}/cycle/${cycle.id}`)
+    await expect(page.getByText('No issues in this cycle')).toBeVisible()
+    await page.keyboard.press('c')
+    const dialog = page.getByRole('dialog', { name: 'New issue' })
+    await expect(dialog.getByRole('button', { name: 'Cycle: Cycle 1' })).toBeVisible()
+    await page.keyboard.type('From the shortcut')
+    await dialog.getByRole('button', { name: /Create issue/ }).click()
+    await expect(
+      page
+        .getByRole('listbox', { name: 'Issues' })
+        .getByRole('option', { name: /From the shortcut/ })
+    ).toBeVisible()
+
+    // Away from the cycle, C has no cycle.
+    await page.goto(`/${workspace.url_key}/my-issues`)
+    await expect(page.getByRole('heading', { level: 1, name: 'My issues' })).toBeVisible()
+    await page.keyboard.press('c')
+    await expect(dialog.getByRole('button', { name: 'Cycle: none' })).toBeVisible()
+  })
+
+  test('a double click on Delete deletes the cycle without an error', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const { workspace, team } = await seedWorkspace(api, user)
+    const cycle = await createCycle(api, user, team.id, {
+      starts_at: isoDay(-3),
+      ends_at: isoDay(10),
+    })
+    await page.goto(`/${workspace.url_key}/team/${team.key}/cycle/${cycle.id}`)
+    await page.getByRole('button', { name: 'Cycle actions' }).click()
+    await page.getByRole('menuitem', { name: 'Delete cycle' }).click()
+    await page
+      .getByRole('alertdialog', { name: 'Delete Cycle 1?' })
+      .getByRole('button', { name: 'Delete' })
+      .dblclick()
+    await expect(page).toHaveURL(`/${workspace.url_key}/team/${team.key}/cycles`)
+    await expect(page.getByText('Deleted Cycle 1')).toBeVisible()
+    await expect(errorToast(page)).toHaveCount(0)
   })
 
   test('a missing cycle shows a message', async ({ api, user, authedPage: page }) => {
