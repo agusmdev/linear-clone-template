@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { useIsMutating } from '@tanstack/react-query'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import {
   Archive,
@@ -59,6 +60,7 @@ import {
   useDeleteRelation,
   useIssue,
   useIssueActivity,
+  issueUpdateMutationKey,
   useIssueByIdentifier,
   useIssueSearch,
   useRelations,
@@ -84,6 +86,13 @@ function IssuePage() {
   const { identifier } = Route.useParams()
   const { workspace, path } = useCurrentWorkspace()
   const issueQuery = useIssueByIdentifier(workspace.id, identifier)
+  // The description editor starts from the issue fetched after the page opened, and
+  // after a save still in flight from the last visit: a cached copy can be out of date.
+  const saving =
+    useIsMutating({ mutationKey: issueUpdateMutationKey(issueQuery.data?.id ?? '') }) > 0
+  const readyKey = `${workspace.id}/${identifier.toUpperCase()}`
+  const [readyFor, setReadyFor] = React.useState<string | null>(null)
+  if (readyFor !== readyKey && issueQuery.isFetchedAfterMount && !saving) setReadyFor(readyKey)
 
   if (issueQuery.isError) {
     return (
@@ -103,7 +112,7 @@ function IssuePage() {
     )
   }
 
-  if (!issueQuery.data) {
+  if (!issueQuery.data || readyFor !== readyKey) {
     return (
       <>
         <PageHeader title={identifier.toUpperCase()} />

@@ -16,13 +16,24 @@ import type {
 import type { Page } from '@/types/page'
 import type { UserSummary } from '@/types/user'
 
-/** The issue page: one issue by its identifier (`ENG-12`), archived issues too. */
+/**
+ * The issue page: one issue by its identifier (`ENG-12`), archived issues too.
+ * Always refetched when the page opens: the description editor starts from this
+ * data, so a cached copy would hide (and its saves overwrite) a teammate's edits.
+ */
 export function useIssueByIdentifier(workspaceId: string, identifier: string) {
   return useQuery({
     queryKey: queryKeys.issues.byIdentifier(workspaceId, identifier.toUpperCase()),
     queryFn: () => api.get<Issue>(API.ISSUES.BY_IDENTIFIER(workspaceId, identifier)),
     retry: false,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
+}
+
+/** Identifies the PATCH /issues/{id} mutations of the issue page (see `useIsMutating`). */
+export function issueUpdateMutationKey(issueId: string) {
+  return ['issues', 'update', issueId] as const
 }
 
 /** One issue by id (e.g. the parent of a sub-issue). Disabled without an id. */
@@ -50,6 +61,7 @@ export interface UpdateIssueDetailVariables {
 export function useUpdateIssueDetail(issue: Pick<Issue, 'id' | 'workspace_id' | 'identifier'>) {
   const queryClient = useQueryClient()
   return useMutation({
+    mutationKey: issueUpdateMutationKey(issue.id),
     mutationFn: ({ data, keepalive }: UpdateIssueDetailVariables) =>
       api.patch<Issue>(API.ISSUES.DETAIL(issue.id), data, { keepalive }),
     onSuccess: updated => {
