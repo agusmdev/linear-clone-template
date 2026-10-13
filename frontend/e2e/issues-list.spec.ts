@@ -1079,6 +1079,54 @@ test.describe('issues list', () => {
     }
   })
 
+  test('focus goes back to the list after the context menu and the delete dialog (ISS-2, ISS-12)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { workspace, team, key } = await seedWorkspace(api, user)
+    const one = await createIssue(api, user, { team_id: team.id, title: 'Menu one' })
+    const two = await createIssue(api, user, { team_id: team.id, title: 'Menu two' })
+    await createIssue(api, user, { team_id: team.id, title: 'Menu three' })
+
+    const page = await loginAs(user)
+    await page.goto(`/${key}/team/ENG/issues`)
+    await expect(row(page, 'Menu three')).toBeVisible()
+    await expect(issueList(page)).toBeFocused()
+
+    // A context-menu action: the right-clicked row is focused and the list
+    // keeps the keyboard, so P acts on that row.
+    await row(page, 'Menu two').click({ button: 'right' })
+    await page.getByRole('menuitem', { name: 'Priority' }).hover()
+    await page.getByRole('menuitemcheckbox', { name: 'High' }).click()
+    await expect.poll(async () => (await getIssue(api, user, two.id)).priority).toBe(2)
+    await expect(issueList(page)).toBeFocused()
+    await expect(issueList(page)).toHaveAttribute('aria-activedescendant', new RegExp(two.id))
+    await page.keyboard.press('p')
+    await expect(page.getByRole('combobox', { name: 'Priority' })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('combobox', { name: 'Priority' })).toBeHidden()
+    await expect(issueList(page)).toBeFocused()
+
+    // Cmd+Backspace, then cancel: J/K still work.
+    await page.keyboard.press('k')
+    await expect(issueList(page)).toHaveAttribute('aria-activedescendant', new RegExp(one.id))
+    await page.keyboard.press('ControlOrMeta+Backspace')
+    await expect(page.getByRole('alertdialog')).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('alertdialog')).toBeHidden()
+    await expect(issueList(page)).toBeFocused()
+
+    // Cmd+Backspace, then Delete: the list has the keyboard again.
+    await page.keyboard.press('ControlOrMeta+Backspace')
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click()
+    await expect(row(page, 'Menu one')).toBeHidden()
+    await expect.poll(async () => (await listIssues(api, user, workspace.id)).total).toBe(2)
+    await expect(issueList(page)).toBeFocused()
+    await page.keyboard.press('j')
+    await expect(issueList(page)).toHaveAttribute('aria-activedescendant', /.+/)
+  })
+
   test('my issues shows assigned, created and subscribed issues (ISS-13)', async ({
     api,
     user,

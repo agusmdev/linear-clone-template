@@ -57,6 +57,7 @@ export function IssueContextMenu({ issue, children }: { issue: Issue; children: 
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
       <ContextMenuContent
         className="w-56"
+        onCloseAutoFocus={view.onPickerCloseAutoFocus}
         onClick={event => event.stopPropagation()}
         onPointerDown={event => event.stopPropagation()}
         onKeyDown={event => event.stopPropagation()}

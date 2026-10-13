@@ -142,8 +142,9 @@ export function IssuesView({
 
   const containerRef = useRef<HTMLDivElement>(null)
   const listbox = () => containerRef.current?.querySelector<HTMLElement>('[role="listbox"]')
-  // A row picker closed: focus goes back to the list (not to the row's trigger
-  // button, which can also be gone when the issue moved to another group).
+  // A row picker, the context menu or the delete dialog closed: focus goes back
+  // to the list so J/K/S/P/A keep working (not to the row's trigger button,
+  // which can also be gone when the issue moved to another group or was deleted).
   const onPickerCloseAutoFocus = (event: Event) => {
     const list = listbox()
     if (!list) return
@@ -486,6 +487,7 @@ export function IssuesView({
         <DeleteIssuesDialog
           issues={deleteTargets}
           pending={actions.isDeleting}
+          onCloseAutoFocus={onPickerCloseAutoFocus}
           onCancel={() => setDeleteTargets([])}
           onConfirm={() =>
             actions.deleteIssues(deleteTargets, () => {
