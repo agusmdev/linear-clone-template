@@ -68,6 +68,7 @@ import {
   useUpdateComment,
   useUpdateIssueDetail,
 } from '@/hooks/useIssueDetail'
+import { useIssueHref } from '@/hooks/useIssueHref'
 import { useTeamStates } from '@/hooks/useWorkspace'
 import { toastApiError } from '@/lib/error-handler'
 import { openCreateIssue } from '@/lib/issue-events'
@@ -177,7 +178,7 @@ function IssueDetail({ issue }: { issue: Issue }) {
     })
   )
 
-  const renderIssueHref = (identifier: string) => issuePath(identifier)
+  const renderIssueHref = useIssueHref()
   const onIssueClick = (identifier: string, event: IssueLinkClick) => {
     if (event.metaKey || event.ctrlKey) return
     event.preventDefault()
