@@ -180,6 +180,20 @@ def test_create_cycle_validation(owner: RegisteredUser, ws: dict[str, Any]) -> N
     )
 
 
+def test_blank_cycle_name_is_stored_as_no_name(
+    owner: RegisteredUser, ws: dict[str, Any]
+) -> None:
+    team_id = ws["team"]["id"]
+    blank = create_cycle(owner.client, team_id, _day(0), _day(6), name="   ")
+    assert blank["name"] is None
+    named = create_cycle(owner.client, team_id, _day(7), _day(13), name=" Sprint ")
+    assert named["name"] == "Sprint"
+
+    response = owner.client.patch(f"/cycles/{named['id']}", json={"name": " \t "})
+    assert response.status_code == 200, response.text
+    assert response.json()["name"] is None
+
+
 def test_progress_counts_issues_by_state_type(
     owner: RegisteredUser, ws: dict[str, Any]
 ) -> None:
