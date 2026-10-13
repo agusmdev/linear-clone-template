@@ -148,6 +148,14 @@ class IssueRelation(TimestampMixin, Base):
         str_enum(IssueRelationType, "issue_relation_type")
     )
 
+    # Read-only, always loaded explicitly (IssueRelationRepository).
+    issue: Mapped[Issue] = relationship(
+        foreign_keys=[issue_id], lazy="raise_on_sql", viewonly=True
+    )
+    related_issue: Mapped[Issue] = relationship(
+        foreign_keys=[related_issue_id], lazy="raise_on_sql", viewonly=True
+    )
+
 
 class IssueSubscriber(TimestampMixin, Base):
     __tablename__ = "issue_subscriber"
@@ -179,6 +187,9 @@ class Comment(TimestampMixin, Base):
         DateTime(timezone=True), default=None
     )
 
+    # Read-only, always loaded explicitly (CommentRepository).
+    user: Mapped[User | None] = relationship(lazy="raise_on_sql", viewonly=True)
+
 
 class IssueActivityAction(enum.StrEnum):
     created = "created"
@@ -206,3 +217,6 @@ class IssueActivity(TimestampMixin, Base):
     field: Mapped[str | None] = mapped_column(String(64), default=None)
     from_value: Mapped[str | None] = mapped_column(Text, default=None)
     to_value: Mapped[str | None] = mapped_column(Text, default=None)
+
+    # Read-only, always loaded explicitly (IssueActivityRepository).
+    actor: Mapped[User | None] = relationship(lazy="raise_on_sql", viewonly=True)
