@@ -701,6 +701,10 @@ function StateEditor({
     try {
       await onSubmit(trimmed, color)
     } catch (err) {
+      if (err instanceof ApiError && err.code === 'duplicate_item') {
+        setError('A status with this name already exists')
+        return
+      }
       toastApiError(err, 'Could not save the status')
     } finally {
       setPending(false)

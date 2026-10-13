@@ -216,10 +216,20 @@ class TeamService(BaseService[Team]):
             raise NotFoundError(detail=detail) from err
         return state
 
+    async def _check_state_name_free(
+        self, team_id: uuid.UUID, name: str, state_id: uuid.UUID | None = None
+    ) -> None:
+        taken = await self.state_repo.get_by_name(team_id, name)
+        if taken is not None and taken.id != state_id:
+            raise DuplicateError(
+                detail=f"A status named '{name.strip()}' already exists in this team"
+            )
+
     async def create_state(
         self, team_id: uuid.UUID, data: WorkflowStateCreate, *, user_id: uuid.UUID
     ) -> WorkflowState:
         await self.get_for_manager(team_id, user_id=user_id)
+        await self._check_state_name_free(team_id, data.name)
         position = data.position
         if position is None:
             position = await self.state_repo.next_position(team_id)
@@ -228,7 +238,10 @@ class TeamService(BaseService[Team]):
     async def update_state(
         self, state_id: uuid.UUID, data: WorkflowStateUpdate, *, user_id: uuid.UUID
     ) -> WorkflowState:
-        await self._state_for_manager(state_id, user_id=user_id)
+        state = await self._state_for_manager(state_id, user_id=user_id)
+        name = data.model_dump(exclude_unset=True).get("name")
+        if name is not None:
+            await self._check_state_name_free(state.team_id, name, state_id)
         return await self.state_repo.update(state_id, data)
 
     async def delete_state(
