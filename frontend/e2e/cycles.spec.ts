@@ -132,6 +132,8 @@ test.describe('cycles page', () => {
     await createCycle(api, user, team.id, { starts_at: isoDay(0), ends_at: isoDay(13) })
 
     await page.goto(`/${workspace.url_key}/team/${team.key}/cycles`)
+    // The dialog takes its dates from the loaded list, so wait for the list first.
+    await expect(page.getByRole('link', { name: /Cycle 1/ })).toBeVisible()
     await page.getByRole('button', { name: 'New cycle' }).click()
     const dialog = page.getByRole('dialog', { name: 'New cycle' })
     await expect(dialog.getByLabel('Name (optional)')).toHaveAttribute('placeholder', 'Cycle 2')

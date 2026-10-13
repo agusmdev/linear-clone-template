@@ -219,6 +219,13 @@ function FilterChip({
 function SearchBox({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   const [text, setText] = useState(value)
   const debounced = useDebounce(text, 250)
+  // When `value` changes from outside (e.g. "Clear filters", back/forward),
+  // show it in the box. A change that this box sent equals `debounced`.
+  const [syncedValue, setSyncedValue] = useState(value)
+  if (value !== syncedValue) {
+    setSyncedValue(value)
+    if (value !== debounced) setText(value)
+  }
 
   useEffect(() => {
     if (debounced !== value) onChange(debounced)
