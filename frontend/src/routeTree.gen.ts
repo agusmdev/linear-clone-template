@@ -16,6 +16,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as OauthErrorRouteImport } from './routes/oauth/error'
 import { Route as OauthCallbackRouteImport } from './routes/oauth/callback'
 import { Route as AuthedItemsRouteImport } from './routes/_authed/items'
+import { Route as AuthedWorkspaceKeyRouteImport } from './routes/_authed/$workspaceKey'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -51,11 +52,17 @@ const AuthedItemsRoute = AuthedItemsRouteImport.update({
   path: '/items',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedWorkspaceKeyRoute = AuthedWorkspaceKeyRouteImport.update({
+  id: '/$workspaceKey',
+  path: '/$workspaceKey',
+  getParentRoute: () => AuthedRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/$workspaceKey': typeof AuthedWorkspaceKeyRoute
   '/items': typeof AuthedItemsRoute
   '/oauth/callback': typeof OauthCallbackRoute
   '/oauth/error': typeof OauthErrorRoute
@@ -64,6 +71,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/$workspaceKey': typeof AuthedWorkspaceKeyRoute
   '/items': typeof AuthedItemsRoute
   '/oauth/callback': typeof OauthCallbackRoute
   '/oauth/error': typeof OauthErrorRoute
@@ -74,6 +82,7 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/_authed/$workspaceKey': typeof AuthedWorkspaceKeyRoute
   '/_authed/items': typeof AuthedItemsRoute
   '/oauth/callback': typeof OauthCallbackRoute
   '/oauth/error': typeof OauthErrorRoute
@@ -84,6 +93,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/register'
+    | '/$workspaceKey'
     | '/items'
     | '/oauth/callback'
     | '/oauth/error'
@@ -92,6 +102,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/register'
+    | '/$workspaceKey'
     | '/items'
     | '/oauth/callback'
     | '/oauth/error'
@@ -101,6 +112,7 @@ export interface FileRouteTypes {
     | '/_authed'
     | '/login'
     | '/register'
+    | '/_authed/$workspaceKey'
     | '/_authed/items'
     | '/oauth/callback'
     | '/oauth/error'
@@ -166,14 +178,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedItemsRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/$workspaceKey': {
+      id: '/_authed/$workspaceKey'
+      path: '/$workspaceKey'
+      fullPath: '/$workspaceKey'
+      preLoaderRoute: typeof AuthedWorkspaceKeyRouteImport
+      parentRoute: typeof AuthedRoute
+    }
   }
 }
 
 interface AuthedRouteChildren {
+  AuthedWorkspaceKeyRoute: typeof AuthedWorkspaceKeyRoute
   AuthedItemsRoute: typeof AuthedItemsRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
+  AuthedWorkspaceKeyRoute: AuthedWorkspaceKeyRoute,
   AuthedItemsRoute: AuthedItemsRoute,
 }
 
