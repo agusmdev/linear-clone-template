@@ -11,11 +11,28 @@ import type {
 } from '@/types/document'
 import type { Page } from '@/types/page'
 
-/** GET /documents: one page of a workspace's documents (default: newest edit first). */
+const PAGE_SIZE = 100
+/** Safety cap: 20 pages of 100 documents. */
+const MAX_PAGES = 20
+
+/** Every page of GET /documents for `params`, flattened. */
+async function fetchAllDocuments(params: DocumentsParams): Promise<DocumentSummary[]> {
+  const items: DocumentSummary[] = []
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const result = await api.get<Page<DocumentSummary>>(
+      buildDocumentsListUrl({ ...params, page, size: PAGE_SIZE })
+    )
+    items.push(...result.items)
+    if (page >= result.pages) break
+  }
+  return items
+}
+
+/** GET /documents: every page of a workspace's documents (default: newest edit first). */
 export function useDocuments(params: DocumentsParams, enabled = true) {
   return useQuery({
     queryKey: queryKeys.documents.list(params),
-    queryFn: () => api.get<Page<DocumentSummary>>(buildDocumentsListUrl(params)),
+    queryFn: () => fetchAllDocuments(params),
     enabled,
     // Keep the current rows while a new search loads (no flicker, no focus loss).
     placeholderData: keepPreviousData,

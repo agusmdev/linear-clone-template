@@ -86,6 +86,24 @@ test.describe('documents list', () => {
     await expect(rows.first()).toContainText('Rich doc')
   })
 
+  test('lists every document, past the first page of 100', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    // The oldest edit is listed last, so it is only on the second page.
+    for (let i = 0; i < 101; i++) {
+      await createDocument(api, user, { workspace_id: workspace.id, title: `Doc ${i}` })
+    }
+
+    await page.goto(`/${workspace.url_key}/documents`)
+
+    const rows = page.getByRole('list', { name: 'Documents' }).getByRole('link')
+    await expect(rows).toHaveCount(101)
+    await expect(rows.last()).toContainText('Doc 0')
+  })
+
   test('"New document" creates an Untitled document and opens it', async ({
     api,
     user,
@@ -404,6 +422,53 @@ test.describe('document editor', () => {
     await expect(page).toHaveURL(`/${workspace.url_key}/documents`)
     await expect(favorites).toHaveCount(1)
     await expect(favorites.first()).toContainText('Final plan')
+  })
+
+  test('a long title wraps, and a pasted line break becomes a space', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    const workspace = await createWorkspace(api, user)
+    const longTitle = 'A rather long document title that cannot fit on one phone line'
+    const doc = await createDocument(api, user, { workspace_id: workspace.id, title: longTitle })
+    await page.goto(`/${workspace.url_key}/document/${doc.id}`)
+
+    const title = page.getByLabel('Document title')
+    await expect(title).toHaveValue(longTitle)
+    // Every word is on screen: the title grows to more lines instead of scrolling.
+    const box = await title.boundingBox()
+    if (!box) throw new Error('title is not laid out')
+    expect(box.height).toBeGreaterThan(60)
+    expect(await title.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+
+    await title.fill('')
+    await title.pressSequentially('Line one')
+    await page.keyboard.insertText('\nline two')
+    await expect(title).toHaveValue('Line one line two')
+    await title.press('Enter')
+    await expect(page.getByLabel('Document content')).toBeFocused()
+    await expect
+      .poll(async () => (await (await fetchDocument(api, user, doc.id)).json()).title)
+      .toBe('Line one line two')
+  })
+
+  test('a document of another workspace is not opened under this one', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const other = await createWorkspace(api, user, { name: 'Other' })
+    const doc = await createDocument(api, user, { workspace_id: other.id, title: 'Elsewhere' })
+
+    await page.goto(`/${workspace.url_key}/document/${doc.id}`)
+    await expect(page.getByText('Document not found')).toBeVisible()
+    await expect(page.getByLabel('Document title')).toHaveCount(0)
+
+    await page.goto(`/${other.url_key}/document/${doc.id}`)
+    await expect(page.getByLabel('Document title')).toHaveValue('Elsewhere')
   })
 
   test('shows "Document not found" for a missing document', async ({

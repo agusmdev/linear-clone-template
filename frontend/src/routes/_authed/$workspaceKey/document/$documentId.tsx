@@ -35,7 +35,7 @@ export const Route = createFileRoute('/_authed/$workspaceKey/document/$documentI
 
 function DocumentPage() {
   const { documentId } = Route.useParams()
-  const { path } = useCurrentWorkspace()
+  const { workspace, path } = useCurrentWorkspace()
   const query = useDocument(documentId)
 
   if (query.isPending) {
@@ -54,7 +54,9 @@ function DocumentPage() {
     )
   }
 
-  if (query.isError) {
+  // A document of another workspace (a link with the wrong URL key) is not shown
+  // here: its projects, issue links and favorites belong to its own workspace.
+  if (query.isError || query.data.workspace_id !== workspace.id) {
     return (
       <div className="flex min-h-full flex-col">
         <PageHeader
@@ -249,9 +251,11 @@ function DocumentEditor({ document }: { document: Document }) {
             </button>
           }
         />
-        <input
+        {/* A textarea so a long title wraps; it stays one line (no line breaks). */}
+        <textarea
+          rows={1}
           value={title}
-          onChange={event => setTitle(event.target.value)}
+          onChange={event => setTitle(event.target.value.replace(/\s*[\r\n]+\s*/g, ' '))}
           onBlur={() => titleSave.flush()}
           onKeyDown={event => {
             if (event.key === 'Enter') {
@@ -266,7 +270,7 @@ function DocumentEditor({ document }: { document: Document }) {
           placeholder="Untitled"
           aria-label="Document title"
           maxLength={255}
-          className="w-full bg-transparent text-[28px] leading-tight font-semibold text-foreground outline-none placeholder:text-text-tertiary"
+          className="field-sizing-content w-full resize-none bg-transparent [overflow-wrap:anywhere] text-[28px] leading-tight font-semibold text-foreground outline-none placeholder:text-text-tertiary"
         />
         <RichTextEditor
           value={content}
