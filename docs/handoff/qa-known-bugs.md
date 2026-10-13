@@ -123,6 +123,21 @@ Bugs found by earlier QA rounds. Do not re-report one unless it still reproduces
 - inbox-search: the inbox preview showed an outdated copy of the issue after a teammate changed it
 - create-issue: the parent picker (and issue list search) only matched the exact phrase (now any word order)
 
+## Round 9 and journey QA (all fixed)
+
+- issues-list: the J/K-focused row scrolled under the sticky group header or the bulk bar
+- issue-detail: a checklist in a posted comment could be ticked but was never saved (read-only checkboxes are now disabled)
+- create-issue: Cmd+K Enter ran a weak command match instead of the top search result ("login" logged out)
+- create-issue: the "Save issue as draft?" prompt did not take keyboard focus
+- journey: New issue preselected a team the user had not joined
+- journey: C on My issues > Assigned created an unassigned issue
+- journey: Cmd+K "Create new document" ignored the current project/team page
+- journey: board drops into an empty column only worked near its centre; reorder in a scrolled board auto-scrolled into another column
+- journey: project Issues tab count left out canceled issues; L did nothing on an issue with no labels
+- journey: opening an issue from a "commented" notification did not show the new comment
+- journey: double-clicking Delete in the Delete document dialog showed a false error
+- journey (in progress): keyboard focus after dialogs, G then P/S hijacked by row pickers, Ctrl+K toggle on Windows/Linux, Esc on the issue page
+
 ## Known and accepted (not bugs to re-report)
 
 - A tab left open after another admin removes you shows "Workspace <id> not found".
@@ -136,7 +151,7 @@ Bugs found by earlier QA rounds. Do not re-report one unless it still reproduces
 - Pressing Enter several times within one frame in the inline sub-issue input can create duplicates.
 - An issue already related to another issue cannot get a second relation type with that issue.
 - The label picker has no "create label" option (labels are managed in Settings).
-- A card grabbed far from its centre and dropped left of an empty column's centre can land in the next column.
 - A member removed from a workspace stays subscribed to its issues (notifications reappear if re-added).
 - Search shows a generic box instead of a project's own icon.
 - Search shows at most 25 results per type.
+- Tab inside a code block moves focus out of the editor.
