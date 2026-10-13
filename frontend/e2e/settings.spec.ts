@@ -171,6 +171,19 @@ test.describe('workspace settings', () => {
     expect(updated).toMatchObject({ name: 'New Name', url_key: newKey })
   })
 
+  test('settings refuse a URL that is an app route', async ({ authedPage: page, api, user }) => {
+    const workspace = await createWorkspace(api, user)
+    await page.goto(`/${workspace.url_key}/settings`)
+
+    await page.getByLabel('Workspace URL').fill('login')
+    await page.getByRole('button', { name: 'Save changes' }).click()
+
+    await expect(page.getByText('This URL is reserved')).toBeVisible()
+    await expect(page).toHaveURL(`/${workspace.url_key}/settings`)
+    const [unchanged] = await listWorkspaces(api, user)
+    expect(unchanged.url_key).toBe(workspace.url_key)
+  })
+
   test('an admin deletes the workspace after typing its name', async ({
     authedPage: page,
     api,
