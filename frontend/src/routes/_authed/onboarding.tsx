@@ -196,8 +196,11 @@ function OnboardingPage() {
                     >
                       <WorkspaceLogo name={workspace.name} size="md" />
                       <span className="min-w-0 flex-1 truncate font-medium">{workspace.name}</span>
-                      <span className="text-mini text-text-tertiary">/{workspace.url_key}</span>
-                      <ArrowRight className="size-4 text-text-tertiary" />
+                      {/* A long URL key truncates too, so it never hides the name. */}
+                      <span className="max-w-[45%] min-w-0 truncate text-mini text-text-tertiary">
+                        /{workspace.url_key}
+                      </span>
+                      <ArrowRight className="size-4 shrink-0 text-text-tertiary" />
                     </Link>
                   </li>
                 ))}
