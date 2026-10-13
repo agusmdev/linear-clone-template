@@ -333,9 +333,9 @@ DOC-7 (issue mentions): the client renders `ENG-12` text as a link to
 | Status | Method | Path | Body | Response |
 |---|---|---|---|---|
 | IMPLEMENTED | GET | `/workspaces/{workspace_id}/projects?status=&team_id=` | – | `Project[]` (by `sort_order`; `team_id` = projects that have this team) |
-| IMPLEMENTED | POST | `/projects` | `{workspace_id, name, description?, status?, lead_id?, start_date?, target_date?, color?, icon?, team_ids?}` | 201 `Project` (`sort_order` = after the last project; lead must be a member and teams in the workspace, else 400 `invalid_reference`) |
+| IMPLEMENTED | POST | `/projects` | `{workspace_id, name, description?, status?, lead_id?, start_date?, target_date?, color?, icon?, team_ids?}` | 201 `Project` (`sort_order` = after the last project; lead must be a member and teams in the workspace, else 400 `invalid_reference`; `target_date` before `start_date` is 422 `validation_error` on `target_date`) |
 | IMPLEMENTED | GET | `/projects/{project_id}` | – | `Project` |
-| IMPLEMENTED | PATCH | `/projects/{project_id}` | any field of POST except `workspace_id`, plus `sort_order` (`team_ids` replaces) | `Project` |
+| IMPLEMENTED | PATCH | `/projects/{project_id}` | any field of POST except `workspace_id`, plus `sort_order` (`team_ids` replaces) | `Project` (a sent date is compared with the stored other date: `target_date` before `start_date` is 422 `validation_error`) |
 | IMPLEMENTED | DELETE | `/projects/{project_id}` | – | 204 (issues and documents keep existing, `project_id = null`) |
 
 Project issues: `GET /issues?workspace_id=..&project_id=..`. Project documents: `GET /documents?workspace_id=..&project_id=..`.

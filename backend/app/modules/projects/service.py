@@ -6,7 +6,7 @@ the workspace and the teams must be teams of the workspace, else 400
 ``invalid_reference``. Responses embed the lead, the teams and the issue
 progress (completed / total; canceled and archived issues are not counted).
 The target date must not be before the start date (also after a PATCH that
-sends only one of them), else 400 ``invalid_project_dates``.
+sends only one of them), else 422 ``validation_error``.
 """
 
 import uuid

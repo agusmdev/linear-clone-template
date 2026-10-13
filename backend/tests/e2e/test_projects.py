@@ -275,6 +275,15 @@ def test_invalid_references(
     )
 
 
+DATES_ERROR = [
+    {
+        "loc": ["body", "target_date"],
+        "msg": "The target date must not be before the start date",
+        "type": "value_error",
+    }
+]
+
+
 def test_target_date_must_not_be_before_start_date(
     owner: RegisteredUser, ws: dict[str, Any]
 ) -> None:
@@ -290,8 +299,9 @@ def test_target_date_must_not_be_before_start_date(
                 "target_date": "2026-01-01",
             },
         ),
-        400,
-        "invalid_project_dates",
+        422,
+        "validation_error",
+        DATES_ERROR,
     )
 
     # The same day is a valid range.
@@ -307,20 +317,23 @@ def test_target_date_must_not_be_before_start_date(
     # A PATCH with one date is compared with the stored other date.
     assert_error(
         owner.client.patch(url, json={"target_date": "2026-12-01"}),
-        400,
-        "invalid_project_dates",
+        422,
+        "validation_error",
+        DATES_ERROR,
     )
     assert_error(
         owner.client.patch(url, json={"start_date": "2027-04-01"}),
-        400,
-        "invalid_project_dates",
+        422,
+        "validation_error",
+        DATES_ERROR,
     )
     assert_error(
         owner.client.patch(
             url, json={"start_date": "2027-05-01", "target_date": "2027-04-01"}
         ),
-        400,
-        "invalid_project_dates",
+        422,
+        "validation_error",
+        DATES_ERROR,
     )
     stored = owner.client.get(url).json()
     assert stored["start_date"] == "2027-03-01"

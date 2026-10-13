@@ -160,16 +160,38 @@ interface DatePickerProps {
   label: string
   value: string | null
   onChange: (date: string | null) => void
+  /** Earliest allowed date (`YYYY-MM-DD`), e.g. the start date for the target. */
+  min?: string | null
+  /** Latest allowed date (`YYYY-MM-DD`), e.g. the target date for the start. */
+  max?: string | null
   className?: string
 }
 
-/** A chip that opens a date input; "Clear" sets null. */
-export function ProjectDatePicker({ label, value, onChange, className }: DatePickerProps) {
+/**
+ * A chip that opens a date input; "Clear" sets null. A date outside
+ * `min`..`max` is not sent: the popover shows why instead.
+ */
+export function ProjectDatePicker({
+  label,
+  value,
+  onChange,
+  min,
+  max,
+  className,
+}: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
   const id = React.useId()
+  const errorId = `${id}-error`
   const shown = formatProjectDate(value)
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={next => {
+        setOpen(next)
+        if (!next) setError(null)
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -190,11 +212,30 @@ export function ProjectDatePicker({ label, value, onChange, className }: DatePic
           id={id}
           type="date"
           value={value ?? ''}
+          min={min ?? undefined}
+          max={max ?? undefined}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
           onChange={event => {
+            const date = event.target.value
             // An unfinished date gives "": wait for a full date (Clear empties it).
-            if (event.target.value) onChange(event.target.value)
+            if (!date) return
+            // ISO dates compare as strings.
+            if (min && date < min) {
+              setError('The target date must not be before the start date')
+            } else if (max && date > max) {
+              setError('The start date must not be after the target date')
+            } else {
+              setError(null)
+              onChange(date)
+            }
           }}
         />
+        {error ? (
+          <p id={errorId} role="alert" className="text-mini text-destructive">
+            {error}
+          </p>
+        ) : null}
         {value ? (
           <Button
             type="button"

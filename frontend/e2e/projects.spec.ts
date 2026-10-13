@@ -206,6 +206,66 @@ test('edits a project inline and autosaves the description', async ({
   await expect.poll(async () => (await getProject(api, user, project.id))?.target_date).toBeNull()
 })
 
+test('the project page keeps the target date on or after the start date', async ({
+  authedPage: page,
+  api,
+  user,
+}) => {
+  const workspace = await createWorkspace(api, user)
+  const project = await createProject(api, user, {
+    workspace_id: workspace.id,
+    name: 'Launch',
+    start_date: '2027-03-01',
+    target_date: '2027-03-31',
+  })
+  await page.goto(`/${workspace.url_key}/project/${project.id}`)
+
+  // A target date before the start date is refused in the picker.
+  await page.getByRole('button', { name: /Target date: Mar 31/ }).click()
+  const target = page.getByLabel('Target date', { exact: true })
+  await expect(target).toHaveAttribute('min', '2027-03-01')
+  await target.fill('2027-02-01')
+  await expect(page.getByRole('alert')).toHaveText(
+    'The target date must not be before the start date'
+  )
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('button', { name: /Target date: Mar 31/ })).toBeVisible()
+
+  // So is a start date after the target date.
+  await page.getByRole('button', { name: /Start date: Mar 1/ }).click()
+  const start = page.getByLabel('Start date', { exact: true })
+  await expect(start).toHaveAttribute('max', '2027-03-31')
+  await start.fill('2027-04-15')
+  await expect(page.getByRole('alert')).toHaveText(
+    'The start date must not be after the target date'
+  )
+  // The same day is allowed.
+  await start.fill('2027-03-31')
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('button', { name: /Start date: Mar 31/ })).toBeVisible()
+  await expect
+    .poll(async () => (await getProject(api, user, project.id))?.start_date)
+    .toBe('2027-03-31')
+  expect((await getProject(api, user, project.id))?.target_date).toBe('2027-03-31')
+
+  // The backend refuses it too: here the start date moved after the page loaded.
+  await updateProject(api, user, project.id, {
+    start_date: '2027-05-01',
+    target_date: '2027-05-31',
+  })
+  await page.getByRole('button', { name: /Target date: Mar 31/ }).click()
+  await page.getByLabel('Target date', { exact: true }).fill('2027-04-10')
+  await expect(page.getByText('Could not update project')).toBeVisible()
+  await expect(
+    page.getByText('target_date: The target date must not be before the start date')
+  ).toBeVisible()
+  expect(await getProject(api, user, project.id)).toMatchObject({
+    start_date: '2027-05-01',
+    target_date: '2027-05-31',
+  })
+})
+
 test('shows progress and the issues of a project; New issue opens the create modal', async ({
   authedPage: page,
   api,
