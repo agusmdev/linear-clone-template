@@ -1,3 +1,4 @@
+import type { DocumentsParams } from '@/types/document'
 import type { IssuesParams } from '@/types/issue'
 import type { ItemsParams } from '@/types/item'
 import type { NotificationsParams } from '@/types/notification'
@@ -40,6 +41,16 @@ export const API = {
     MARK_ALL_READ: '/notifications/mark-all-read',
     DETAIL: (id: string) => `/notifications/${id}`,
   },
+  CYCLES: {
+    TEAM: (teamId: string) => `/teams/${teamId}/cycles`,
+    DETAIL: (cycleId: string) => `/cycles/${cycleId}`,
+    COMPLETE: (cycleId: string) => `/cycles/${cycleId}/complete`,
+  },
+  DOCUMENTS: {
+    LIST: '/documents',
+    CREATE: '/documents',
+    DETAIL: (id: string) => `/documents/${id}`,
+  },
 } as const
 
 /** Makes `%`, `_` and `\` match themselves in an ILIKE pattern (backslash is Postgres' default escape). */
@@ -79,4 +90,18 @@ export function buildNotificationsListUrl(params: NotificationsParams): string {
     queryParams.append(key, String(value))
   }
   return `${API.NOTIFICATIONS.LIST}?${queryParams.toString()}`
+}
+
+/** Builds the GET /documents URL (default order: most recently updated first). */
+export function buildDocumentsListUrl(params: DocumentsParams): string {
+  const queryParams = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '') continue
+    if (Array.isArray(value)) {
+      if (value.length > 0) queryParams.append(key, value.join(','))
+    } else {
+      queryParams.append(key, String(value))
+    }
+  }
+  return `${API.DOCUMENTS.LIST}?${queryParams.toString()}`
 }

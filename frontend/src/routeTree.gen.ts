@@ -18,6 +18,10 @@ import { Route as OauthCallbackRouteImport } from './routes/oauth/callback'
 import { Route as AuthedItemsRouteImport } from './routes/_authed/items'
 import { Route as AuthedWorkspaceKeyRouteImport } from './routes/_authed/$workspaceKey'
 import { Route as AuthedWorkspaceKeyInboxRouteImport } from './routes/_authed/$workspaceKey/inbox'
+import { Route as AuthedWorkspaceKeyDocumentsRouteImport } from './routes/_authed/$workspaceKey/documents'
+import { Route as AuthedWorkspaceKeyDocumentDocumentIdRouteImport } from './routes/_authed/$workspaceKey/document/$documentId'
+import { Route as AuthedWorkspaceKeyTeamTeamKeyCyclesRouteImport } from './routes/_authed/$workspaceKey/team/$teamKey/cycles'
+import { Route as AuthedWorkspaceKeyTeamTeamKeyCycleCycleIdRouteImport } from './routes/_authed/$workspaceKey/team/$teamKey/cycle/$cycleId'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -63,6 +67,30 @@ const AuthedWorkspaceKeyInboxRoute = AuthedWorkspaceKeyInboxRouteImport.update({
   path: '/inbox',
   getParentRoute: () => AuthedWorkspaceKeyRoute,
 } as any)
+const AuthedWorkspaceKeyDocumentsRoute =
+  AuthedWorkspaceKeyDocumentsRouteImport.update({
+    id: '/documents',
+    path: '/documents',
+    getParentRoute: () => AuthedWorkspaceKeyRoute,
+  } as any)
+const AuthedWorkspaceKeyDocumentDocumentIdRoute =
+  AuthedWorkspaceKeyDocumentDocumentIdRouteImport.update({
+    id: '/document/$documentId',
+    path: '/document/$documentId',
+    getParentRoute: () => AuthedWorkspaceKeyRoute,
+  } as any)
+const AuthedWorkspaceKeyTeamTeamKeyCyclesRoute =
+  AuthedWorkspaceKeyTeamTeamKeyCyclesRouteImport.update({
+    id: '/team/$teamKey/cycles',
+    path: '/team/$teamKey/cycles',
+    getParentRoute: () => AuthedWorkspaceKeyRoute,
+  } as any)
+const AuthedWorkspaceKeyTeamTeamKeyCycleCycleIdRoute =
+  AuthedWorkspaceKeyTeamTeamKeyCycleCycleIdRouteImport.update({
+    id: '/team/$teamKey/cycle/$cycleId',
+    path: '/team/$teamKey/cycle/$cycleId',
+    getParentRoute: () => AuthedWorkspaceKeyRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -72,7 +100,11 @@ export interface FileRoutesByFullPath {
   '/items': typeof AuthedItemsRoute
   '/oauth/callback': typeof OauthCallbackRoute
   '/oauth/error': typeof OauthErrorRoute
+  '/$workspaceKey/documents': typeof AuthedWorkspaceKeyDocumentsRoute
   '/$workspaceKey/inbox': typeof AuthedWorkspaceKeyInboxRoute
+  '/$workspaceKey/document/$documentId': typeof AuthedWorkspaceKeyDocumentDocumentIdRoute
+  '/$workspaceKey/team/$teamKey/cycles': typeof AuthedWorkspaceKeyTeamTeamKeyCyclesRoute
+  '/$workspaceKey/team/$teamKey/cycle/$cycleId': typeof AuthedWorkspaceKeyTeamTeamKeyCycleCycleIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -82,7 +114,11 @@ export interface FileRoutesByTo {
   '/items': typeof AuthedItemsRoute
   '/oauth/callback': typeof OauthCallbackRoute
   '/oauth/error': typeof OauthErrorRoute
+  '/$workspaceKey/documents': typeof AuthedWorkspaceKeyDocumentsRoute
   '/$workspaceKey/inbox': typeof AuthedWorkspaceKeyInboxRoute
+  '/$workspaceKey/document/$documentId': typeof AuthedWorkspaceKeyDocumentDocumentIdRoute
+  '/$workspaceKey/team/$teamKey/cycles': typeof AuthedWorkspaceKeyTeamTeamKeyCyclesRoute
+  '/$workspaceKey/team/$teamKey/cycle/$cycleId': typeof AuthedWorkspaceKeyTeamTeamKeyCycleCycleIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -94,7 +130,11 @@ export interface FileRoutesById {
   '/_authed/items': typeof AuthedItemsRoute
   '/oauth/callback': typeof OauthCallbackRoute
   '/oauth/error': typeof OauthErrorRoute
+  '/_authed/$workspaceKey/documents': typeof AuthedWorkspaceKeyDocumentsRoute
   '/_authed/$workspaceKey/inbox': typeof AuthedWorkspaceKeyInboxRoute
+  '/_authed/$workspaceKey/document/$documentId': typeof AuthedWorkspaceKeyDocumentDocumentIdRoute
+  '/_authed/$workspaceKey/team/$teamKey/cycles': typeof AuthedWorkspaceKeyTeamTeamKeyCyclesRoute
+  '/_authed/$workspaceKey/team/$teamKey/cycle/$cycleId': typeof AuthedWorkspaceKeyTeamTeamKeyCycleCycleIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -106,7 +146,11 @@ export interface FileRouteTypes {
     | '/items'
     | '/oauth/callback'
     | '/oauth/error'
+    | '/$workspaceKey/documents'
     | '/$workspaceKey/inbox'
+    | '/$workspaceKey/document/$documentId'
+    | '/$workspaceKey/team/$teamKey/cycles'
+    | '/$workspaceKey/team/$teamKey/cycle/$cycleId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -116,7 +160,11 @@ export interface FileRouteTypes {
     | '/items'
     | '/oauth/callback'
     | '/oauth/error'
+    | '/$workspaceKey/documents'
     | '/$workspaceKey/inbox'
+    | '/$workspaceKey/document/$documentId'
+    | '/$workspaceKey/team/$teamKey/cycles'
+    | '/$workspaceKey/team/$teamKey/cycle/$cycleId'
   id:
     | '__root__'
     | '/'
@@ -127,7 +175,11 @@ export interface FileRouteTypes {
     | '/_authed/items'
     | '/oauth/callback'
     | '/oauth/error'
+    | '/_authed/$workspaceKey/documents'
     | '/_authed/$workspaceKey/inbox'
+    | '/_authed/$workspaceKey/document/$documentId'
+    | '/_authed/$workspaceKey/team/$teamKey/cycles'
+    | '/_authed/$workspaceKey/team/$teamKey/cycle/$cycleId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -204,15 +256,54 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedWorkspaceKeyInboxRouteImport
       parentRoute: typeof AuthedWorkspaceKeyRoute
     }
+    '/_authed/$workspaceKey/documents': {
+      id: '/_authed/$workspaceKey/documents'
+      path: '/documents'
+      fullPath: '/$workspaceKey/documents'
+      preLoaderRoute: typeof AuthedWorkspaceKeyDocumentsRouteImport
+      parentRoute: typeof AuthedWorkspaceKeyRoute
+    }
+    '/_authed/$workspaceKey/document/$documentId': {
+      id: '/_authed/$workspaceKey/document/$documentId'
+      path: '/document/$documentId'
+      fullPath: '/$workspaceKey/document/$documentId'
+      preLoaderRoute: typeof AuthedWorkspaceKeyDocumentDocumentIdRouteImport
+      parentRoute: typeof AuthedWorkspaceKeyRoute
+    }
+    '/_authed/$workspaceKey/team/$teamKey/cycles': {
+      id: '/_authed/$workspaceKey/team/$teamKey/cycles'
+      path: '/team/$teamKey/cycles'
+      fullPath: '/$workspaceKey/team/$teamKey/cycles'
+      preLoaderRoute: typeof AuthedWorkspaceKeyTeamTeamKeyCyclesRouteImport
+      parentRoute: typeof AuthedWorkspaceKeyRoute
+    }
+    '/_authed/$workspaceKey/team/$teamKey/cycle/$cycleId': {
+      id: '/_authed/$workspaceKey/team/$teamKey/cycle/$cycleId'
+      path: '/team/$teamKey/cycle/$cycleId'
+      fullPath: '/$workspaceKey/team/$teamKey/cycle/$cycleId'
+      preLoaderRoute: typeof AuthedWorkspaceKeyTeamTeamKeyCycleCycleIdRouteImport
+      parentRoute: typeof AuthedWorkspaceKeyRoute
+    }
   }
 }
 
 interface AuthedWorkspaceKeyRouteChildren {
+  AuthedWorkspaceKeyDocumentsRoute: typeof AuthedWorkspaceKeyDocumentsRoute
   AuthedWorkspaceKeyInboxRoute: typeof AuthedWorkspaceKeyInboxRoute
+  AuthedWorkspaceKeyDocumentDocumentIdRoute: typeof AuthedWorkspaceKeyDocumentDocumentIdRoute
+  AuthedWorkspaceKeyTeamTeamKeyCyclesRoute: typeof AuthedWorkspaceKeyTeamTeamKeyCyclesRoute
+  AuthedWorkspaceKeyTeamTeamKeyCycleCycleIdRoute: typeof AuthedWorkspaceKeyTeamTeamKeyCycleCycleIdRoute
 }
 
 const AuthedWorkspaceKeyRouteChildren: AuthedWorkspaceKeyRouteChildren = {
+  AuthedWorkspaceKeyDocumentsRoute: AuthedWorkspaceKeyDocumentsRoute,
   AuthedWorkspaceKeyInboxRoute: AuthedWorkspaceKeyInboxRoute,
+  AuthedWorkspaceKeyDocumentDocumentIdRoute:
+    AuthedWorkspaceKeyDocumentDocumentIdRoute,
+  AuthedWorkspaceKeyTeamTeamKeyCyclesRoute:
+    AuthedWorkspaceKeyTeamTeamKeyCyclesRoute,
+  AuthedWorkspaceKeyTeamTeamKeyCycleCycleIdRoute:
+    AuthedWorkspaceKeyTeamTeamKeyCycleCycleIdRoute,
 }
 
 const AuthedWorkspaceKeyRouteWithChildren =

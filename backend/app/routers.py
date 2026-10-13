@@ -2,6 +2,8 @@
 
 from fastapi import APIRouter
 
+from app.modules.cycles.routers import cycles_router
+from app.modules.documents.routers import documents_router
 from app.modules.issues.routers import issues_router
 from app.modules.items.routers import items_router
 from app.modules.labels.routers import labels_router
@@ -33,5 +35,7 @@ def get_app_router() -> APIRouter:
     router.include_router(labels_router)
     router.include_router(issues_router)
     router.include_router(notifications_router)
+    router.include_router(cycles_router)
+    router.include_router(documents_router)
 
     return router

@@ -1,0 +1,311 @@
+import { useId, useMemo, useState, type ReactNode } from 'react'
+import {
+  closestCorners,
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
+  type UniqueIdentifier,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { Plus } from 'lucide-react'
+
+import { cn } from '@/lib/utils'
+import {
+  buildMoveEvent,
+  toIdMap,
+  type BoardGroup,
+  type GroupedItems,
+  type MoveEvent,
+} from './types'
+
+export interface KanbanCardState {
+  /** True for the copy shown in the drag overlay. */
+  isOverlay: boolean
+}
+
+export interface KanbanBoardProps<T> {
+  columns: readonly BoardGroup[]
+  /** Items per column id, in display order. */
+  items: GroupedItems<T>
+  getItemId: (item: T) => string
+  renderCard: (item: T, state: KanbanCardState) => ReactNode
+  /** Fired once on drop when the card changed column or position. */
+  onMove?: (event: MoveEvent) => void
+  /** Shows a "+" button in each column header. */
+  onAddInColumn?: (columnId: string) => void
+  /** Column width in px. Default 348. */
+  columnWidth?: number
+  className?: string
+  'aria-label'?: string
+}
+
+const COLUMN_PREFIX = 'kanban-column:'
+
+type DragData = { type: 'column'; columnId: string } | { type: 'card' }
+
+/** Linear-style board: horizontal columns, sortable cards, cross-column drag. */
+export function KanbanBoard<T>({
+  columns,
+  items,
+  getItemId,
+  renderCard,
+  onMove,
+  onAddInColumn,
+  columnWidth = 348,
+  className,
+  'aria-label': ariaLabel = 'Board',
+}: KanbanBoardProps<T>) {
+  const dndId = useId()
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
+  const propIds = useMemo(() => toIdMap(columns, items, getItemId), [columns, items, getItemId])
+  const itemById = useMemo(() => {
+    const map = new Map<string, T>()
+    for (const column of columns) {
+      for (const item of items[column.id] ?? []) map.set(getItemId(item), item)
+    }
+    return map
+  }, [columns, items, getItemId])
+
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const [originColumnId, setOriginColumnId] = useState<string | null>(null)
+  // Live order while a drag runs; null when idle (props are the source of truth).
+  const [dragIds, setDragIds] = useState<Record<string, string[]> | null>(null)
+  const ids = dragIds ?? propIds
+
+  const findColumn = (id: UniqueIdentifier, map: Record<string, string[]>): string | null => {
+    const key = String(id)
+    if (key.startsWith(COLUMN_PREFIX)) return key.slice(COLUMN_PREFIX.length)
+    for (const [columnId, columnIds] of Object.entries(map)) {
+      if (columnIds.includes(key)) return columnId
+    }
+    return null
+  }
+
+  const reset = () => {
+    setActiveId(null)
+    setOriginColumnId(null)
+    setDragIds(null)
+  }
+
+  const handleDragStart = ({ active }: DragStartEvent) => {
+    const id = String(active.id)
+    setActiveId(id)
+    setOriginColumnId(findColumn(id, propIds))
+    setDragIds(propIds)
+  }
+
+  const handleDragOver = ({ active, over }: DragOverEvent) => {
+    if (!over) return
+    const activeKey = String(active.id)
+    const overIsColumn = (over.data.current as DragData | undefined)?.type === 'column'
+    const translated = active.rect.current.translated
+    const below = translated !== null && translated.top > over.rect.top + over.rect.height / 2
+
+    setDragIds(prev => {
+      if (!prev) return prev
+      const from = findColumn(active.id, prev)
+      const to = findColumn(over.id, prev)
+      if (!from || !to || from === to) return prev
+
+      const target = prev[to]
+      let index = target.length
+      if (!overIsColumn) {
+        const overIndex = target.indexOf(String(over.id))
+        index = overIndex >= 0 ? overIndex + (below ? 1 : 0) : target.length
+      }
+      return {
+        ...prev,
+        [from]: prev[from].filter(id => id !== activeKey),
+        [to]: [...target.slice(0, index), activeKey, ...target.slice(index)],
+      }
+    })
+  }
+
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    const map = dragIds
+    const origin = originColumnId
+    reset()
+    if (!over || !map || !origin) return
+
+    const activeKey = String(active.id)
+    const column = findColumn(active.id, map)
+    if (!column) return
+
+    let finalIds = map[column]
+    const overKey = String(over.id)
+    if (findColumn(over.id, map) === column && !overKey.startsWith(COLUMN_PREFIX)) {
+      const oldIndex = finalIds.indexOf(activeKey)
+      const newIndex = finalIds.indexOf(overKey)
+      if (oldIndex !== newIndex) finalIds = arrayMove(finalIds, oldIndex, newIndex)
+    }
+
+    const originalIndex = propIds[origin]?.indexOf(activeKey) ?? -1
+    const finalIndex = finalIds.indexOf(activeKey)
+    if (column === origin && finalIndex === originalIndex) return
+    onMove?.(buildMoveEvent(activeKey, origin, column, finalIds))
+  }
+
+  const activeItem = activeId ? itemById.get(activeId) : undefined
+
+  return (
+    <DndContext
+      id={dndId}
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+      onDragCancel={reset}
+    >
+      <div
+        role="region"
+        aria-label={ariaLabel}
+        className={cn(
+          'flex h-full min-h-0 gap-3 overflow-auto px-3 pb-3 text-[13px]',
+          'bg-[var(--background,#0f1011)] text-[var(--foreground,#f7f8f8)]',
+          className
+        )}
+      >
+        {columns.map(column => (
+          <KanbanColumn
+            key={column.id}
+            column={column}
+            ids={ids[column.id] ?? []}
+            itemById={itemById}
+            renderCard={renderCard}
+            onAdd={onAddInColumn}
+            width={columnWidth}
+            disabled={!onMove}
+          />
+        ))}
+      </div>
+      <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.2, 0, 0, 1)' }}>
+        {activeItem !== undefined ? (
+          <div className="cursor-grabbing rotate-[1.5deg] shadow-2xl shadow-black/50">
+            {renderCard(activeItem, { isOverlay: true })}
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  )
+}
+
+interface KanbanColumnProps<T> {
+  column: BoardGroup
+  ids: string[]
+  itemById: Map<string, T>
+  renderCard: (item: T, state: KanbanCardState) => ReactNode
+  onAdd?: (columnId: string) => void
+  width: number
+  disabled: boolean
+}
+
+function KanbanColumn<T>({
+  column,
+  ids,
+  itemById,
+  renderCard,
+  onAdd,
+  width,
+  disabled,
+}: KanbanColumnProps<T>) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `${COLUMN_PREFIX}${column.id}`,
+    data: { type: 'column', columnId: column.id } satisfies DragData,
+    disabled,
+  })
+  const count = column.count ?? ids.length
+
+  return (
+    <section
+      aria-label={column.title}
+      className="flex shrink-0 flex-col"
+      style={{ width, minWidth: width }}
+    >
+      <header className="sticky top-0 z-10 flex h-11 items-center gap-2 bg-[var(--background,#0f1011)] px-1">
+        {column.icon ? <span className="flex size-4 items-center">{column.icon}</span> : null}
+        <span className="truncate font-medium">{column.title}</span>
+        <span className="text-[var(--muted-foreground,#8a8f98)] tabular-nums">{count}</span>
+        {onAdd ? (
+          <button
+            type="button"
+            onClick={() => onAdd(column.id)}
+            aria-label={`Add to ${column.title}`}
+            className="ml-auto rounded p-1 text-[var(--muted-foreground,#8a8f98)] hover:bg-white/5 hover:text-[var(--foreground,#f7f8f8)]"
+          >
+            <Plus className="size-4" />
+          </button>
+        ) : null}
+      </header>
+      <SortableContext id={column.id} items={ids} strategy={verticalListSortingStrategy}>
+        <div
+          ref={setNodeRef}
+          className={cn(
+            'flex min-h-24 flex-1 flex-col gap-2 rounded-md p-1 transition-colors',
+            isOver && 'bg-white/[0.03]'
+          )}
+        >
+          {ids.map(id => {
+            const item = itemById.get(id)
+            if (item === undefined) return null
+            return (
+              <SortableCard key={id} id={id} disabled={disabled}>
+                {renderCard(item, { isOverlay: false })}
+              </SortableCard>
+            )
+          })}
+        </div>
+      </SortableContext>
+    </section>
+  )
+}
+
+function SortableCard({
+  id,
+  disabled,
+  children,
+}: {
+  id: string
+  disabled: boolean
+  children: ReactNode
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+    data: { type: 'card' } satisfies DragData,
+    disabled,
+  })
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Translate.toString(transform), transition }}
+      className={cn(
+        'rounded-md outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary,#5e6ad2)]',
+        !disabled && 'cursor-grab',
+        isDragging && 'opacity-30'
+      )}
+      {...attributes}
+      {...listeners}
+    >
+      {children}
+    </div>
+  )
+}

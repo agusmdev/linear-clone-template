@@ -38,6 +38,13 @@ import {
 } from '@playwright/test'
 import { AUTH_TOKEN_KEY } from '../src/lib/auth'
 import type { AuthSessionResponse } from '../src/types/auth'
+import type {
+  CompleteCycleData,
+  CompleteCycleResult,
+  CreateCycleData,
+  Cycle,
+} from '../src/types/cycle'
+import type { CreateDocumentData, Document, DocumentSummary } from '../src/types/document'
 import type { CreateIssueData, Issue, UpdateIssueData } from '../src/types/issue'
 import type { CreateItemData, Item, ItemsResponse } from '../src/types/item'
 import type { Label } from '../src/types/label'
@@ -366,6 +373,92 @@ export async function markAllNotificationsRead(
   })
   await expectOk(response, 'POST /notifications/mark-all-read')
   return ((await response.json()) as { updated: number }).updated
+}
+
+// --- Cycles (CYC-1) ---------------------------------------------------------
+
+export async function createCycle(
+  api: APIRequestContext,
+  user: TestUser,
+  teamId: string,
+  data: CreateCycleData
+): Promise<Cycle> {
+  const response = await api.post(`/teams/${teamId}/cycles`, { data, headers: authHeaders(user) })
+  await expectOk(response, 'POST /teams/{id}/cycles')
+  return (await response.json()) as Cycle
+}
+
+export async function listCycles(
+  api: APIRequestContext,
+  user: TestUser,
+  teamId: string
+): Promise<Cycle[]> {
+  const response = await api.get(`/teams/${teamId}/cycles`, { headers: authHeaders(user) })
+  await expectOk(response, 'GET /teams/{id}/cycles')
+  return (await response.json()) as Cycle[]
+}
+
+/** GET /cycles/{id}; returns the raw response so a spec can check a 404 after a delete. */
+export function getCycleResponse(
+  api: APIRequestContext,
+  user: TestUser,
+  cycleId: string
+): Promise<APIResponse> {
+  return api.get(`/cycles/${cycleId}`, { headers: authHeaders(user) })
+}
+
+export async function completeCycle(
+  api: APIRequestContext,
+  user: TestUser,
+  cycleId: string,
+  data: CompleteCycleData = {}
+): Promise<CompleteCycleResult> {
+  const response = await api.post(`/cycles/${cycleId}/complete`, {
+    data,
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'POST /cycles/{id}/complete')
+  return (await response.json()) as CompleteCycleResult
+}
+
+/** Today (UTC, like the backend) plus `offset` days, as YYYY-MM-DD. */
+export function isoDay(offset = 0): string {
+  const now = new Date()
+  const day = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+  day.setUTCDate(day.getUTCDate() + offset)
+  return day.toISOString().slice(0, 10)
+}
+
+export async function createDocument(
+  api: APIRequestContext,
+  user: TestUser,
+  data: CreateDocumentData
+): Promise<Document> {
+  const response = await api.post('/documents', { data, headers: authHeaders(user) })
+  await expectOk(response, 'POST /documents')
+  return (await response.json()) as Document
+}
+
+/** GET /documents?workspace_id=…: the first page (up to 100), newest edit first. */
+export async function listDocuments(
+  api: APIRequestContext,
+  user: TestUser,
+  workspaceId: string
+): Promise<ApiPage<DocumentSummary>> {
+  const response = await api.get(`/documents?workspace_id=${workspaceId}&size=100`, {
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'GET /documents')
+  return (await response.json()) as ApiPage<DocumentSummary>
+}
+
+/** GET /documents/{id}: the response itself, so a spec can also check a 404. */
+export function fetchDocument(
+  api: APIRequestContext,
+  user: TestUser,
+  documentId: string
+): Promise<APIResponse> {
+  return api.get(`/documents/${documentId}`, { headers: authHeaders(user) })
 }
 
 // ---------------------------------------------------------------------------

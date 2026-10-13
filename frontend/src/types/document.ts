@@ -1,6 +1,6 @@
 import type { UserSummary } from '@/types/user'
 
-/** Planned: /documents endpoints (see docs/API.md). The list returns it without `content`. */
+/** /documents endpoints (see docs/API.md). The list returns it without `content`. */
 export interface DocumentSummary {
   id: string
   workspace_id: string
@@ -12,6 +12,8 @@ export interface DocumentSummary {
   creator: UserSummary | null
   last_edited_by_id: string | null
   last_edited_by: UserSummary | null
+  /** The project the document is in. */
+  project: { id: string; name: string } | null
   sort_order: number
   created_at: string
   updated_at: string

@@ -271,16 +271,16 @@ No extra endpoints. My issues: `assignee_id=me` / `creator_id=me` /
 
 ## 3. Documents
 
-`DocumentSummary = {id, workspace_id, project_id, team_id, title, icon, creator_id, creator: UserSummary|null, last_edited_by_id, last_edited_by: UserSummary|null, sort_order, created_at, updated_at}`
+`DocumentSummary = {id, workspace_id, project_id, team_id, title, icon, creator_id, creator: UserSummary|null, last_edited_by_id, last_edited_by: UserSummary|null, project: {id, name}|null, sort_order, created_at, updated_at}`
 `Document = DocumentSummary & {content}` (HTML)
 
 | Status | Method | Path | Body | Response |
 |---|---|---|---|---|
-| PLANNED | GET | `/documents?workspace_id=..&project_id=&team_id=&search=&order_by=-updated_at` | – | `Page<DocumentSummary>` (search: title and content ILIKE) |
-| PLANNED | POST | `/documents` | `{workspace_id, title, content?, icon?, project_id?, team_id?}` | 201 `Document` |
-| PLANNED | GET | `/documents/{document_id}` | – | `Document` |
-| PLANNED | PATCH | `/documents/{document_id}` | `{title?, content?, icon?, project_id?, team_id?, sort_order?}` | `Document` (`last_edited_by_id = me`) |
-| PLANNED | DELETE | `/documents/{document_id}` | – | 204 |
+| IMPLEMENTED | GET | `/documents?workspace_id=..&project_id=&team_id=&search=&order_by=-updated_at` | – | `Page<DocumentSummary>` (search: title and content ILIKE) |
+| IMPLEMENTED | POST | `/documents` | `{workspace_id, title, content?, icon?, project_id?, team_id?}` | 201 `Document` |
+| IMPLEMENTED | GET | `/documents/{document_id}` | – | `Document` |
+| IMPLEMENTED | PATCH | `/documents/{document_id}` | `{title?, content?, icon?, project_id?, team_id?, sort_order?}` | `Document` (`last_edited_by_id = me`) |
+| IMPLEMENTED | DELETE | `/documents/{document_id}` | – | 204 |
 
 DOC-7 (issue mentions): the client renders `ENG-12` text as a link to
 `/<url_key>/issue/ENG-12` and resolves it with the IMPLEMENTED by-identifier endpoint.
@@ -306,15 +306,21 @@ Project issues: `GET /issues?workspace_id=..&project_id=..`. Project documents: 
 
 ### Cycles (CYC-1)
 
-`Cycle = {id, team_id, number, name, starts_at, ends_at, status: "current"|"upcoming"|"past", issue_count, completed_issue_count, created_at, updated_at}`
+`Cycle = {id, team_id, number, name, starts_at, ends_at, status: "current"|"upcoming"|"past", issue_count, completed_issue_count, progress: CycleProgress, created_at, updated_at}`
+`CycleProgress = {total, completed, percentage, scope: {backlog, unstarted, started, completed, canceled}}`
+
+- `status` from today's date (UTC): `starts_at <= today <= ends_at` = current, `starts_at > today` = upcoming, else past.
+- Dates are inclusive. `ends_at` must be after `starts_at` (else 400 `invalid_cycle_dates`); two cycles of one team never share a day (else 400 `cycle_overlap`).
+- `scope` counts the non-archived issues of the cycle by state type. `total` = `issue_count` = scope without canceled; `completed` = `completed_issue_count`; `percentage` = round(completed * 100 / total), 0 when empty.
 
 | Status | Method | Path | Body | Response |
 |---|---|---|---|---|
-| PLANNED | GET | `/teams/{team_id}/cycles` | – | `Cycle[]` (by `starts_at`) |
-| PLANNED | POST | `/teams/{team_id}/cycles` | `{name?, starts_at, ends_at}` | 201 `Cycle` (`number` = next per team; `ends_at >= starts_at`) |
-| PLANNED | GET | `/cycles/{cycle_id}` | – | `Cycle` |
-| PLANNED | PATCH | `/cycles/{cycle_id}` | `{name?, starts_at?, ends_at?}` | `Cycle` |
-| PLANNED | DELETE | `/cycles/{cycle_id}` | – | 204 (issues keep existing, `cycle_id = null`) |
+| IMPLEMENTED | GET | `/teams/{team_id}/cycles` | – | `Cycle[]` (by `starts_at`) |
+| IMPLEMENTED | POST | `/teams/{team_id}/cycles` | `{name?, starts_at, ends_at}` | 201 `Cycle` (`number` = next per team) |
+| IMPLEMENTED | GET | `/cycles/{cycle_id}` | – | `Cycle` |
+| IMPLEMENTED | PATCH | `/cycles/{cycle_id}` | `{name?, starts_at?, ends_at?}` | `Cycle` |
+| IMPLEMENTED | DELETE | `/cycles/{cycle_id}` | – | 204 (issues keep existing, `cycle_id = null`) |
+| IMPLEMENTED | POST | `/cycles/{cycle_id}/complete` | `{target_cycle_id?}` (optional body) | `{moved, target_cycle: Cycle}`: moves the non-archived issues in backlog/unstarted/started states to `target_cycle_id` (default: the next cycle of the team; none: 400 `no_next_cycle`; not another cycle of the team: 400 `invalid_reference`). One `cycle` history row per moved issue |
 
 Assign issues with `PATCH /issues/{id} {cycle_id}`; cycle issues with `GET /issues?cycle_id=..`.
 
@@ -378,7 +384,7 @@ Issue search matches title, description and identifier (`ENG-12`).
 | `issues` | `issue`, `issue_label`, `issue_relation`, `issue_subscriber`, `comment`, `issue_activity` | issues (+ planned relations, comments, activity, subscribers) |
 | `projects` | `project`, `project_team` | models only |
 | `cycles` | `cycle` | models only |
-| `documents` | `document` | models only |
+| `documents` | `document` | documents |
 | `notifications` | `notification` | notifications (inbox); `NotificationService.notify_*` = creation, used by `IssueService` |
 | `favorites` | `favorite` | models only |
 
