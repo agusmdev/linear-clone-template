@@ -210,7 +210,8 @@ test('archives issues from the list context menu', async ({ api, user, authedPag
   await expect(page.getByText(`Archived ${issue.identifier}`)).toBeVisible()
   await expect(list.getByRole('option', { name: /Old idea/ })).toHaveCount(0)
   await expect(list.getByRole('option', { name: /Keep me/ })).toBeVisible()
-  expect((await getIssue(api, user, issue.id)).archived_at).not.toBeNull()
+  // The toast and the list update are optimistic: wait for the PATCH to land.
+  await expect.poll(async () => (await getIssue(api, user, issue.id)).archived_at).not.toBeNull()
 })
 
 test('the shortcuts help lists the issue page and inbox keys', async ({
