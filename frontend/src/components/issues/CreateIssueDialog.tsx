@@ -159,10 +159,12 @@ export function CreateIssueDialog({
 
   // Blocks a second submit (Cmd+Enter pressed again, double-click) while the
   // create request is in flight. A ref, not `pending`: `pending` changes only
-  // after a re-render, so a fast second event still sees `false`.
+  // after a re-render, so a fast second event still sees `false`. A closing
+  // dialog (`open` already false) still gets keys during its exit animation:
+  // those must not submit the same draft again.
   const inFlight = useRef(false)
   const submit = form.handleSubmit(async data => {
-    if (inFlight.current) return
+    if (inFlight.current || !open) return
     inFlight.current = true
     try {
       await onCreate(createIssueFormToPayload(data))

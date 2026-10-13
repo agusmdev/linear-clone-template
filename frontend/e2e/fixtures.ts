@@ -230,6 +230,19 @@ export async function listTeams(
   return (await response.json()) as Team[]
 }
 
+/** GET /workspaces/{id}/teams?joined=true: the teams the user is a member of. */
+export async function listMyTeams(
+  api: APIRequestContext,
+  user: TestUser,
+  workspaceId: string
+): Promise<Team[]> {
+  const response = await api.get(`/workspaces/${workspaceId}/teams?joined=true`, {
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'GET /workspaces/{id}/teams?joined=true')
+  return (await response.json()) as Team[]
+}
+
 export async function listLabels(
   api: APIRequestContext,
   user: TestUser,

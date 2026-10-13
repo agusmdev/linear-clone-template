@@ -21,6 +21,7 @@ import {
   listMembers,
   listStates,
   listTeamMembers,
+  listMyTeams,
   listTeams,
   listWorkspaces,
   registerUser,
@@ -467,12 +468,14 @@ test.describe('teams', () => {
     await page.getByRole('link', { name: 'Back to app' }).click()
     await expect(page).toHaveURL(`/${workspace.url_key}/my-issues`)
     await expect(teamLink).toHaveCount(0)
+    expect(await listMyTeams(api, user, workspace.id)).toEqual([])
 
     await page.goto(`/${workspace.url_key}/settings/teams`)
     await row.getByRole('button', { name: `Join ${team.name}` }).click()
     await expect(row.getByRole('button', { name: `Leave ${team.name}` })).toBeVisible()
     await page.getByRole('link', { name: 'Back to app' }).click()
     await expect(teamLink).toBeVisible()
+    expect((await listMyTeams(api, user, workspace.id)).map(t => t.id)).toEqual([team.id])
   })
 
   test('the team names stay readable at phone width', async ({ authedPage: page, api, user }) => {
