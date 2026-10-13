@@ -215,6 +215,31 @@ test.describe('login', () => {
     await expect(page).toHaveURL(`/${workspace.url_key}/my-issues`)
   })
 
+  test('sign-in and "/" reopen the workspace the user opened last', async ({ page, api, user }) => {
+    await createWorkspace(api, user, { name: 'First Co' })
+    const second = await createWorkspace(api, user, { name: 'Second Co' })
+    await page.goto('/login')
+    await fillLoginForm(page, user.email, user.password)
+    await page.getByRole('button', { name: 'Sign in' }).click()
+    await expect(page).toHaveURL(/\/my-issues$/)
+
+    await page.getByRole('button', { name: /^Workspace: / }).click()
+    await page.getByRole('menuitem', { name: 'Second Co' }).click()
+    await expect(page).toHaveURL(`/${second.url_key}/my-issues`)
+    // The URL changes first; the workspace is remembered once it has loaded.
+    await expect(page.getByRole('button', { name: 'Workspace: Second Co' })).toBeVisible()
+
+    await page.goto('/')
+    await expect(page).toHaveURL(`/${second.url_key}/my-issues`)
+
+    await page.getByRole('button', { name: /^Workspace: / }).click()
+    await page.getByRole('menuitem', { name: 'Log out' }).click()
+    await expect(page).toHaveURL('/login')
+    await fillLoginForm(page, user.email, user.password)
+    await page.getByRole('button', { name: 'Sign in' }).click()
+    await expect(page).toHaveURL(`/${second.url_key}/my-issues`)
+  })
+
   test('signing in as another user over a session shows only the new user', async ({
     api,
     user,

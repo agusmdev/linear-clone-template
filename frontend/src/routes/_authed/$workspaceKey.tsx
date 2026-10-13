@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { createFileRoute, Link, Outlet, useLocation, useNavigate } from '@tanstack/react-router'
 import { Box, CircleDot, LogOut, Plus, Search, Settings, SquarePen, Users } from 'lucide-react'
 import { AppShell } from '@/components/AppShell'
@@ -31,6 +31,7 @@ import {
   useWorkspaces,
 } from '@/hooks/useWorkspace'
 import { openCreateIssue } from '@/lib/issue-events'
+import { setLastWorkspaceId } from '@/lib/last-workspace'
 
 /**
  * Layout of every workspace page: `/$workspaceKey/...`.
@@ -62,6 +63,12 @@ function WorkspaceLayout() {
   const inSettings = useLocation({
     select: location => location.pathname.startsWith(`/${workspaceKey}/settings`),
   })
+
+  // "/" reopens this workspace next time (sign-in, the logo).
+  const workspaceId = workspace?.id
+  useEffect(() => {
+    if (workspaceId) setLastWorkspaceId(workspaceId)
+  }, [workspaceId])
 
   const value = useMemo<WorkspaceContextValue | null>(() => {
     if (!workspace || !teamsQuery.data || !membersQuery.data || !labelsQuery.data || !meQuery.data)
