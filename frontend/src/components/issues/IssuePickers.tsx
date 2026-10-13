@@ -80,9 +80,15 @@ interface IssuePickerProps {
   align?: 'start' | 'center' | 'end'
 }
 
-/** The inline status / priority / assignee / labels picker of one issue (controlled by the view). */
+/**
+ * The inline status / priority / assignee / labels picker of one issue (controlled by the view).
+ * When the issue is part of a multi-selection, the change applies to every selected issue
+ * (S / P / A / L on a selection, like Linear).
+ */
 export function IssuePicker({ issue, kind, trigger, align = 'start' }: IssuePickerProps) {
   const view = useIssueView()
+  const targets = view.targetsFor(issue)
+  const many = targets.length > 1
   const open = view.openPicker?.issueId === issue.id && view.openPicker.kind === kind
   const onOpenChange = (next: boolean) =>
     view.setOpenPicker(next ? { issueId: issue.id, kind } : null)
@@ -103,8 +109,8 @@ export function IssuePicker({ issue, kind, trigger, align = 'start' }: IssuePick
         label="Status"
         placeholder="Change status..."
         options={statusOptions(teamStates)}
-        value={issue.state_id}
-        onChange={stateId => view.actions.setState([issue], stateId)}
+        value={many ? null : issue.state_id}
+        onChange={stateId => view.actions.setState(targets, stateId)}
       />
     )
   } else if (kind === 'priority') {
@@ -114,8 +120,8 @@ export function IssuePicker({ issue, kind, trigger, align = 'start' }: IssuePick
         label="Priority"
         placeholder="Set priority to..."
         options={priorityOptions()}
-        value={String(issue.priority)}
-        onChange={value => view.actions.setPriority([issue], Number(value) as IssuePriority)}
+        value={many ? null : String(issue.priority)}
+        onChange={value => view.actions.setPriority(targets, Number(value) as IssuePriority)}
       />
     )
   } else if (kind === 'assignee') {
@@ -125,11 +131,16 @@ export function IssuePicker({ issue, kind, trigger, align = 'start' }: IssuePick
         label="Assignee"
         placeholder="Assign to..."
         options={assigneeOptions(view.members, { meId: view.meId })}
-        value={issue.assignee_id ?? NONE}
-        onChange={value => view.actions.setAssignee([issue], value === NONE ? null : value)}
+        value={many ? null : (issue.assignee_id ?? NONE)}
+        onChange={value => view.actions.setAssignee(targets, value === NONE ? null : value)}
       />
     )
   } else {
+    // Many issues: the checked labels are the ones every selected issue has;
+    // a toggle adds or removes that label on all of them.
+    const shared = view.labels
+      .filter(label => targets.every(t => t.labels.some(l => l.id === label.id)))
+      .map(label => label.id)
     picker = (
       <PropertyPicker
         {...common}
@@ -137,8 +148,17 @@ export function IssuePicker({ issue, kind, trigger, align = 'start' }: IssuePick
         label="Labels"
         placeholder="Change labels..."
         options={labelOptions(view.labels)}
-        value={issue.labels.map(l => l.id)}
-        onChange={labelIds => view.actions.setLabels(issue, labelIds)}
+        value={many ? shared : issue.labels.map(l => l.id)}
+        onChange={labelIds => {
+          if (!many) {
+            view.actions.setLabels(issue, labelIds)
+            return
+          }
+          const added = labelIds.filter(id => !shared.includes(id))
+          const removed = shared.filter(id => !labelIds.includes(id))
+          if (added.length) view.actions.addLabels(targets, added)
+          if (removed.length) view.actions.removeLabels(targets, removed)
+        }}
       />
     )
   }

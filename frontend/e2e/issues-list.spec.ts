@@ -937,6 +937,70 @@ test.describe('issues list', () => {
     await expect(bar).toContainText('1 issue selected')
   })
 
+  test('S / P / A / L and the row pickers change every selected issue (ISS-2, ISS-14)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { team, labels, key } = await seedWorkspace(api, user)
+    const me = await getMe(api, user)
+    const one = await createIssue(api, user, {
+      team_id: team.id,
+      title: 'Multi one',
+      label_ids: [labels.Bug.id],
+    })
+    const two = await createIssue(api, user, {
+      team_id: team.id,
+      title: 'Multi two',
+      label_ids: [labels.Bug.id, labels.Feature.id],
+    })
+    const other = await createIssue(api, user, { team_id: team.id, title: 'Multi other' })
+
+    const page = await loginAs(user)
+    await page.goto(`/${key}/team/ENG/issues`)
+    await expect(row(page, 'Multi one')).toBeVisible()
+    // Cmd/Ctrl+click selects the row and highlights it (the S/P/A/L target).
+    await row(page, 'Multi one').click({ modifiers: ['ControlOrMeta'] })
+    await row(page, 'Multi two').click({ modifiers: ['ControlOrMeta'] })
+    const bar = page.getByRole('toolbar', { name: 'Bulk actions' })
+    await expect(bar).toContainText('2 issues selected')
+
+    await page.keyboard.press('a')
+    await page.getByRole('option', { name: /\(you\)/ }).click()
+    await expect.poll(async () => (await getIssue(api, user, one.id)).assignee_id).toBe(me.id)
+    expect((await getIssue(api, user, two.id)).assignee_id).toBe(me.id)
+
+    await page.keyboard.press('p')
+    await page.keyboard.press('1')
+    await expect.poll(async () => (await getIssue(api, user, one.id)).priority).toBe(1)
+    expect((await getIssue(api, user, two.id)).priority).toBe(1)
+
+    // The row's own status picker also acts on the selection.
+    await row(page, 'Multi two')
+      .getByRole('button', { name: /^Status:/ })
+      .click()
+    await page.getByRole('option', { name: /^In Progress/ }).click()
+    await expect
+      .poll(async () => (await getIssue(api, user, one.id)).state.name)
+      .toBe('In Progress')
+    expect((await getIssue(api, user, two.id)).state.name).toBe('In Progress')
+
+    // Labels: only the labels of every selected issue are checked; unchecking
+    // Bug removes it from both and keeps Feature on the second.
+    await issueList(page).focus()
+    await page.keyboard.press('l')
+    await page.getByRole('option', { name: 'Bug', exact: true }).click()
+    await expect
+      .poll(async () => (await getIssue(api, user, one.id)).labels.map(l => l.name))
+      .toEqual([])
+    expect((await getIssue(api, user, two.id)).labels.map(l => l.name)).toEqual(['Feature'])
+    await page.keyboard.press('Escape')
+
+    // The issue outside the selection did not change.
+    const untouched = await getIssue(api, user, other.id)
+    expect(untouched).toMatchObject({ assignee_id: null, priority: 0, state: { name: 'Todo' } })
+  })
+
   test('the bulk bar does not cover the last row (ISS-14)', async ({ api, user, loginAs }) => {
     const { team, key } = await seedWorkspace(api, user)
     for (let n = 1; n <= 24; n++) {
