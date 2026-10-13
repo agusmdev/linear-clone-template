@@ -101,6 +101,12 @@ Bugs found by earlier QA rounds. Do not re-report one unless it still reproduces
 - issue-detail: 5-letter team identifiers wrapped and clipped in sub-issue / relation rows; "duplicated by" activity line was not a sentence
 - inbox-search: search only matched the exact phrase (now every word must match, in any order)
 
+## Round 6 (all fixed)
+
+- create-issue (r5): a saved draft whose project/cycle/status/assignee was deleted could not be created
+- issues-list: S/P/A/L and row pickers changed only one issue of a multi-selection
+- documents: reopening a stale document let autosave overwrite a teammate's newer edits
+
 ## Known and accepted (not bugs to re-report)
 
 - A tab left open after another admin removes you shows "Workspace <id> not found".
