@@ -181,6 +181,7 @@ function WorkspaceLayout() {
         issuesTo: `${base}/team/${team.key}/issues`,
         cyclesTo: `${base}/team/${team.key}/cycles`,
         projectsTo: `${base}/team/${team.key}/projects`,
+        documentsTo: `${base}/team/${team.key}/documents`,
       }))}
       footer={
         <>

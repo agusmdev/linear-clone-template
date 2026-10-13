@@ -31,6 +31,7 @@ export interface SidebarTeam {
   issuesTo: string
   cyclesTo: string
   projectsTo: string
+  documentsTo: string
   /** More links under the team (e.g. Settings). */
   extraLinks?: SidebarLink[]
 }
@@ -136,6 +137,7 @@ function SidebarTeamItem({ team }: { team: SidebarTeam }) {
     { label: 'Issues', to: team.issuesTo, icon: <CircleDot /> },
     { label: 'Cycles', to: team.cyclesTo, icon: <RefreshCcw /> },
     { label: 'Projects', to: team.projectsTo, icon: <Box /> },
+    { label: 'Documents', to: team.documentsTo, icon: <FileText /> },
     ...(team.extraLinks ?? []),
   ]
   return (
