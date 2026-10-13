@@ -416,7 +416,7 @@ test.describe('issues list', () => {
 
     await page.getByRole('button', { name: 'Filter' }).click()
     await page.getByRole('menuitem', { name: 'Priority' }).click()
-    await page.getByRole('option', { name: 'Urgent' }).click()
+    await page.getByRole('option', { name: 'Urgent', exact: true }).click()
     await page.keyboard.press('Escape')
     await expect(page).toHaveURL(/priority=urgent/)
     await expect(row(page, 'Crash on save')).toBeVisible()
@@ -433,7 +433,7 @@ test.describe('issues list', () => {
     // Label filter and search.
     await page.getByRole('button', { name: 'Filter' }).click()
     await page.getByRole('menuitem', { name: 'Labels' }).click()
-    await page.getByRole('option', { name: 'Bug' }).click()
+    await page.getByRole('option', { name: 'Bug', exact: true }).click()
     await page.keyboard.press('Escape')
     await expect(row(page, 'Polish header')).toBeHidden()
     await page.getByRole('button', { name: 'Clear filters' }).click()

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   CircleDot,
   Columns3,
@@ -75,6 +75,9 @@ export function IssueToolbar({
   actions,
 }: IssueToolbarProps) {
   const [openKind, setOpenKind] = useState<FilterKind | null>(null)
+  // The kind picked in the "Filter" menu. Its chip opens once the menu has
+  // closed: opened earlier, the menu's dismissal would close it again.
+  const pendingKind = useRef<FilterKind | null>(null)
   const shownKinds = FILTER_KINDS.filter(
     kind => state.filters[kind].length > 0 || openKind === kind
   )
@@ -110,10 +113,14 @@ export function IssueToolbar({
         <DropdownMenuContent
           align="start"
           className="w-48"
-          onCloseAutoFocus={e => e.preventDefault()}
+          onCloseAutoFocus={e => {
+            e.preventDefault()
+            if (pendingKind.current) setOpenKind(pendingKind.current)
+            pendingKind.current = null
+          }}
         >
           {offered.map(kind => (
-            <DropdownMenuItem key={kind} onSelect={() => setOpenKind(kind)}>
+            <DropdownMenuItem key={kind} onSelect={() => (pendingKind.current = kind)}>
               {FILTER_ICONS[kind]}
               {FILTER_LABELS[kind]}
             </DropdownMenuItem>
