@@ -259,13 +259,6 @@ export function WorkspaceCommands() {
               keywords: [team.key, 'team'],
               onSelect: () => go(`/team/${team.key}/projects`),
             },
-            {
-              id: `go-team-documents-${team.id}`,
-              label: `Go to ${team.name} documents`,
-              icon: <FileText />,
-              keywords: [team.key, 'team', 'docs'],
-              onSelect: () => go(`/team/${team.key}/documents`),
-            },
           ]),
           {
             id: 'go-settings',
