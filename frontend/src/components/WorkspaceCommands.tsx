@@ -36,7 +36,7 @@ import { useNewDocument } from '@/features/documents/useNewDocument'
 import { useDebounce } from '@/hooks/useDebounce'
 import { favoritePath, useFavorites } from '@/hooks/useFavorites'
 import { useSearch } from '@/hooks/useSearch'
-import { openCreateIssue } from '@/lib/issue-events'
+import { openCreateIssueHere } from '@/lib/issue-events'
 
 /** Window event that opens the command palette (any slice can dispatch it). */
 export const COMMAND_PALETTE_EVENT = 'linear:command-palette'
@@ -149,7 +149,7 @@ export function WorkspaceCommands() {
   }
 
   useShortcut('mod+k', () => setOpen(o => !o), { allowInInputs: true })
-  useShortcut('c', () => openCreateIssue())
+  useShortcut('c', () => openCreateIssueHere())
   useShortcut('/', goSearch)
   useShortcut('?', () => setHelpOpen(true))
   useShortcut('g i', () => go('/inbox'))
@@ -171,7 +171,7 @@ export function WorkspaceCommands() {
             icon: <SquarePen />,
             shortcut: 'c',
             keywords: ['new issue', 'add'],
-            onSelect: () => openCreateIssue(),
+            onSelect: () => openCreateIssueHere(),
           },
           {
             id: 'create-document',

@@ -28,6 +28,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCurrentWorkspace } from '@/contexts/WorkspaceContext'
 import { useNewDocument } from '@/features/documents/useNewDocument'
+import { usePageIssueDefaults } from '@/hooks/usePageIssueDefaults'
 import { useDeleteProject, useProject, useUpdateProject } from '@/hooks/useProjects'
 import { toastApiError } from '@/lib/error-handler'
 import { openCreateIssue } from '@/lib/issue-events'
@@ -69,6 +70,8 @@ function ProjectPage() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const newDocument = useNewDocument({ project_id: projectId })
   const project = projectQuery.data
+  // `C` creates an issue in this project, like "New issue".
+  usePageIssueDefaults({ projectId: project?.id, teamId: project?.team_ids[0] })
 
   if (projectQuery.isError) {
     return (
@@ -256,6 +259,7 @@ function ProjectOverview({ project }: { project: Project }) {
         <ProjectLeadPicker
           members={members}
           value={project.lead_id}
+          currentLead={project.lead}
           onChange={leadId => update({ lead_id: leadId })}
         />
         <ProjectDatePicker

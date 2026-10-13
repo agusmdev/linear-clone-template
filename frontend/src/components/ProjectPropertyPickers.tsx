@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils'
 import type { ProjectStatus } from '@/types/project'
 import type { Team } from '@/types/team'
+import type { UserSummary } from '@/types/user'
 import type { WorkspaceMember } from '@/types/workspace'
 
 const NO_LEAD = 'none'
@@ -70,12 +71,22 @@ export function ProjectStatusPicker({ value, onChange, className }: StatusPicker
 interface LeadPickerProps {
   members: WorkspaceMember[]
   value: string | null
+  /** The lead embedded in the project: shown when they are no longer a member. */
+  currentLead?: UserSummary | null
   onChange: (leadId: string | null) => void
   className?: string
 }
 
-export function ProjectLeadPicker({ members, value, onChange, className }: LeadPickerProps) {
-  const lead = members.find(m => m.user_id === value)?.user
+export function ProjectLeadPicker({
+  members,
+  value,
+  currentLead,
+  onChange,
+  className,
+}: LeadPickerProps) {
+  const lead =
+    members.find(m => m.user_id === value)?.user ??
+    (currentLead && currentLead.id === value ? currentLead : undefined)
   return (
     <PropertyPicker<string>
       label="Project lead"
