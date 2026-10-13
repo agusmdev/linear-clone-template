@@ -13,10 +13,11 @@ from typing import Any
 
 from fastapi_pagination import Page, Params
 
+from app.core.logging import log_entities
 from app.modules.issues.filters import IssueFilter
 from app.modules.issues.models import Issue, IssueActivityAction
 from app.modules.issues.repository import IssueRepository
-from app.modules.issues.schemas import IssueCreate, IssueUpdate
+from app.modules.issues.schemas import IssueBulkUpdate, IssueCreate, IssueUpdate
 from app.modules.labels.models import Label
 from app.modules.labels.service import LabelService
 from app.modules.teams.models import Team, WorkflowState, WorkflowStateType
@@ -244,7 +245,24 @@ class IssueService(BaseService[Issue]):
         self, issue_id: uuid.UUID, data: IssueUpdate, *, user_id: uuid.UUID
     ) -> Issue:
         issue = await self.get_for_member(issue_id, user_id=user_id)
-        changes = data.model_dump(exclude_unset=True)
+        plan = await self._plan_update(
+            issue, data.model_dump(exclude_unset=True), user_id=user_id
+        )
+        if plan is None:
+            return issue
+        updated = await self.repo.update_issue(issue.id, **plan)
+        self._log_entity(issue.id)
+        return updated
+
+    async def _plan_update(
+        self, issue: Issue, changes: dict[str, Any], *, user_id: uuid.UUID
+    ) -> dict[str, Any] | None:
+        """Validate ``changes`` against ``issue``: the write for the repository.
+
+        Returns ``None`` when nothing changes. Else a dict with ``values``,
+        ``label_ids``, ``subscriber_ids`` and ``activities`` (the keyword
+        arguments of ``IssueRepository.update_issue``).
+        """
         values: dict[str, Any] = {}
         activities: list[dict[str, Any]] = []
         subscribers: set[uuid.UUID] = set()
@@ -348,19 +366,70 @@ class IssueService(BaseService[Issue]):
             )
 
         if not values and label_ids is None:
-            return issue
+            return None
         values["updated_at"] = now
-        updated = await self.repo.update_issue(
-            issue.id,
-            values,
-            label_ids=label_ids,
-            subscriber_ids=subscribers,
-            activities=activities,
-        )
-        self._log_entity(issue.id)
-        return updated
+        return {
+            "values": values,
+            "label_ids": label_ids,
+            "subscriber_ids": subscribers,
+            "activities": activities,
+        }
 
     async def delete_issue(self, issue_id: uuid.UUID, *, user_id: uuid.UUID) -> None:
         await self.get_for_member(issue_id, user_id=user_id)
         await self.repo.delete(issue_id)
         self._log_entity(issue_id)
+
+    # --- bulk --------------------------------------------------------------
+
+    async def _issues_for_member(
+        self, issue_ids: list[uuid.UUID], *, user_id: uuid.UUID
+    ) -> list[Issue]:
+        """Load every issue, in the given order; 404 if one is missing or hidden."""
+        wanted = list(dict.fromkeys(issue_ids))
+        issues = {issue.id: issue for issue in await self.repo.get_many_full(wanted)}
+        for issue_id in wanted:
+            if issue_id not in issues:
+                raise NotFoundError(detail=f"Issue {issue_id} not found")
+        for workspace_id in {issue.workspace_id for issue in issues.values()}:
+            try:
+                await self.workspace_service.require_member(workspace_id, user_id)
+            except NotFoundError as err:
+                hidden = next(
+                    i.id for i in issues.values() if i.workspace_id == workspace_id
+                )
+                raise NotFoundError(detail=f"Issue {hidden} not found") from err
+        return [issues[issue_id] for issue_id in wanted]
+
+    async def bulk_update(
+        self, data: IssueBulkUpdate, *, user_id: uuid.UUID
+    ) -> list[Issue]:
+        """Apply the same changes to many issues: all or nothing, one commit."""
+        issues = await self._issues_for_member(data.issue_ids, user_id=user_id)
+        base = data.update.model_dump(
+            exclude_unset=True, exclude={"label_ids_add", "label_ids_remove"}
+        )
+        add = set(data.update.label_ids_add or [])
+        remove = set(data.update.label_ids_remove or [])
+        plans: list[dict[str, Any]] = []
+        for issue in issues:
+            changes = dict(base)
+            if add or remove:
+                current = set(
+                    changes.get("label_ids") or [lb.id for lb in issue.labels]
+                )
+                changes["label_ids"] = list((current | add) - remove)
+            plan = await self._plan_update(issue, changes, user_id=user_id)
+            if plan is not None:
+                plans.append({"issue_id": issue.id, **plan})
+        if plans:
+            await self.repo.update_issues(plans)
+        log_entities("issue", [issue.id for issue in issues])
+        return await self.repo.get_many_full([issue.id for issue in issues])
+
+    async def bulk_delete(
+        self, issue_ids: list[uuid.UUID], *, user_id: uuid.UUID
+    ) -> None:
+        issues = await self._issues_for_member(issue_ids, user_id=user_id)
+        await self.repo.delete_many([issue.id for issue in issues])
+        log_entities("issue", [issue.id for issue in issues])
