@@ -4,6 +4,7 @@
  * feature build on these helpers.
  */
 import {
+  authHeaders,
   createIssue,
   createWorkspace,
   deleteIssue,
@@ -88,5 +89,37 @@ test.describe('workspace core API', () => {
       headers: { Authorization: `Bearer ${stranger.token}` },
     })
     expect(response.status()).toBe(404)
+  })
+})
+
+test.describe('workspace not found page', () => {
+  test('a non-member can go back to their own workspace', async ({ api, user, loginAs }) => {
+    const foreign = await createWorkspace(api, user)
+    const stranger = await registerUser(api)
+    const own = await createWorkspace(api, stranger)
+    const page = await loginAs(stranger)
+
+    await page.goto(`/${foreign.url_key}/my-issues`)
+    await expect(page.getByText('Workspace not found')).toBeVisible()
+    await page.getByRole('link', { name: 'Go to my workspaces' }).click()
+    await expect(page).toHaveURL(`/${own.url_key}/my-issues`)
+  })
+
+  test('a user with no workspace goes to onboarding from an unknown key', async ({
+    authedPage: page,
+  }) => {
+    await page.goto('/no-such-workspace-key/my-issues')
+    await expect(page.getByText('Workspace not found')).toBeVisible()
+    await page.getByRole('link', { name: 'Go to my workspaces' }).click()
+    await expect(page).toHaveURL('/onboarding')
+  })
+
+  test('the user can log out from the page', async ({ api, user, authedPage: page }) => {
+    await page.goto('/no-such-workspace-key/my-issues')
+    await expect(page.getByText('Workspace not found')).toBeVisible()
+    await page.getByRole('button', { name: 'Log out' }).click()
+    await expect(page).toHaveURL('/login')
+    const response = await api.get('/workspaces', { headers: authHeaders(user) })
+    expect(response.status()).toBe(401)
   })
 })
