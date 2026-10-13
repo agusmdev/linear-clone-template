@@ -16,6 +16,8 @@ interface DeleteIssuesDialogProps {
   pending?: boolean
   onConfirm: () => void
   onCancel: () => void
+  /** Where focus goes when the dialog closes (default: the element that had it). */
+  onCloseAutoFocus?: (event: Event) => void
 }
 
 /** "Delete N issues?" confirmation (ISS-12 / ISS-14). */
@@ -24,11 +26,12 @@ export function DeleteIssuesDialog({
   pending,
   onConfirm,
   onCancel,
+  onCloseAutoFocus,
 }: DeleteIssuesDialogProps) {
   const one = issues.length === 1
   return (
     <AlertDialog open={issues.length > 0} onOpenChange={open => !open && onCancel()}>
-      <AlertDialogContent>
+      <AlertDialogContent onCloseAutoFocus={onCloseAutoFocus}>
         <AlertDialogHeader>
           <AlertDialogTitle>
             {one ? 'Delete issue?' : `Delete ${issues.length} issues?`}

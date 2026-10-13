@@ -306,6 +306,7 @@ export function GroupedList<T>({
                         draggable={onMove !== undefined}
                         onClick={event => handleRowClick(event, id)}
                         onCheckboxClick={event => handleCheckboxClick(event, id)}
+                        onContextMenu={() => setFocusedId(id)}
                       >
                         {renderRow(item, state)}
                       </ListRow>
@@ -338,6 +339,8 @@ interface ListRowProps {
   draggable: boolean
   onClick: (event: MouseEvent) => void
   onCheckboxClick: (event: MouseEvent) => void
+  /** A right-click focuses the row, so keyboard shortcuts act on it afterwards. */
+  onContextMenu: () => void
   children: ReactNode
 }
 
@@ -351,6 +354,7 @@ function ListRow({
   draggable,
   onClick,
   onCheckboxClick,
+  onContextMenu,
   children,
 }: ListRowProps) {
   const { setNodeRef, listeners, transform, transition, isDragging } = useSortable({
@@ -368,6 +372,7 @@ function ListRow({
       aria-selected={state.selected}
       tabIndex={-1}
       onClick={onClick}
+      onContextMenu={onContextMenu}
       {...listeners}
       style={{
         height,
