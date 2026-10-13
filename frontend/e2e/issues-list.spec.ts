@@ -952,6 +952,44 @@ test.describe('issues list', () => {
     ])
   })
 
+  test('a card low in a long column drops into a short column beside it (ISS-4)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { team, states, key } = await seedWorkspace(api, user)
+    await createIssue(api, user, {
+      team_id: team.id,
+      title: 'Backlog card',
+      state_id: states.Backlog.id,
+    })
+    let last = await createIssue(api, user, { team_id: team.id, title: 'Todo 1' })
+    for (let i = 2; i <= 14; i++)
+      last = await createIssue(api, user, { team_id: team.id, title: `Todo ${i}` })
+
+    const page = await loginAs(user)
+    await page.goto(`/${key}/team/ENG/issues?layout=board`)
+    const board = page.getByRole('region', { name: 'Issue board' })
+    const card = board.locator('[data-issue-card="ENG-15"]')
+    await card.scrollIntoViewIfNeeded()
+
+    // The short column keeps its header and drop area next to the scrolled card.
+    const backlog = board.getByRole('region', { name: 'Backlog' })
+    await expect(backlog.getByText('Backlog', { exact: true })).toBeInViewport()
+    const from = await card.boundingBox()
+    const to = await backlog.boundingBox()
+    if (!from || !to) throw new Error('board not laid out')
+    expect(to.y + to.height).toBeGreaterThan(from.y + from.height / 2)
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(from.x + from.width / 2 + 10, from.y + from.height / 2 + 10, { steps: 5 })
+    await page.mouse.move(to.x + to.width / 2, from.y + from.height / 2, { steps: 15 })
+    await page.mouse.up()
+
+    await expect(backlog).toContainText('Todo 14')
+    await expect.poll(async () => (await getIssue(api, user, last.id)).state.name).toBe('Backlog')
+  })
+
   test('selects rows and runs bulk actions (ISS-14)', async ({ api, user, loginAs }) => {
     const { workspace, team, key } = await seedWorkspace(api, user)
     const one = await createIssue(api, user, { team_id: team.id, title: 'Bulk one' })
