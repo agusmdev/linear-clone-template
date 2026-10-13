@@ -160,6 +160,23 @@ test.describe('login', () => {
     await expect(onboardingHeading(page)).toBeVisible()
   })
 
+  test('the onboarding header fits a phone screen, Log out included', async ({
+    authedPage: page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 700 })
+    await page.goto('/onboarding')
+    await expect(onboardingHeading(page)).toBeVisible()
+
+    const logOut = page.getByRole('button', { name: 'Log out' })
+    const box = await logOut.boundingBox()
+    expect(box).not.toBeNull()
+    expect(box!.x + box!.width).toBeLessThanOrEqual(320)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320)
+
+    await logOut.click()
+    await expect(page).toHaveURL('/login')
+  })
+
   test('a user with a workspace goes to its My issues after sign-in', async ({
     page,
     api,
