@@ -301,13 +301,15 @@ function ProjectOverview({ project }: { project: Project }) {
         <div className="flex h-5 items-center justify-between">
           <h2 className="text-mini font-medium text-text-secondary">Description</h2>
           <span aria-live="polite" className="text-micro text-text-tertiary">
-            {autosave.status === 'saving'
-              ? 'Saving…'
-              : autosave.status === 'saved'
-                ? 'Saved'
-                : autosave.status === 'error'
-                  ? 'Not saved'
-                  : ''}
+            {autosave.status === 'unsaved'
+              ? 'Unsaved'
+              : autosave.status === 'saving'
+                ? 'Saving…'
+                : autosave.status === 'saved'
+                  ? 'Saved'
+                  : autosave.status === 'error'
+                    ? 'Not saved'
+                    : ''}
           </span>
         </div>
         <RichTextEditor

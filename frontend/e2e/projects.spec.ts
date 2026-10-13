@@ -188,7 +188,9 @@ test('edits a project inline and autosaves the description', async ({
 
   await page.getByRole('textbox', { name: 'Project description' }).click()
   await page.keyboard.type('Goals for the new site')
-  await expect(page.getByText('Saved')).toBeVisible()
+  // Dirty content shows "Unsaved" during the debounce, never a stale "Saved".
+  await expect(page.getByText('Unsaved')).toBeVisible()
+  await expect(page.getByText('Saved', { exact: true })).toBeVisible()
 
   await expect
     .poll(async () => (await getProject(api, user, project.id))?.description ?? '')

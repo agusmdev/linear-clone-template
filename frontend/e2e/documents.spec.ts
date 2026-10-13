@@ -201,6 +201,45 @@ test.describe('document editor', () => {
       .toBe('<p>Start QUICKCLOSE</p>')
   })
 
+  test('shows "Unsaved" as soon as a saved document changes, until the change is saved', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const doc = await createDocument(api, user, { workspace_id: workspace.id, title: 'Notes' })
+
+    await page.goto(`/${workspace.url_key}/document/${doc.id}`)
+    const status = page.getByRole('status')
+    // A document that was just opened has nothing to report.
+    await expect(status).toBeHidden()
+
+    const editor = page.getByLabel('Document content')
+    await editor.click()
+    await page.keyboard.type('First draft')
+    await expect(status).toHaveText('Unsaved')
+    await expect(status).toHaveText('Saved')
+    await expect
+      .poll(async () => (await (await fetchDocument(api, user, doc.id)).json()).content)
+      .toBe('<p>First draft</p>')
+
+    // After a save, a new edit must not keep showing "Saved" during the debounce.
+    await page.keyboard.type(' and more')
+    await expect(status).toHaveText('Unsaved')
+    await expect(status).toHaveText('Saved')
+    await expect
+      .poll(async () => (await (await fetchDocument(api, user, doc.id)).json()).content)
+      .toBe('<p>First draft and more</p>')
+
+    // The title uses the same indicator.
+    await page.getByLabel('Document title').fill('Meeting notes')
+    await expect(status).toHaveText('Unsaved')
+    await expect(status).toHaveText('Saved')
+    await expect
+      .poll(async () => (await (await fetchDocument(api, user, doc.id)).json()).title)
+      .toBe('Meeting notes')
+  })
+
   test('issue identifiers in the text link to the issue (DOC-7)', async ({
     api,
     user,
