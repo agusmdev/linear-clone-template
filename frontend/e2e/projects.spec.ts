@@ -575,3 +575,41 @@ test('a double click on Delete project deletes it without an error', async ({
   await expect(page.getByText('Project deleted')).toBeVisible()
   await expect(errorToast(page)).toHaveCount(0)
 })
+
+test('a project of another workspace is not opened under this one', async ({
+  authedPage: page,
+  api,
+  user,
+}) => {
+  const workspace = await createWorkspace(api, user)
+  const other = await createWorkspace(api, user, { name: 'Other' })
+  const project = await createProject(api, user, { workspace_id: other.id, name: 'Elsewhere' })
+
+  await page.goto(`/${workspace.url_key}/project/${project.id}`)
+  await expect(page.getByText('Project not found')).toBeVisible()
+  await expect(page.getByLabel('Project name')).toHaveCount(0)
+  await page.getByRole('link', { name: 'Back to projects' }).click()
+  await expect(page).toHaveURL(`/${workspace.url_key}/projects`)
+
+  await page.goto(`/${other.url_key}/project/${project.id}`)
+  await expect(page.getByLabel('Project name')).toHaveValue('Elsewhere')
+})
+
+test('the project name on the project page stops at 255 characters', async ({
+  authedPage: page,
+  api,
+  user,
+}) => {
+  const workspace = await createWorkspace(api, user)
+  const project = await createProject(api, user, { workspace_id: workspace.id, name: 'Short' })
+  await page.goto(`/${workspace.url_key}/project/${project.id}`)
+
+  const name = page.getByLabel('Project name')
+  await name.fill('x'.repeat(300))
+  await expect(name).toHaveValue('x'.repeat(255))
+  await name.press('Enter')
+  await expect
+    .poll(async () => (await getProject(api, user, project.id))?.name)
+    .toBe('x'.repeat(255))
+  await expect(errorToast(page)).toHaveCount(0)
+})
