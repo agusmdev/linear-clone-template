@@ -156,7 +156,7 @@ function DocumentEditor({ document }: { document: Document }) {
             <DocumentSaveStatus status={status} />
             {editor ? (
               <span
-                className="hidden px-2 text-mini text-text-tertiary md:inline"
+                className="hidden max-w-96 truncate px-2 text-mini text-text-tertiary md:inline"
                 data-testid="document-last-edited"
               >
                 Last edited by {editor.name || editor.email} ·{' '}
