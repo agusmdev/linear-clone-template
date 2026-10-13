@@ -1,5 +1,6 @@
 import type { IssuesParams } from '@/types/issue'
 import type { ItemsParams } from '@/types/item'
+import type { SearchParams } from '@/types/search'
 
 export const queryKeys = {
   items: {
@@ -30,5 +31,14 @@ export const queryKeys = {
     detail: (id: string) => ['issues', 'detail', id] as const,
     byIdentifier: (workspaceId: string, identifier: string) =>
       ['issues', 'by-identifier', workspaceId, identifier] as const,
+  },
+  search: {
+    all: ['search'] as const,
+    results: (workspaceId: string, params: SearchParams) =>
+      ['search', workspaceId, params] as const,
+  },
+  favorites: {
+    all: ['favorites'] as const,
+    list: (workspaceId: string) => ['favorites', 'list', workspaceId] as const,
   },
 }

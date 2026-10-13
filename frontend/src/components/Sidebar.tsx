@@ -49,6 +49,8 @@ export interface SidebarProps {
   viewsTo: string
   /** Optional "Favorites" section (shown when not empty). */
   favorites?: SidebarLink[]
+  /** Drag and drop reorder of favorites: move the row at `from` to index `to`. */
+  onFavoriteMove?: (from: number, to: number) => void
   teams: SidebarTeam[]
   /** Bottom slot: help, theme toggle, user menu... */
   footer?: React.ReactNode
@@ -160,6 +162,61 @@ function SidebarTeamItem({ team }: { team: SidebarTeam }) {
   )
 }
 
+/** Favorite rows; with `onMove` they can be reordered by drag and drop. */
+function SidebarFavorites({
+  favorites,
+  onMove,
+}: {
+  favorites: SidebarLink[]
+  onMove?: (from: number, to: number) => void
+}) {
+  const [dragIndex, setDragIndex] = React.useState<number | null>(null)
+  const [overIndex, setOverIndex] = React.useState<number | null>(null)
+  if (!onMove) {
+    return favorites.map(link => <SidebarNavLink key={link.to} {...link} />)
+  }
+  const reset = () => {
+    setDragIndex(null)
+    setOverIndex(null)
+  }
+  return favorites.map((link, index) => (
+    <div
+      key={link.to}
+      data-testid="sidebar-favorite"
+      draggable
+      onDragStart={event => {
+        event.dataTransfer.effectAllowed = 'move'
+        event.dataTransfer.setData('text/plain', link.label)
+        setDragIndex(index)
+      }}
+      onDragOver={event => {
+        if (dragIndex === null) return
+        event.preventDefault()
+        event.dataTransfer.dropEffect = 'move'
+        setOverIndex(index)
+      }}
+      onDrop={event => {
+        event.preventDefault()
+        if (dragIndex !== null && dragIndex !== index) onMove(dragIndex, index)
+        reset()
+      }}
+      onDragEnd={reset}
+      className={cn(
+        'rounded-md',
+        dragIndex === index && 'opacity-50',
+        overIndex === index &&
+          dragIndex !== null &&
+          dragIndex !== index &&
+          (dragIndex < index
+            ? 'shadow-[0_1px_0_0_var(--primary)]'
+            : 'shadow-[0_-1px_0_0_var(--primary)]')
+      )}
+    >
+      <SidebarNavLink {...link} />
+    </div>
+  ))
+}
+
 /**
  * Linear's left sidebar. Props only: the caller builds the links and data.
  * Top: workspace switcher + actions. Then Inbox, My issues, Favorites,
@@ -176,6 +233,7 @@ export function Sidebar({
   documentsTo,
   viewsTo,
   favorites,
+  onFavoriteMove,
   teams,
   footer,
   className,
@@ -193,9 +251,7 @@ export function Sidebar({
         </div>
         {favorites && favorites.length > 0 ? (
           <SidebarSection title="Favorites">
-            {favorites.map(link => (
-              <SidebarNavLink key={link.to} {...link} />
-            ))}
+            <SidebarFavorites favorites={favorites} onMove={onFavoriteMove} />
           </SidebarSection>
         ) : null}
         <SidebarSection title="Workspace">

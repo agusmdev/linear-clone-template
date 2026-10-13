@@ -1,15 +1,20 @@
 import { useMemo } from 'react'
 import { createFileRoute, Outlet, useNavigate } from '@tanstack/react-router'
-import { LogOut } from 'lucide-react'
+import { Box, CircleDot, FileText, LogOut, Search, SquarePen, Users } from 'lucide-react'
 import { AppShell } from '@/components/AppShell'
+import { ShortcutsProvider } from '@/components/command'
 import { EmptyState } from '@/components/EmptyState'
-import { Sidebar } from '@/components/Sidebar'
+import { IconButton } from '@/components/IconButton'
+import { Sidebar, type SidebarLink } from '@/components/Sidebar'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { UserAvatar } from '@/components/UserAvatar'
+import { WorkspaceCommands, openCreateIssue } from '@/components/WorkspaceCommands'
 import { WorkspaceSwitcher } from '@/components/WorkspaceSwitcher'
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/contexts/AuthContext'
 import { WorkspaceContext, type WorkspaceContextValue } from '@/contexts/WorkspaceContext'
+import type { Favorite } from '@/types/favorite'
+import { favoritePath, useFavorites, useReorderFavorite } from '@/hooks/useFavorites'
 import {
   useLabels,
   useMe,
@@ -41,6 +46,8 @@ function WorkspaceLayout() {
   const membersQuery = useMembers(workspace?.id)
   const labelsQuery = useLabels(workspace?.id)
   const meQuery = useMe()
+  const favoritesQuery = useFavorites(workspace?.id)
+  const reorderFavorite = useReorderFavorite(workspace?.id ?? '')
 
   const value = useMemo<WorkspaceContextValue | null>(() => {
     if (!workspace || !teamsQuery.data || !membersQuery.data || !labelsQuery.data || !meQuery.data)
@@ -71,6 +78,26 @@ function WorkspaceLayout() {
   }
 
   const base = `/${value.workspace.url_key}`
+  const favorites = favoritesQuery.data ?? []
+  const favoriteLinks: SidebarLink[] = favorites.map(favorite => ({
+    label: favorite.name,
+    to: favoritePath(base, favorite),
+    icon: <FavoriteIcon favorite={favorite} />,
+  }))
+  const moveFavorite = (from: number, to: number) => {
+    const rest = favorites.filter((_, i) => i !== from)
+    const before = rest[to - 1]
+    const after = rest[to]
+    const sortOrder =
+      before && after
+        ? (before.sort_order + after.sort_order) / 2
+        : before
+          ? before.sort_order + 1
+          : after
+            ? after.sort_order - 1
+            : 0
+    reorderFavorite.mutate({ id: favorites[from].id, data: { sort_order: sortOrder } })
+  }
   const sidebar = (
     <Sidebar
       workspaceSwitcher={
@@ -94,11 +121,29 @@ function WorkspaceLayout() {
           </DropdownMenuItem>
         </WorkspaceSwitcher>
       }
+      actions={
+        <>
+          <IconButton
+            label="Search"
+            shortcut="/"
+            icon={<Search />}
+            onClick={() => navigate({ to: `${base}/search` as '/' })}
+          />
+          <IconButton
+            label="New issue"
+            shortcut="C"
+            icon={<SquarePen />}
+            onClick={() => openCreateIssue()}
+          />
+        </>
+      }
       inboxTo={`${base}/inbox`}
       myIssuesTo={`${base}/my-issues`}
       projectsTo={`${base}/projects`}
       documentsTo={`${base}/documents`}
       viewsTo={`${base}/views`}
+      favorites={favoriteLinks}
+      onFavoriteMove={moveFavorite}
       teams={value.teams.map(team => ({
         id: team.id,
         name: team.name,
@@ -122,9 +167,26 @@ function WorkspaceLayout() {
 
   return (
     <WorkspaceContext.Provider value={value}>
-      <AppShell sidebar={sidebar}>
-        <Outlet />
-      </AppShell>
+      <ShortcutsProvider>
+        <AppShell sidebar={sidebar}>
+          <Outlet />
+        </AppShell>
+        <WorkspaceCommands />
+      </ShortcutsProvider>
     </WorkspaceContext.Provider>
   )
+}
+
+function FavoriteIcon({ favorite }: { favorite: Favorite }) {
+  const style = favorite.color ? { color: favorite.color } : undefined
+  switch (favorite.entity_type) {
+    case 'issue':
+      return <CircleDot />
+    case 'project':
+      return <Box style={style} />
+    case 'document':
+      return <FileText />
+    case 'team':
+      return <Users style={style} />
+  }
 }

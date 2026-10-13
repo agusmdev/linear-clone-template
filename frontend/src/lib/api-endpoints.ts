@@ -1,5 +1,6 @@
 import type { IssuesParams } from '@/types/issue'
 import type { ItemsParams } from '@/types/item'
+import type { SearchParams } from '@/types/search'
 
 export const API = {
   AUTH: {
@@ -33,6 +34,14 @@ export const API = {
     BY_IDENTIFIER: (workspaceId: string, identifier: string) =>
       `/workspaces/${workspaceId}/issues/by-identifier/${identifier}`,
   },
+  SEARCH: {
+    WORKSPACE: (workspaceId: string) => `/workspaces/${workspaceId}/search`,
+  },
+  FAVORITES: {
+    LIST: (workspaceId: string) => `/workspaces/${workspaceId}/favorites`,
+    CREATE: '/favorites',
+    DETAIL: (id: string) => `/favorites/${id}`,
+  },
 } as const
 
 /** Makes `%`, `_` and `\` match themselves in an ILIKE pattern (backslash is Postgres' default escape). */
@@ -62,4 +71,12 @@ export function buildIssuesListUrl(params: IssuesParams): string {
     }
   }
   return `${API.ISSUES.LIST}?${queryParams.toString()}`
+}
+
+/** Builds the GET /workspaces/{id}/search URL (`types` comma-separated). */
+export function buildSearchUrl(workspaceId: string, params: SearchParams): string {
+  const queryParams = new URLSearchParams({ q: params.q })
+  if (params.types?.length) queryParams.append('types', params.types.join(','))
+  if (params.limit) queryParams.append('limit', String(params.limit))
+  return `${API.SEARCH.WORKSPACE(workspaceId)}?${queryParams.toString()}`
 }
