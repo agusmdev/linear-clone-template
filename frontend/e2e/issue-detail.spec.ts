@@ -546,6 +546,35 @@ test.describe('issue page', () => {
       .toEqual([issue.id])
   })
 
+  test('the sidebar favorite follows a rename and goes away on delete', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const { workspace, team } = await seedWorkspace(api, user)
+    const issue = await createIssue(api, user, { team_id: team.id, title: 'Fav rename' })
+    await openIssue(page, workspace.url_key, issue.identifier)
+
+    await page.getByRole('button', { name: 'Add to favorites' }).click()
+    const favorite = page.getByTestId('sidebar-favorite')
+    await expect(favorite).toHaveCount(1)
+    await expect(favorite).toContainText('Fav rename')
+
+    const title = page.getByRole('textbox', { name: 'Issue title' })
+    await title.fill('Fav renamed')
+    await title.press('Enter')
+    await expect.poll(async () => (await getIssue(api, user, issue.id)).title).toBe('Fav renamed')
+    // No reload: the cached favorites list must refresh after the rename.
+    await expect(favorite).toContainText('Fav renamed')
+
+    await page.getByRole('button', { name: 'Issue actions' }).click()
+    await page.getByRole('menuitem', { name: 'Delete issue' }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click()
+    await expect(page).toHaveURL(`/${workspace.url_key}/team/${team.key}/issues`)
+    await expect(favorite).toHaveCount(0)
+    expect(await listFavorites(api, user, workspace.id)).toEqual([])
+  })
+
   test('an unknown identifier shows "Issue not found"', async ({ api, user, authedPage: page }) => {
     const { workspace } = await seedWorkspace(api, user)
     await page.goto(`/${workspace.url_key}/issue/ENG-999`)

@@ -57,7 +57,7 @@ class FavoriteService(BaseService[Favorite]):
     async def list_favorites(
         self, workspace_id: uuid.UUID, *, user_id: uuid.UUID
     ) -> list[ResolvedFavorite]:
-        """My favorites in the workspace; rows whose entity is gone are left out."""
+        """My favorites in the workspace; rows whose entity is gone are deleted."""
         await self.workspace_service.require_member(workspace_id, user_id)
         favorites = await self.repo.list_for_user(workspace_id, user_id)
         ids_by_type: dict[FavoriteEntityType, set[uuid.UUID]] = defaultdict(set)
@@ -67,6 +67,9 @@ class FavoriteService(BaseService[Favorite]):
         for entity_type, ids in ids_by_type.items():
             found = await self.repo.entities(workspace_id, entity_type, ids)
             infos.update({(entity_type, k): v for k, v in found.items()})
+        # A favorite whose entity was deleted is dropped (no FK to cascade).
+        orphans = [f.id for f in favorites if (f.entity_type, f.entity_id) not in infos]
+        await self.repo.delete_ids(orphans)
         return [
             ResolvedFavorite.of(f, infos[(f.entity_type, f.entity_id)])
             for f in favorites

@@ -135,13 +135,38 @@ def test_reorder_and_remove(owner: RegisteredUser, ws: dict[str, Any]) -> None:
     assert_error(owner.client.delete(f"/favorites/{first['id']}"), 404, "not_found")
 
 
-def test_deleted_entity_is_left_out(owner: RegisteredUser, ws: dict[str, Any]) -> None:
+def test_deleted_entity_is_dropped(owner: RegisteredUser, ws: dict[str, Any]) -> None:
     workspace_id = ws["workspace"]["id"]
-    issue = create_issue(owner.client, ws["team"]["id"], "Gone soon")
-    add(owner, workspace_id, "issue", issue["id"])
+    team_id = ws["team"]["id"]
+    issue = create_issue(owner.client, team_id, "Gone soon")
+    bulk_gone = create_issue(owner.client, team_id, "Bulk gone")
+    kept = create_issue(owner.client, team_id, "Kept")
+    favorite = add(owner, workspace_id, "issue", issue["id"])
+    bulk_favorite = add(owner, workspace_id, "issue", bulk_gone["id"])
+    add(owner, workspace_id, "issue", kept["id"])
     assert owner.client.delete(f"/issues/{issue['id']}").status_code == 204
+    response = owner.client.post(
+        "/issues/bulk-delete", json={"issue_ids": [bulk_gone["id"]]}
+    )
+    assert response.status_code == 204, response.text
 
-    assert list_favorites(owner, workspace_id) == []
+    assert [f["entity_id"] for f in list_favorites(owner, workspace_id)] == [kept["id"]]
+    # The orphaned rows are deleted, not only hidden.
+    for gone in (favorite, bulk_favorite):
+        assert_error(owner.client.delete(f"/favorites/{gone['id']}"), 404, "not_found")
+
+
+def test_renamed_entity_shows_the_new_name(
+    owner: RegisteredUser, ws: dict[str, Any]
+) -> None:
+    workspace_id = ws["workspace"]["id"]
+    issue = create_issue(owner.client, ws["team"]["id"], "Old title")
+    add(owner, workspace_id, "issue", issue["id"])
+    response = owner.client.patch(f"/issues/{issue['id']}", json={"title": "New"})
+    assert response.status_code == 200, response.text
+
+    [favorite] = list_favorites(owner, workspace_id)
+    assert favorite["name"] == f"{issue['identifier']} New"
 
 
 def test_add_errors(

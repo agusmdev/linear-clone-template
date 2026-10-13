@@ -118,13 +118,15 @@ function restore(queryClient: QueryClient, snapshot: [readonly unknown[], unknow
 
 /**
  * Refreshes every cache an issue change can touch: issue lists and details,
- * and the project and cycle progress counts.
+ * the project and cycle progress counts, and the sidebar favorites.
  */
 export function invalidateIssueCaches(queryClient: QueryClient) {
   return Promise.all([
     queryClient.invalidateQueries({ queryKey: queryKeys.issues.all }),
     queryClient.invalidateQueries({ queryKey: queryKeys.projects.all }),
     queryClient.invalidateQueries({ queryKey: queryKeys.cycles.all }),
+    // Sidebar favorites show the issue title and drop deleted issues.
+    queryClient.invalidateQueries({ queryKey: queryKeys.favorites.all }),
   ])
 }
 
