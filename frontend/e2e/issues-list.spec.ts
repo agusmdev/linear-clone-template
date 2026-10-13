@@ -322,6 +322,56 @@ test.describe('issues list', () => {
     expect((await listIssues(api, user, workspace.id)).total).toBe(0)
   })
 
+  test('Escape clears the selection wherever the focus is (ISS-14)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { team, key } = await seedWorkspace(api, user)
+    const one = await createIssue(api, user, { team_id: team.id, title: 'Esc one' })
+    const two = await createIssue(api, user, { team_id: team.id, title: 'Esc two' })
+    await createIssue(api, user, { team_id: team.id, title: 'Esc three' })
+
+    const page = await loginAs(user)
+    await page.goto(`/${key}/team/ENG/issues`)
+    const bar = page.getByRole('toolbar', { name: 'Bulk actions' })
+
+    // After a bulk action the focus is on the bar button: Escape still clears.
+    await row(page, 'Esc one').click({ modifiers: ['ControlOrMeta'] })
+    await row(page, 'Esc two').click({ modifiers: ['ControlOrMeta'] })
+    await expect(bar).toContainText('2 issues selected')
+    await bar.getByRole('button', { name: 'Priority' }).click()
+    await page.getByRole('option', { name: 'Low' }).click()
+    await expect.poll(async () => (await getIssue(api, user, one.id)).priority).toBe(4)
+    expect((await getIssue(api, user, two.id)).priority).toBe(4)
+    await expect(bar).toContainText('2 issues selected')
+    await page.keyboard.press('Escape')
+    await expect(bar).toBeHidden()
+    await expect(row(page, 'Esc one')).toHaveAttribute('aria-selected', 'false')
+
+    // Focus outside the list (page body after a click on the header): Escape clears.
+    await row(page, 'Esc one').getByRole('checkbox', { name: 'Select row' }).click()
+    await expect(bar).toContainText('1 issue selected')
+    await page.getByRole('heading', { level: 1 }).click()
+    await expect(issueList(page)).not.toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(bar).toBeHidden()
+
+    // Escape that closes an open picker only closes the picker.
+    await row(page, 'Esc two').getByRole('checkbox', { name: 'Select row' }).click()
+    await bar.getByRole('button', { name: 'Status' }).click()
+    await expect(page.getByRole('option', { name: 'Done' })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('option', { name: 'Done' })).toBeHidden()
+    await expect(bar).toContainText('1 issue selected')
+
+    // A new selection after Escape does not include the old, hidden one.
+    await page.keyboard.press('Escape')
+    await expect(bar).toBeHidden()
+    await row(page, 'Esc three').click({ modifiers: ['ControlOrMeta'] })
+    await expect(bar).toContainText('1 issue selected')
+  })
+
   test('keyboard navigation, pickers and the context menu (ISS-2, ISS-12)', async ({
     api,
     user,
