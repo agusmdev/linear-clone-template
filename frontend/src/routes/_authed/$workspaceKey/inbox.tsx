@@ -15,6 +15,7 @@ import {
   useMarkAllNotificationsRead,
   useNotificationIssue,
   useNotifications,
+  useRefreshNotificationIssue,
   useUpdateNotification,
 } from '@/hooks/useNotifications'
 import { toastApiError } from '@/lib/error-handler'
@@ -63,6 +64,7 @@ function InboxPage() {
   const selected =
     items.find(n => n.id === selectedId) ?? (sticky?.id === selectedId ? sticky : null)
   const issueQuery = useNotificationIssue(selected?.issue_id)
+  const refreshIssue = useRefreshNotificationIssue()
 
   const update = useUpdateNotification()
   const markAllRead = useMarkAllNotificationsRead()
@@ -77,6 +79,7 @@ function InboxPage() {
   function select(n: Notification) {
     setSelectedId(n.id)
     setSticky(n.read_at ? n : { ...n, read_at: new Date().toISOString() })
+    refreshIssue(n.issue_id)
     scrollRowIntoView(n.id)
     if (!n.read_at) change(n, { read: true }, 'Could not mark the notification as read')
   }

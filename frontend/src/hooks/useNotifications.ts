@@ -44,13 +44,32 @@ export function useUnreadNotificationCount(workspaceId: string | undefined) {
   })
 }
 
-/** The full issue of a notification, for the inbox preview (GET /issues/{id}). */
+/**
+ * The full issue of a notification, for the inbox preview (GET /issues/{id}).
+ * Polls with the list, so an open preview follows a teammate's changes.
+ */
 export function useNotificationIssue(issueId: string | null | undefined) {
   return useQuery({
     queryKey: queryKeys.issues.detail(issueId ?? ''),
     queryFn: () => api.get<Issue>(API.ISSUES.DETAIL(issueId ?? '')),
     enabled: !!issueId,
+    refetchInterval: UNREAD_COUNT_POLL_MS,
   })
+}
+
+/**
+ * Refetches the cached issue of a notification about to be previewed: it may
+ * be older than the notification (a teammate changed the issue since).
+ */
+export function useRefreshNotificationIssue() {
+  const queryClient = useQueryClient()
+  return (issueId: string | null) => {
+    if (issueId)
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.issues.detail(issueId),
+        exact: true,
+      })
+  }
 }
 
 type ListSnapshot = [readonly unknown[], Page<Notification> | undefined][]
