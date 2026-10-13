@@ -1227,6 +1227,50 @@ test.describe('issues list', () => {
     await last.click({ trial: true })
   })
 
+  test('J / K keep the focused row clear of the group header and the bulk bar (ISS-14)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { team, key } = await seedWorkspace(api, user)
+    for (let n = 1; n <= 30; n++) {
+      await createIssue(api, user, { team_id: team.id, title: `Scroll row ${n}` })
+    }
+
+    const page = await loginAs(user)
+    await page.setViewportSize({ width: 1280, height: 600 })
+    await page.goto(`/${key}/team/ENG/issues`)
+    const list = issueList(page)
+    await expect(row(page, 'Scroll row 30')).toBeAttached()
+    await list.focus()
+    const focused = async () =>
+      page.locator(`[id="${(await list.getAttribute('aria-activedescendant')) ?? ''}"]`)
+    // The sticky header bar of the "Todo" group.
+    const header = list.getByRole('group', { name: 'Todo' }).locator('xpath=./div[1]')
+
+    // Select the first row so the bulk bar shows, then walk down past the fold.
+    await page.keyboard.press('j')
+    await page.keyboard.press('x')
+    const bar = page.getByRole('toolbar', { name: 'Bulk actions' })
+    await expect(bar).toBeVisible()
+    for (let n = 0; n < 20; n++) await page.keyboard.press('j')
+    await expect(async () => {
+      const rowBox = await (await focused()).boundingBox()
+      const barBox = await bar.boundingBox()
+      if (!rowBox || !barBox) throw new Error('not laid out')
+      expect(rowBox.y + rowBox.height).toBeLessThanOrEqual(barBox.y)
+    }).toPass()
+
+    // Walk back up: the row scrolls in below the sticky "Todo" header.
+    for (let n = 0; n < 15; n++) await page.keyboard.press('k')
+    await expect(async () => {
+      const rowBox = await (await focused()).boundingBox()
+      const headerBox = await header.boundingBox()
+      if (!rowBox || !headerBox) throw new Error('not laid out')
+      expect(rowBox.y).toBeGreaterThanOrEqual(headerBox.y + headerBox.height - 1)
+    }).toPass()
+  })
+
   test('keyboard navigation, pickers and the context menu (ISS-2, ISS-12)', async ({
     api,
     user,

@@ -237,9 +237,12 @@ export function GroupedList<T>({
         aria-activedescendant={activeFocusId ? rowDomId(activeFocusId) : undefined}
         tabIndex={0}
         onKeyDown={handleKeyDown}
+        // Scroll padding keeps the row that J/K focuses (scrollIntoView) out
+        // from under the sticky group header (h-9) and the floating bulk bar.
         className={cn(
-          'flex min-h-0 flex-col overflow-auto text-[13px] outline-none',
+          'flex min-h-0 scroll-pt-9 flex-col overflow-auto text-[13px] outline-none',
           'bg-[var(--background,#0f1011)] text-[var(--foreground,#f7f8f8)]',
+          selectedIds.size > 0 && 'scroll-pb-32 sm:scroll-pb-20',
           className
         )}
       >
