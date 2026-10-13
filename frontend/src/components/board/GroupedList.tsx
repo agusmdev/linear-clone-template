@@ -279,7 +279,7 @@ export function GroupedList<T>({
                     tabIndex={-1}
                     onClick={() => onAddInGroup(group.id)}
                     aria-label={`Add to ${group.title}`}
-                    className="rounded p-1 text-[var(--muted-foreground,#8a8f98)] hover:bg-white/5 hover:text-[var(--foreground,#f7f8f8)]"
+                    className="rounded p-1 text-[var(--muted-foreground,#8a8f98)] hover:bg-[var(--foreground,#f7f8f8)]/5 hover:text-[var(--foreground,#f7f8f8)]"
                   >
                     <Plus className="size-4" />
                   </button>
@@ -317,9 +317,10 @@ export function GroupedList<T>({
           )
         })}
         {/* The floating BulkActionBar (fixed, bottom-6) shows while rows are
-            selected. This spacer lets the last rows scroll out from under it. */}
+            selected. This spacer lets the last rows scroll out from under it
+            (taller on phones, where the bar wraps onto two rows). */}
         {selectedIds.size > 0 ? (
-          <div aria-hidden="true" data-bulk-bar-spacer="" className="h-20 shrink-0" />
+          <div aria-hidden="true" data-bulk-bar-spacer="" className="h-32 shrink-0 sm:h-20" />
         ) : null}
       </div>
     </DndContext>
@@ -375,10 +376,10 @@ function ListRow({
       }}
       className={cn(
         'group/row relative flex cursor-default items-center gap-2 border-b border-[var(--border,#2a2b2e)]/50 pr-3 pl-1 select-none',
-        'hover:bg-white/[0.03]',
+        'hover:bg-[var(--foreground,#f7f8f8)]/[0.03]',
         state.selected && 'bg-[var(--primary,#5e6ad2)]/10 hover:bg-[var(--primary,#5e6ad2)]/15',
         state.focused &&
-          'bg-white/[0.05] before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-[var(--primary,#5e6ad2)]',
+          'bg-[var(--foreground,#f7f8f8)]/[0.05] before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-[var(--primary,#5e6ad2)]',
         isDragging && 'z-20 bg-[var(--card,#1c1d1f)] shadow-lg'
       )}
     >

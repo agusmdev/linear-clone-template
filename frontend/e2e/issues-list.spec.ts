@@ -450,6 +450,81 @@ test.describe('issues list', () => {
     for (const ratio of withModal) expect(ratio).toBeGreaterThanOrEqual(3)
   })
 
+  test('the light theme shows the row hover and keyboard focus on white', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { team, key } = await seedWorkspace(api, user)
+    await createIssue(api, user, { team_id: team.id, title: 'Hover one' })
+    await createIssue(api, user, { team_id: team.id, title: 'Hover two' })
+
+    /** The row background as drawn over the white list surface (sRGB 0..255). */
+    const drawnBackground = (title: string) =>
+      row(page, title).evaluate(element => {
+        const ctx = document.createElement('canvas').getContext('2d')!
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(0, 0, 1, 1)
+        ctx.fillStyle = getComputedStyle(element).backgroundColor
+        ctx.fillRect(0, 0, 1, 1)
+        return Array.from(ctx.getImageData(0, 0, 1, 1).data.slice(0, 3))
+      })
+
+    const page = await loginAs(user)
+    await page.goto(`/${key}/team/ENG/issues`)
+    await page.evaluate(() => localStorage.setItem('theme', 'light'))
+    await page.reload()
+    await expect(page.locator('html')).toHaveClass(/light/)
+    await expect(row(page, 'Hover two')).toBeVisible()
+    expect(await drawnBackground('Hover two')).toEqual([255, 255, 255])
+
+    await row(page, 'Hover two').hover()
+    expect(await drawnBackground('Hover two')).not.toEqual([255, 255, 255])
+
+    await page.mouse.move(0, 0)
+    await issueList(page).focus()
+    await page.keyboard.press('j')
+    await expect(issueList(page)).toHaveAttribute('aria-activedescendant', /.+/)
+    expect(await drawnBackground('Hover one')).not.toEqual([255, 255, 255])
+  })
+
+  test('the bulk action bar fits a phone screen (ISS-14)', async ({ api, user, loginAs }) => {
+    const { team, key } = await seedWorkspace(api, user)
+    for (const title of ['Phone one', 'Phone two', 'Phone three', 'Phone four']) {
+      await createIssue(api, user, { team_id: team.id, title })
+    }
+
+    const page = await loginAs(user)
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto(`/${key}/team/ENG/issues`)
+    await row(page, 'Phone one').getByRole('checkbox', { name: 'Select row' }).click()
+    const bar = page.getByRole('toolbar', { name: 'Bulk actions' })
+    await expect(bar).toContainText('1 issue selected')
+
+    // Every control of the bar is inside the viewport.
+    const controls = [
+      bar.getByRole('button', { name: 'Clear selection' }),
+      ...['Status', 'Priority', 'Assignee', 'Label', 'Archive', 'Delete'].map(name =>
+        bar.getByRole('button', { name })
+      ),
+    ]
+    for (const control of controls) {
+      const box = (await control.boundingBox())!
+      expect(box.x).toBeGreaterThanOrEqual(0)
+      expect(box.x + box.width).toBeLessThanOrEqual(390)
+      expect(box.y + box.height).toBeLessThanOrEqual(844)
+    }
+
+    // The last row scrolls out from under the bar.
+    await issueList(page).evaluate(list => (list.scrollTop = list.scrollHeight))
+    const last = (await row(page, 'Phone four').boundingBox())!
+    const barBox = (await bar.boundingBox())!
+    expect(last.y + last.height).toBeLessThanOrEqual(barBox.y)
+
+    await bar.getByRole('button', { name: 'Clear selection' }).click()
+    await expect(bar).toBeHidden()
+  })
+
   test('filters, search and display options live in the URL (ISS-5)', async ({
     api,
     user,
