@@ -38,17 +38,24 @@ export function useIssue(issueId: string | null) {
  * PATCH /issues/{id}. The issue page's cache entry (`byIdentifier`) is updated
  * at once with the server answer; every issue query is refreshed after.
  */
+export interface UpdateIssueDetailVariables {
+  data: UpdateIssueData
+  /** Set when the page is being reloaded or closed, so the save is not cancelled. */
+  keepalive?: boolean
+}
+
 export function useUpdateIssueDetail(issue: Pick<Issue, 'id' | 'workspace_id' | 'identifier'>) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: UpdateIssueData) => api.patch<Issue>(API.ISSUES.DETAIL(issue.id), data),
+    mutationFn: ({ data, keepalive }: UpdateIssueDetailVariables) =>
+      api.patch<Issue>(API.ISSUES.DETAIL(issue.id), data, { keepalive }),
     onSuccess: updated => {
       queryClient.setQueryData(
         queryKeys.issues.byIdentifier(issue.workspace_id, issue.identifier),
         updated
       )
     },
-    onSettled: (_data, _error, data) => {
+    onSettled: (_data, _error, { data }) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.issues.all })
       // Cycle progress counts the issue's state and cycle.
       if ('cycle_id' in data || 'state_id' in data || 'archived' in data) {

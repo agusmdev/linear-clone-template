@@ -113,6 +113,34 @@ test.describe('issue page', () => {
     await expect(activity.getByText(/updated the description/)).toBeVisible()
   })
 
+  test('saves a description typed just before a reload (keepalive flush on pagehide)', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const { workspace, team } = await seedWorkspace(api, user)
+    const issue = await createIssue(api, user, {
+      team_id: team.id,
+      title: 'Quick reload',
+      description: '<p>Start</p>',
+    })
+    await openIssue(page, workspace.url_key, issue.identifier)
+
+    const description = page.getByRole('textbox', { name: 'Issue description' })
+    await expect(description).toContainText('Start')
+    await description.click()
+    await page.keyboard.press('End')
+    await page.keyboard.type(' QUICKRELOAD')
+    // Reload inside the 800 ms debounce: no React unmount runs.
+    await page.reload()
+
+    await expect
+      .poll(async () => (await getIssue(api, user, issue.id)).description)
+      .toBe('<p>Start QUICKRELOAD</p>')
+    await page.reload()
+    await expect(description).toHaveText('Start QUICKRELOAD')
+  })
+
   test('changes every property from the side panel', async ({ api, user, authedPage: page }) => {
     const { workspace, team, state } = await seedWorkspace(api, user)
     const me = await getMe(api, user)

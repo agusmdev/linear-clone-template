@@ -163,12 +163,15 @@ function IssueDetail({ issue }: { issue: Issue }) {
   const titleRef = React.useRef<HTMLTextAreaElement>(null)
 
   const update = (data: UpdateIssueData) =>
-    updateIssue.mutate(data, { onError: error => toastApiError(error, 'Could not update issue') })
+    updateIssue.mutate(
+      { data },
+      { onError: error => toastApiError(error, 'Could not update issue') }
+    )
 
   // Description: local draft, saved 800ms after the last keystroke.
   const [description, setDescription] = React.useState(issue.description ?? '')
-  const autosave = useDebouncedAutosave(description, next =>
-    updateIssue.mutateAsync({ description: next || null }).catch(error => {
+  const autosave = useDebouncedAutosave(description, (next, { keepalive }) =>
+    updateIssue.mutateAsync({ data: { description: next || null }, keepalive }).catch(error => {
       toastApiError(error, 'Could not save description')
       throw error
     })
@@ -203,7 +206,7 @@ function IssueDetail({ issue }: { issue: Issue }) {
   const archived = issue.archived_at !== null
   const setArchived = (value: boolean) =>
     updateIssue.mutate(
-      { archived: value },
+      { data: { archived: value } },
       {
         onSuccess: () => toast.success(value ? `${issue.identifier} archived` : 'Issue restored'),
         onError: error => toastApiError(error, 'Could not archive issue'),

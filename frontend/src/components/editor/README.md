@@ -37,7 +37,9 @@ Controlled value: changes to `value` from outside are applied when the editor do
 
 ```tsx
 const [html, setHtml] = useState(issue.description ?? '')
-const { status } = useDebouncedAutosave(html, (next) => updateIssue.mutateAsync({ description: next }))
+const { status } = useDebouncedAutosave(html, (next, { keepalive }) =>
+  updateIssue.mutateAsync({ data: { description: next }, keepalive })
+)
 
 <RichTextEditor
   value={html}
