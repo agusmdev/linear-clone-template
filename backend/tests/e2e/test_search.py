@@ -179,6 +179,40 @@ def test_search_issue_and_project_descriptions_match_visible_text_only(
     assert found("the new site") == ([], [project["id"]])
 
 
+def test_search_matches_every_word_in_any_order(
+    owner: RegisteredUser, ws: dict[str, Any]
+) -> None:
+    workspace_id = ws["workspace"]["id"]
+    issue = create_issue(
+        owner.client,
+        ws["team"]["id"],
+        "Fix login redirect",
+        description="<p>Users land on <strong>home</strong></p>",
+    )
+    create_issue(owner.client, ws["team"]["id"], "Fix signup")
+    document = create_document(
+        owner.client, workspace_id, "Login spec", content="<p>OAuth flow</p>"
+    )
+    project = create_project(owner.client, workspace_id, "Auth revamp")
+
+    def found(q: str) -> tuple[list[str], list[str], list[str]]:
+        body = search(owner, workspace_id, q=q)
+        return (
+            [i["id"] for i in body["issues"]],
+            [d["id"] for d in body["documents"]],
+            [p["id"] for p in body["projects"]],
+        )
+
+    assert found("redirect fix") == ([issue["id"]], [], [])
+    assert found("  login   redirect ") == ([issue["id"]], [], [])
+    # One word in the title, the other in the description (or content).
+    assert found("redirect home") == ([issue["id"]], [], [])
+    assert found("oauth spec") == ([], [document["id"]], [])
+    assert found("revamp auth") == ([], [], [project["id"]])
+    # Every word must match.
+    assert found("redirect signup") == ([], [], [])
+
+
 def test_search_skips_archived_issues(
     owner: RegisteredUser, ws: dict[str, Any]
 ) -> None:
