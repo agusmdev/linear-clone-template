@@ -36,7 +36,7 @@ export function IssueRow({ issue }: { issue: Issue }) {
             </button>
           }
         />
-        <span className="hidden w-16 shrink-0 truncate text-ui text-text-tertiary tabular-nums sm:block">
+        <span className="hidden min-w-16 shrink-0 text-ui whitespace-nowrap text-text-tertiary tabular-nums sm:block">
           {issue.identifier}
         </span>
         <IssuePicker

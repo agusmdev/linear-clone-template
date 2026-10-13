@@ -10,6 +10,7 @@ import {
   bulkUpdateIssues,
   createIssue,
   createProject,
+  createTeam,
   createWorkspace,
   deleteIssue,
   expect,
@@ -46,6 +47,28 @@ function row(page: Page, title: string) {
 }
 
 test.describe('issues list', () => {
+  test('a long issue identifier is shown in full in the list row', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    // A five-letter key with two digits is wider than a fixed 64px column.
+    const team = await createTeam(api, user, workspace.id, { name: 'Marketing', key: 'MWMWM' })
+    for (let n = 1; n < 10; n++) {
+      await createIssue(api, user, { team_id: team.id, title: `Filler ${n}` })
+    }
+    const issue = await createIssue(api, user, { team_id: team.id, title: 'Gizmo launch' })
+
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await page.goto(`/${workspace.url_key}/team/MWMWM/issues`)
+    const identifier = row(page, 'Gizmo launch').getByText(issue.identifier, { exact: true })
+    await expect(identifier).toBeVisible()
+    // Not cut off with an ellipsis, and on one line.
+    expect(await identifier.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+    expect(await identifier.evaluate(el => el.getBoundingClientRect().height)).toBeLessThan(24)
+  })
+
   test('creates an issue with properties from the modal (ISS-1)', async ({
     api,
     user,
