@@ -118,12 +118,18 @@ function TeamRow({ team, to, memberCount, joined }: TeamRowProps) {
         </span>
         <span className="font-mono text-mini text-text-tertiary">{team.key}</span>
       </Link>
+      {/* At phone width the count and the badge leave no room for the name; the
+          Join / Leave button still tells whether you are in the team. */}
       {memberCount !== undefined ? (
-        <span className="text-mini text-text-secondary">
+        <span className="hidden text-mini whitespace-nowrap text-text-secondary sm:inline">
           {memberCount} {memberCount === 1 ? 'member' : 'members'}
         </span>
       ) : null}
-      {joined ? <Badge variant="secondary">Joined</Badge> : null}
+      {joined ? (
+        <Badge variant="secondary" className="hidden sm:inline-flex">
+          Joined
+        </Badge>
+      ) : null}
       <Button
         variant="outline"
         size="sm"
