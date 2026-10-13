@@ -171,7 +171,14 @@ export function CommandPalette({
           <DialogPrimitive.Description className="sr-only">
             Search for a command to run.
           </DialogPrimitive.Description>
-          <Command label="Command menu" filter={filterItems} loop onKeyDown={handleKeyDown}>
+          {/* No vim bindings: Ctrl+K must reach the mod+k toggle, not move up to "Log out". */}
+          <Command
+            label="Command menu"
+            filter={filterItems}
+            loop
+            vimBindings={false}
+            onKeyDown={handleKeyDown}
+          >
             {pages.length > 0 && (
               <div className="flex flex-wrap items-center gap-1 px-4 pt-3">
                 {pages.map(p => (
