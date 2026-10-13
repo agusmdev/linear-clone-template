@@ -999,6 +999,52 @@ test.describe('issues list', () => {
     expect((await listIssues(api, user, workspace.id)).total).toBe(0)
   })
 
+  test('bulk actions work on a selection of more than 250 issues (ISS-14)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    test.slow()
+    const { workspace, team, key } = await seedWorkspace(api, user)
+    // One more than the API's bulk limit (250 ids per request).
+    for (let start = 1; start <= 251; start += 25) {
+      const numbers = Array.from({ length: Math.min(25, 252 - start) }, (_, i) => start + i)
+      await Promise.all(
+        numbers.map(n => createIssue(api, user, { team_id: team.id, title: `Many ${n}` }))
+      )
+    }
+
+    const page = await loginAs(user)
+    await page.goto(`/${key}/team/ENG/issues?group=none`)
+    const rows = issueList(page).getByRole('option')
+    await expect(rows).toHaveCount(251)
+    await rows.first().getByRole('checkbox', { name: 'Select row' }).click()
+    await rows
+      .last()
+      .getByRole('checkbox', { name: 'Select row' })
+      .click({ modifiers: ['Shift'] })
+    const bar = page.getByRole('toolbar', { name: 'Bulk actions' })
+    await expect(bar).toContainText('251 issues selected')
+
+    await bar.getByRole('button', { name: 'Priority' }).click()
+    await page.getByRole('option', { name: 'Urgent' }).click()
+    await expect
+      .poll(async () => {
+        const response = await api.get(
+          `/issues?workspace_id=${workspace.id}&priority__in=1&size=1`,
+          { headers: authHeaders(user) }
+        )
+        return ((await response.json()) as { total: number }).total
+      })
+      .toBe(251)
+    await expect(page.getByText('Could not update issues')).toBeHidden()
+
+    await bar.getByRole('button', { name: 'Delete' }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click()
+    await expect(bar).toBeHidden()
+    await expect.poll(async () => (await listIssues(api, user, workspace.id)).total).toBe(0)
+  })
+
   test('Escape clears the selection wherever the focus is (ISS-14)', async ({
     api,
     user,
