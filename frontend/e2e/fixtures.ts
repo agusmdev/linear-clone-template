@@ -46,7 +46,13 @@ import type {
   Cycle,
 } from '../src/types/cycle'
 import type { CreateDocumentData, Document, DocumentSummary } from '../src/types/document'
-import type { CreateIssueData, Issue, UpdateIssueData } from '../src/types/issue'
+import type {
+  BulkUpdateIssuesData,
+  BulkUpdateIssuesResponse,
+  CreateIssueData,
+  Issue,
+  UpdateIssueData,
+} from '../src/types/issue'
 import type { CreateItemData, Item, ItemsResponse } from '../src/types/item'
 import type { Label } from '../src/types/label'
 import type { CreateProjectData, Project, UpdateProjectData } from '../src/types/project'
@@ -293,6 +299,30 @@ export async function deleteIssue(
 ): Promise<void> {
   const response = await api.delete(`/issues/${issueId}`, { headers: authHeaders(user) })
   await expectOk(response, 'DELETE /issues/{id}')
+}
+
+/** POST /issues/bulk-update: the same changes for every issue. */
+export async function bulkUpdateIssues(
+  api: APIRequestContext,
+  user: TestUser,
+  data: BulkUpdateIssuesData
+): Promise<Issue[]> {
+  const response = await api.post('/issues/bulk-update', { data, headers: authHeaders(user) })
+  await expectOk(response, 'POST /issues/bulk-update')
+  return ((await response.json()) as BulkUpdateIssuesResponse).items
+}
+
+/** POST /issues/bulk-delete. */
+export async function bulkDeleteIssues(
+  api: APIRequestContext,
+  user: TestUser,
+  issueIds: string[]
+): Promise<void> {
+  const response = await api.post('/issues/bulk-delete', {
+    data: { issue_ids: issueIds },
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'POST /issues/bulk-delete')
 }
 
 // --- Search and favorites (slice "command") ---------------------------------

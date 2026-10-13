@@ -166,8 +166,17 @@ Issue = {
 | IMPLEMENTED | GET | `/workspaces/{workspace_id}/issues/by-identifier/{identifier}` | – | `Issue` (`ENG-12`, any case) |
 | IMPLEMENTED | PATCH | `/issues/{issue_id}` | `UpdateIssue` | `Issue` |
 | IMPLEMENTED | DELETE | `/issues/{issue_id}` | – | 204 (sub-issues lose their parent) |
-| PLANNED | POST | `/issues/bulk-update` | `{issue_ids, update: {state_id?, priority?, assignee_id?, label_ids?, project_id?, cycle_id?, archived?}}` | `{items: Issue[]}`; same rules and activity as PATCH, all or nothing |
-| PLANNED | POST | `/issues/bulk-delete` | `{issue_ids}` | 204 |
+| IMPLEMENTED | POST | `/issues/bulk-update` | `{issue_ids, update: {state_id?, priority?, assignee_id?, label_ids?, label_ids_add?, label_ids_remove?, project_id?, cycle_id?, archived?}}` | `{items: Issue[]}` (in `issue_ids` order); same rules and activity as PATCH, all or nothing |
+| IMPLEMENTED | POST | `/issues/bulk-delete` | `{issue_ids}` | 204 |
+
+**Bulk** (ISS-14): `issue_ids` 1-250 ids; one missing or hidden issue = 404 for the
+whole request. `label_ids` replaces the labels; `label_ids_add` / `label_ids_remove`
+add or remove labels and keep the others. `state_id`, `priority`, `label_ids`,
+`archived` cannot be `null` (422). A state must belong to the team of every issue
+(else 400 `invalid_reference`, nothing changes).
+
+**Board drag** (ISS-4): no extra endpoint. `PATCH /issues/{id} {state_id, sort_order}`
+with `sort_order` = the mean of the neighbours' values (top: first - 1, bottom: last + 1).
 
 **CreateIssue** `{team_id, title, description?, state_id?, priority?, assignee_id?, label_ids?, project_id?, cycle_id?, parent_id?, estimate?, due_date?, sort_order?}`
 - `title` 1-500 chars; `priority` 0-4 (default 0); `estimate` 0-1000; `label_ids` max 50.
@@ -199,6 +208,10 @@ Issue = {
 | `creator_id` | user id or `me` |
 | `subscriber_id` | user id or `me` (My issues → Subscribed) |
 | `label_id` | issues with this label |
+| `assignee_id__in` | comma-separated: user ids, `me`, `none` (any of them) |
+| `creator_id__in` | comma-separated: user ids, `me` |
+| `label_id__in` | issues with any of these labels |
+| `project_id__in`, `cycle_id__in` | comma-separated ids, `none` = no project / cycle |
 | `project_id`, `cycle_id`, `parent_id` | equality |
 | `parent_id__isnull` | `true` = top-level only, `false` = sub-issues only |
 | `include_archived` | default `false` |

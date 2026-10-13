@@ -36,6 +36,8 @@ export const API = {
     DETAIL: (id: string) => `/issues/${id}`,
     BY_IDENTIFIER: (workspaceId: string, identifier: string) =>
       `/workspaces/${workspaceId}/issues/by-identifier/${identifier}`,
+    BULK_UPDATE: '/issues/bulk-update',
+    BULK_DELETE: '/issues/bulk-delete',
   },
   SEARCH: {
     WORKSPACE: (workspaceId: string) => `/workspaces/${workspaceId}/search`,

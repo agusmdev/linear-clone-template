@@ -31,11 +31,11 @@ left sidebar, Inter font, subtle borders, small type 13px).
 
 | ID | Feature | Status |
 |---|---|---|
-| ISS-1 | Create issue (modal, `C` shortcut): title, description (rich text), team, status, priority (No priority/Urgent/High/Medium/Low), assignee, labels, project, cycle, estimate, due date, parent | todo |
+| ISS-1 | Create issue (modal, `C` shortcut): title, description (rich text), team, status, priority (No priority/Urgent/High/Medium/Low), assignee, labels, project, cycle, estimate, due date, parent | done |
 | ISS-2 | Issue identifier `TEAMKEY-<number>` auto-increments per team; open issue by identifier URL `/<ws>/issue/ENG-12` | todo |
-| ISS-3 | Issue list view grouped by status, with priority icon, identifier, title, labels, assignee avatar, dates; inline property changes | todo |
-| ISS-4 | Board (kanban) view by status with drag and drop between columns and reorder inside a column | todo |
-| ISS-5 | Filters: status, priority, assignee, label, project, cycle, creator; text search; sort (manual, priority, created, updated, due date); grouping (status, assignee, priority, project, none); display options persisted per view in URL | todo |
+| ISS-3 | Issue list view grouped by status, with priority icon, identifier, title, labels, assignee avatar, dates; inline property changes | done |
+| ISS-4 | Board (kanban) view by status with drag and drop between columns and reorder inside a column | done |
+| ISS-5 | Filters: status, priority, assignee, label, project, cycle, creator; text search; sort (manual, priority, created, updated, due date); grouping (status, assignee, priority, project, none); display options persisted per view in URL | done |
 | ISS-6 | Issue detail page: editable title + rich-text description (autosave), properties sidebar (status, priority, assignee, labels, project, cycle, estimate, due date) | todo |
 | ISS-7 | Sub-issues: create sub-issue, list with progress, parent breadcrumb | todo |
 | ISS-8 | Relations: blocks / blocked by / related / duplicate of | todo |
@@ -43,8 +43,8 @@ left sidebar, Inter font, subtle borders, small type 13px).
 | ISS-10 | Activity history: every property change is logged and shown in the issue timeline merged with comments | todo |
 | ISS-11 | Subscribe/unsubscribe; creator and assignee are subscribed automatically | todo |
 | ISS-12 | Delete issue (with confirm); archive | todo |
-| ISS-13 | Views: "My issues" (assigned / created / subscribed tabs), team "All issues" / "Active" / "Backlog" tabs | todo |
-| ISS-14 | Bulk actions: multi-select rows (checkbox / shift-click), change status/priority/assignee, delete | todo |
+| ISS-13 | Views: "My issues" (assigned / created / subscribed tabs), team "All issues" / "Active" / "Backlog" tabs | done |
+| ISS-14 | Bulk actions: multi-select rows (checkbox / shift-click), change status/priority/assignee, delete | done |
 
 ## 3. Documents (P0)
 

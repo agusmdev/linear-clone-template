@@ -34,6 +34,8 @@ export const queryKeys = {
     detail: (id: string) => ['issues', 'detail', id] as const,
     byIdentifier: (workspaceId: string, identifier: string) =>
       ['issues', 'by-identifier', workspaceId, identifier] as const,
+    /** Every page of a list, flattened (IssuesView). */
+    listAll: (params: IssuesParams) => ['issues', 'list-all', params] as const,
   },
   search: {
     all: ['search'] as const,

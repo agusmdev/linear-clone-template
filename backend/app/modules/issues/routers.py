@@ -1,4 +1,4 @@
-"""Issues router: create, list, get (by id or identifier), update, delete."""
+"""Issues router: create, list, get (by id or identifier), update, delete, bulk."""
 
 import uuid
 
@@ -9,7 +9,14 @@ from fastapi_pagination import Page, Params
 from app.core.logging import log_action, log_entity
 from app.modules.issues.dependencies import get_issue_service
 from app.modules.issues.filters import IssueFilter
-from app.modules.issues.schemas import IssueCreate, IssueResponse, IssueUpdate
+from app.modules.issues.schemas import (
+    IssueBulkDelete,
+    IssueBulkResponse,
+    IssueBulkUpdate,
+    IssueCreate,
+    IssueResponse,
+    IssueUpdate,
+)
 from app.modules.issues.service import IssueService
 from app.user.auth import require_current_user_id
 
@@ -125,3 +132,32 @@ async def delete_issue(
     log_action("delete")
     log_entity("issue", issue_id)
     await issue_service.delete_issue(issue_id, user_id=user_id)
+
+
+@issues_router.post(
+    "/issues/bulk-update",
+    response_description="Apply the same changes to many issues",
+    status_code=status.HTTP_200_OK,
+)
+async def bulk_update_issues(
+    data: IssueBulkUpdate = Body(...),
+    user_id: uuid.UUID = Depends(require_current_user_id),
+    issue_service: IssueService = Depends(get_issue_service),
+) -> IssueBulkResponse:
+    log_action("bulk_update")
+    result = await issue_service.bulk_update(data, user_id=user_id)
+    return IssueBulkResponse(items=[IssueResponse.model_validate(i) for i in result])
+
+
+@issues_router.post(
+    "/issues/bulk-delete",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_description="Delete many issues",
+)
+async def bulk_delete_issues(
+    data: IssueBulkDelete = Body(...),
+    user_id: uuid.UUID = Depends(require_current_user_id),
+    issue_service: IssueService = Depends(get_issue_service),
+) -> None:
+    log_action("bulk_delete")
+    await issue_service.bulk_delete(data.issue_ids, user_id=user_id)

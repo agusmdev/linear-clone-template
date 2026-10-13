@@ -246,11 +246,15 @@ test('shows progress and the issues of a project; New issue opens the create mod
       document.body.dataset.createIssue = JSON.stringify((event as CustomEvent).detail)
     })
   })
-  await page.getByRole('button', { name: 'New issue' }).first().click()
+  await page.getByRole('main').getByRole('button', { name: 'New issue' }).first().click()
   await expect(page.locator('body')).toHaveAttribute(
     'data-create-issue',
     JSON.stringify({ projectId: project.id, teamId: team.id })
   )
+  const dialog = page.getByRole('dialog', { name: 'New issue' })
+  await expect(dialog.getByRole('button', { name: `Project: ${project.name}` })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
 })
 
 test('deletes a project after confirmation and keeps its issues', async ({

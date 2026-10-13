@@ -5,6 +5,7 @@ import { AppShell } from '@/components/AppShell'
 import { ShortcutsProvider } from '@/components/command'
 import { EmptyState } from '@/components/EmptyState'
 import { IconButton } from '@/components/IconButton'
+import { CreateIssueHost } from '@/components/issues/CreateIssueHost'
 import { Sidebar, type SidebarLink } from '@/components/Sidebar'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { UserAvatar } from '@/components/UserAvatar'
@@ -175,6 +176,7 @@ function WorkspaceLayout() {
           <Outlet />
         </AppShell>
         <WorkspaceCommands />
+        <CreateIssueHost />
       </ShortcutsProvider>
     </WorkspaceContext.Provider>
   )

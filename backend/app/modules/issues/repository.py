@@ -144,6 +144,55 @@ class IssueRepository(SQLAlchemyRepository[Issue]):
         activities: list[dict[str, Any]],
     ) -> Issue:
         """Update columns, replace labels (when given), log activity: one commit."""
+        await self._apply_update(
+            issue_id,
+            values,
+            label_ids=label_ids,
+            subscriber_ids=subscriber_ids,
+            activities=activities,
+        )
+        await self._session.commit()
+        return await self._get_full_or_404(issue_id)
+
+    @SQLAlchemyRepository.translate_commit_errors
+    async def update_issues(self, plans: list[dict[str, Any]]) -> None:
+        """Run many ``update_issue`` writes (``issue_id`` + its kwargs) in one commit."""
+        for plan in plans:
+            await self._apply_update(
+                plan["issue_id"],
+                plan["values"],
+                label_ids=plan["label_ids"],
+                subscriber_ids=plan["subscriber_ids"],
+                activities=plan["activities"],
+            )
+        await self._session.commit()
+
+    async def get_many_full(self, issue_ids: list[uuid.UUID]) -> list[Issue]:
+        """The issues with these ids (missing ids are left out), in the given order."""
+        if not issue_ids:
+            return []
+        query = (
+            self.select_full()
+            .where(Issue.id.in_(issue_ids))
+            .execution_options(populate_existing=True)
+        )
+        found = {i.id: i for i in (await self._session.execute(query)).scalars()}
+        return [found[issue_id] for issue_id in issue_ids if issue_id in found]
+
+    @SQLAlchemyRepository.translate_commit_errors
+    async def delete_many(self, issue_ids: list[uuid.UUID]) -> None:
+        await self._session.execute(delete(Issue).where(Issue.id.in_(issue_ids)))
+        await self._session.commit()
+
+    async def _apply_update(
+        self,
+        issue_id: uuid.UUID,
+        values: dict[str, Any],
+        *,
+        label_ids: set[uuid.UUID] | None,
+        subscriber_ids: set[uuid.UUID],
+        activities: list[dict[str, Any]],
+    ) -> None:
         if values:
             await self._session.execute(
                 update(Issue).where(Issue.id == issue_id).values(**values)
@@ -159,5 +208,3 @@ class IssueRepository(SQLAlchemyRepository[Issue]):
                 )
         await self._add_subscribers(issue_id, subscriber_ids)
         await self._add_activities(issue_id, activities)
-        await self._session.commit()
-        return await self._get_full_or_404(issue_id)
