@@ -38,6 +38,10 @@ import { KanbanBoard, GroupedList, BulkActionBar, type MoveEvent } from '@/compo
   during the drag and goes back to `items` on drop. Update `items` in `onMove` (optimistic
   update), or the card snaps back.
 - Horizontal scroll; each column scrolls on its own under its header; drag overlay with drop animation.
+- The column under the pointer is the drop target (the whole column, header included, even
+  when empty); inside it the closest card sets the position. Keyboard drags use closest corners.
+- Auto-scroll only starts with the pointer in the outer 5% of the board's width (20% of a
+  column's height), so small sideways drift while reordering does not scroll the board.
 - Keyboard: focus a card with Tab, Space to lift, arrows to move, Space to drop, Escape to
   cancel. Screen reader announcements come from dnd-kit.
 

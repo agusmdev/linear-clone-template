@@ -1,5 +1,6 @@
 import { useId, useMemo, useState, type ReactNode } from 'react'
 import {
+  closestCenter,
   closestCorners,
   DndContext,
   DragOverlay,
@@ -8,6 +9,7 @@ import {
   useDroppable,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
@@ -56,6 +58,43 @@ export interface KanbanBoardProps<T> {
 const COLUMN_PREFIX = 'kanban-column:'
 
 type DragData = { type: 'column'; columnId: string } | { type: 'card' }
+
+/**
+ * Only a pointer in the outer 5% of the board scrolls it sideways (dnd-kit's default is 20%,
+ * so a few pixels of drift inside the leftmost visible column scrolled the board).
+ */
+const AUTO_SCROLL = { threshold: { x: 0.05, y: 0.2 } }
+
+/**
+ * The column under the pointer (or the nearest one when the pointer is in a gap) is the target,
+ * so an empty column is a drop target over its whole area. Inside it, the closest card decides
+ * the position. Without a pointer (keyboard drag) it falls back to the closest corners.
+ */
+const boardCollision: CollisionDetection = args => {
+  const { droppableContainers, droppableRects, pointerCoordinates } = args
+  if (!pointerCoordinates) return closestCorners(args)
+
+  let column: (typeof droppableContainers)[number] | null = null
+  let best = Infinity
+  for (const container of droppableContainers) {
+    const rect = droppableRects.get(container.id)
+    if (!rect || (container.data.current as DragData | undefined)?.type !== 'column') continue
+    const x = pointerCoordinates.x
+    const distance = x < rect.left ? rect.left - x : x > rect.right ? x - rect.right : 0
+    if (distance < best) {
+      best = distance
+      column = container
+    }
+  }
+  if (!column) return closestCorners(args)
+
+  const columnId = (column.data.current as { columnId: string }).columnId
+  const cards = droppableContainers.filter(
+    container => container.data.current?.sortable?.containerId === columnId
+  )
+  const [card] = cards.length > 0 ? closestCenter({ ...args, droppableContainers: cards }) : []
+  return card ? [card] : [{ id: column.id, data: { droppableContainer: column, value: 0 } }]
+}
 
 /** Linear-style board: horizontal columns, sortable cards, cross-column drag. */
 export function KanbanBoard<T>({
@@ -169,7 +208,8 @@ export function KanbanBoard<T>({
     <DndContext
       id={dndId}
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={boardCollision}
+      autoScroll={AUTO_SCROLL}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
@@ -236,6 +276,7 @@ function KanbanColumn<T>({
 
   return (
     <section
+      ref={setNodeRef}
       aria-label={column.title}
       className="flex min-h-0 shrink-0 flex-col"
       style={{ width, minWidth: width }}
@@ -257,7 +298,6 @@ function KanbanColumn<T>({
       </header>
       <SortableContext id={column.id} items={ids} strategy={verticalListSortingStrategy}>
         <div
-          ref={setNodeRef}
           className={cn(
             // Each column scrolls on its own, so every header and drop area stays in view.
             'flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto rounded-md p-1 transition-colors',
