@@ -16,8 +16,9 @@ from tests.e2e.helpers import (
     assert_error,
     create_issue,
     create_project,
+    create_team,
     create_workspace,
-    join_workspace,
+    invite_member,
     team_states,
     workspace_team,
 )
@@ -26,7 +27,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from tests.e2e.helpers import RegisteredUser
-    from tests.e2e.stack import Database
 
 PROJECT_FIELDS = {
     "id",
@@ -65,17 +65,6 @@ def ws(owner: RegisteredUser) -> dict[str, Any]:
         "team": team,
         "states": team_states(owner.client, team["id"]),
     }
-
-
-def _add_team(db: Database, workspace_id: str, name: str, key: str) -> str:
-    # There is no endpoint to create a team yet: insert the row.
-    team_id = str(uuid.uuid4())
-    db.execute(
-        "INSERT INTO team (id, workspace_id, name, key, issue_counter, created_at, "
-        "updated_at) VALUES (%s, %s, %s, %s, 0, now(), now())",
-        (team_id, workspace_id, name, key),
-    )
-    return team_id
 
 
 def test_create_project_with_defaults(
@@ -130,10 +119,10 @@ def test_create_project_with_every_field(
 
 
 def test_list_projects_by_sort_order_with_filters(
-    owner: RegisteredUser, ws: dict[str, Any], db: Database
+    owner: RegisteredUser, ws: dict[str, Any]
 ) -> None:
     workspace_id = ws["workspace"]["id"]
-    design_team = _add_team(db, workspace_id, "Design", "DES")
+    design_team = create_team(owner.client, workspace_id, "Design", "DES")["id"]
     first = create_project(owner.client, workspace_id, "First")
     second = create_project(
         owner.client,
@@ -305,7 +294,6 @@ def test_non_member_gets_404(
     owner: RegisteredUser,
     ws: dict[str, Any],
     register_user: Callable[..., RegisteredUser],
-    db: Database,
 ) -> None:
     workspace_id = ws["workspace"]["id"]
     project = create_project(owner.client, workspace_id)
@@ -327,7 +315,7 @@ def test_non_member_gets_404(
     )
     assert_error(owner.client.get(f"/projects/{uuid.uuid4()}"), 404, "not_found")
 
-    join_workspace(db, workspace_id, stranger.id)
+    invite_member(owner.client, workspace_id, stranger.email)
     assert stranger.client.get(path).status_code == 200
     lead = owner.client.patch(path, json={"lead_id": stranger.id})
     assert lead.json()["lead"]["id"] == stranger.id

@@ -7,7 +7,6 @@ missing document. A project or team of another workspace is a 400
 
 from __future__ import annotations
 
-import uuid
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -15,8 +14,9 @@ import pytest
 from tests.e2e.helpers import (
     assert_error,
     create_document,
+    create_project,
     create_workspace,
-    join_workspace,
+    invite_member,
     workspace_team,
 )
 
@@ -24,7 +24,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from tests.e2e.helpers import RegisteredUser
-    from tests.e2e.stack import Database
 
 SUMMARY_FIELDS = {
     "id",
@@ -58,16 +57,8 @@ def ws(owner: RegisteredUser) -> dict[str, Any]:
     }
 
 
-def _project(db: Database, workspace_id: str, name: str = "Launch") -> str:
-    # Projects are created by another slice's endpoint; insert the row directly
-    # so this suite does not depend on it.
-    project_id = str(uuid.uuid4())
-    db.execute(
-        "INSERT INTO project (id, workspace_id, name, status, sort_order, "
-        "created_at, updated_at) VALUES (%s, %s, %s, 'planned', 0, now(), now())",
-        (project_id, workspace_id, name),
-    )
-    return project_id
+def _project(client: Any, workspace_id: str, name: str = "Launch") -> str:
+    return create_project(client, workspace_id, name)["id"]
 
 
 def _list(client: Any, workspace_id: str, **params: Any) -> dict[str, Any]:
@@ -97,10 +88,8 @@ def test_create_document_with_defaults(
     assert owner.client.get(f"/documents/{doc['id']}").json() == doc
 
 
-def test_create_with_every_field(
-    owner: RegisteredUser, ws: dict[str, Any], db: Database
-) -> None:
-    project_id = _project(db, ws["workspace"]["id"])
+def test_create_with_every_field(owner: RegisteredUser, ws: dict[str, Any]) -> None:
+    project_id = _project(owner.client, ws["workspace"]["id"])
 
     doc = create_document(
         owner.client,
@@ -119,10 +108,10 @@ def test_create_with_every_field(
 
 
 def test_references_of_another_workspace_are_rejected(
-    owner: RegisteredUser, ws: dict[str, Any], db: Database
+    owner: RegisteredUser, ws: dict[str, Any]
 ) -> None:
     other = create_workspace(owner.client, team_key="OPS")
-    foreign_project = _project(db, other["id"])
+    foreign_project = _project(owner.client, other["id"])
     foreign_team = workspace_team(owner.client, other["id"])["id"]
     wid = ws["workspace"]["id"]
 
@@ -140,10 +129,10 @@ def test_references_of_another_workspace_are_rejected(
 
 
 def test_list_filters_search_and_order(
-    owner: RegisteredUser, ws: dict[str, Any], db: Database
+    owner: RegisteredUser, ws: dict[str, Any]
 ) -> None:
     wid = ws["workspace"]["id"]
-    project_id = _project(db, wid)
+    project_id = _project(owner.client, wid)
     first = create_document(owner.client, wid, "Alpha notes", content="<p>x</p>")
     second = create_document(
         owner.client, wid, "Beta", content="<p>hidden needle</p>", project_id=project_id
@@ -189,13 +178,12 @@ def test_list_rejects_unknown_order_field(
 def test_update_sets_last_edited_by(
     owner: RegisteredUser,
     ws: dict[str, Any],
-    db: Database,
     register_user: Callable[..., RegisteredUser],
 ) -> None:
     wid = ws["workspace"]["id"]
     editor = register_user(display_name="Editor")
-    join_workspace(db, wid, editor.id)
-    project_id = _project(db, wid)
+    invite_member(owner.client, wid, editor.email)
+    project_id = _project(owner.client, wid)
     doc = create_document(owner.client, wid, "Plan")
 
     response = editor.client.patch(
