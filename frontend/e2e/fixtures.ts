@@ -25,6 +25,7 @@
  *   authedPage  A page in its own browser context, already signed in as `user`.
  *   loginAs     (user) => a new signed-in page for any other user.
  */
+import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import {
   test as base,
@@ -37,10 +38,25 @@ import {
 } from '@playwright/test'
 import { AUTH_TOKEN_KEY } from '../src/lib/auth'
 import type { AuthSessionResponse } from '../src/types/auth'
+import type { CreateFavoriteData, Favorite, UpdateFavoriteData } from '../src/types/favorite'
+import type {
+  CompleteCycleData,
+  CompleteCycleResult,
+  CreateCycleData,
+  Cycle,
+} from '../src/types/cycle'
+import type { CreateDocumentData, Document, DocumentSummary } from '../src/types/document'
 import type { CreateIssueData, Issue, UpdateIssueData } from '../src/types/issue'
 import type { CreateItemData, Item, ItemsResponse } from '../src/types/item'
 import type { CreateLabelData, Label, UpdateLabelData } from '../src/types/label'
+import type { CreateProjectData, Project, UpdateProjectData } from '../src/types/project'
+import type {
+  Notification,
+  UnreadNotificationCount,
+  UpdateNotificationData,
+} from '../src/types/notification'
 import type { Page as ApiPage } from '../src/types/page'
+import type { SearchResults } from '../src/types/search'
 import type {
   CreateTeamData,
   Team,
@@ -55,7 +71,7 @@ import type {
   WorkspaceMember,
   WorkspaceRole,
 } from '../src/types/workspace'
-import { BACKEND_URL, FRONTEND_URL } from './support/stack'
+import { BACKEND_URL, DB_CONTAINER, FRONTEND_URL } from './support/stack'
 
 export { expect }
 export type { Locator, Page } from '@playwright/test'
@@ -409,6 +425,282 @@ export async function updateLabel(
   const response = await api.patch(`/labels/${labelId}`, { data, headers: authHeaders(user) })
   await expectOk(response, 'PATCH /labels/{id}')
   return (await response.json()) as Label
+}
+
+// --- Search and favorites (slice "command") ---------------------------------
+
+export async function searchWorkspace(
+  api: APIRequestContext,
+  user: TestUser,
+  workspaceId: string,
+  q: string
+): Promise<SearchResults> {
+  const response = await api.get(`/workspaces/${workspaceId}/search?q=${encodeURIComponent(q)}`, {
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'GET /workspaces/{id}/search')
+  return (await response.json()) as SearchResults
+}
+
+export async function listFavorites(
+  api: APIRequestContext,
+  user: TestUser,
+  workspaceId: string
+): Promise<Favorite[]> {
+  const response = await api.get(`/workspaces/${workspaceId}/favorites`, {
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'GET /workspaces/{id}/favorites')
+  return (await response.json()) as Favorite[]
+}
+
+export async function addFavorite(
+  api: APIRequestContext,
+  user: TestUser,
+  data: CreateFavoriteData
+): Promise<Favorite> {
+  const response = await api.post('/favorites', { data, headers: authHeaders(user) })
+  await expectOk(response, 'POST /favorites')
+  return (await response.json()) as Favorite
+}
+
+export async function updateFavorite(
+  api: APIRequestContext,
+  user: TestUser,
+  favoriteId: string,
+  data: UpdateFavoriteData
+): Promise<Favorite> {
+  const response = await api.patch(`/favorites/${favoriteId}`, {
+    data,
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'PATCH /favorites/{id}')
+  return (await response.json()) as Favorite
+}
+
+export async function deleteFavorite(
+  api: APIRequestContext,
+  user: TestUser,
+  favoriteId: string
+): Promise<void> {
+  const response = await api.delete(`/favorites/${favoriteId}`, { headers: authHeaders(user) })
+  await expectOk(response, 'DELETE /favorites/{id}')
+}
+
+export async function createProject(
+  api: APIRequestContext,
+  user: TestUser,
+  data: CreateProjectData
+): Promise<Project> {
+  const response = await api.post('/projects', { data, headers: authHeaders(user) })
+  await expectOk(response, 'POST /projects')
+  return (await response.json()) as Project
+}
+
+/** GET /workspaces/{id}/projects, with the optional `status` / `team_id` filters. */
+export async function listProjects(
+  api: APIRequestContext,
+  user: TestUser,
+  workspaceId: string,
+  query = ''
+): Promise<Project[]> {
+  const response = await api.get(`/workspaces/${workspaceId}/projects` + query, {
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'GET /workspaces/{id}/projects')
+  return (await response.json()) as Project[]
+}
+
+/** GET /projects/{id}; returns null on 404. */
+export async function getProject(
+  api: APIRequestContext,
+  user: TestUser,
+  projectId: string
+): Promise<Project | null> {
+  const response = await api.get(`/projects/${projectId}`, { headers: authHeaders(user) })
+  if (response.status() === 404) return null
+  await expectOk(response, 'GET /projects/{id}')
+  return (await response.json()) as Project
+}
+
+export async function updateProject(
+  api: APIRequestContext,
+  user: TestUser,
+  projectId: string,
+  data: UpdateProjectData
+): Promise<Project> {
+  const response = await api.patch(`/projects/${projectId}`, { data, headers: authHeaders(user) })
+  await expectOk(response, 'PATCH /projects/{id}')
+  return (await response.json()) as Project
+}
+
+/**
+ * Adds an existing user to a workspace as a member, straight in the e2e
+ * database (docker exec psql). Invites (POST /workspaces/{id}/members) are not
+ * implemented on this branch; when they are, use the endpoint instead.
+ */
+export async function addWorkspaceMember(
+  api: APIRequestContext,
+  workspaceId: string,
+  user: TestUser
+): Promise<User> {
+  const me = await getMe(api, user)
+  if (!/^[0-9a-f-]{36}$/.test(workspaceId)) throw new Error(`Bad workspace id ${workspaceId}`)
+  execFileSync(
+    'docker',
+    [
+      'exec',
+      DB_CONTAINER,
+      'psql',
+      '--username=app',
+      '--dbname=app',
+      '--set=ON_ERROR_STOP=1',
+      '--command',
+      'INSERT INTO workspace_member (id, workspace_id, user_id, role, created_at, updated_at) ' +
+        `VALUES (gen_random_uuid(), '${workspaceId}', '${me.id}', 'member', now(), now())`,
+    ],
+    { stdio: 'pipe' }
+  )
+  return me
+}
+
+/** GET /notifications?workspace_id=…: my notifications, newest first (archived left out). */
+export async function listNotifications(
+  api: APIRequestContext,
+  user: TestUser,
+  workspaceId: string,
+  query = ''
+): Promise<Notification[]> {
+  const response = await api.get(`/notifications?workspace_id=${workspaceId}&size=100${query}`, {
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'GET /notifications')
+  return ((await response.json()) as ApiPage<Notification>).items
+}
+
+export async function getUnreadNotificationCount(
+  api: APIRequestContext,
+  user: TestUser,
+  workspaceId: string
+): Promise<number> {
+  const response = await api.get(`/notifications/unread-count?workspace_id=${workspaceId}`, {
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'GET /notifications/unread-count')
+  return ((await response.json()) as UnreadNotificationCount).count
+}
+
+export async function updateNotification(
+  api: APIRequestContext,
+  user: TestUser,
+  notificationId: string,
+  data: UpdateNotificationData
+): Promise<Notification> {
+  const response = await api.patch(`/notifications/${notificationId}`, {
+    data,
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'PATCH /notifications/{id}')
+  return (await response.json()) as Notification
+}
+
+export async function markAllNotificationsRead(
+  api: APIRequestContext,
+  user: TestUser,
+  workspaceId: string
+): Promise<number> {
+  const response = await api.post('/notifications/mark-all-read', {
+    data: { workspace_id: workspaceId },
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'POST /notifications/mark-all-read')
+  return ((await response.json()) as { updated: number }).updated
+}
+
+// --- Cycles (CYC-1) ---------------------------------------------------------
+
+export async function createCycle(
+  api: APIRequestContext,
+  user: TestUser,
+  teamId: string,
+  data: CreateCycleData
+): Promise<Cycle> {
+  const response = await api.post(`/teams/${teamId}/cycles`, { data, headers: authHeaders(user) })
+  await expectOk(response, 'POST /teams/{id}/cycles')
+  return (await response.json()) as Cycle
+}
+
+export async function listCycles(
+  api: APIRequestContext,
+  user: TestUser,
+  teamId: string
+): Promise<Cycle[]> {
+  const response = await api.get(`/teams/${teamId}/cycles`, { headers: authHeaders(user) })
+  await expectOk(response, 'GET /teams/{id}/cycles')
+  return (await response.json()) as Cycle[]
+}
+
+/** GET /cycles/{id}; returns the raw response so a spec can check a 404 after a delete. */
+export function getCycleResponse(
+  api: APIRequestContext,
+  user: TestUser,
+  cycleId: string
+): Promise<APIResponse> {
+  return api.get(`/cycles/${cycleId}`, { headers: authHeaders(user) })
+}
+
+export async function completeCycle(
+  api: APIRequestContext,
+  user: TestUser,
+  cycleId: string,
+  data: CompleteCycleData = {}
+): Promise<CompleteCycleResult> {
+  const response = await api.post(`/cycles/${cycleId}/complete`, {
+    data,
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'POST /cycles/{id}/complete')
+  return (await response.json()) as CompleteCycleResult
+}
+
+/** Today (UTC, like the backend) plus `offset` days, as YYYY-MM-DD. */
+export function isoDay(offset = 0): string {
+  const now = new Date()
+  const day = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+  day.setUTCDate(day.getUTCDate() + offset)
+  return day.toISOString().slice(0, 10)
+}
+
+export async function createDocument(
+  api: APIRequestContext,
+  user: TestUser,
+  data: CreateDocumentData
+): Promise<Document> {
+  const response = await api.post('/documents', { data, headers: authHeaders(user) })
+  await expectOk(response, 'POST /documents')
+  return (await response.json()) as Document
+}
+
+/** GET /documents?workspace_id=…: the first page (up to 100), newest edit first. */
+export async function listDocuments(
+  api: APIRequestContext,
+  user: TestUser,
+  workspaceId: string
+): Promise<ApiPage<DocumentSummary>> {
+  const response = await api.get(`/documents?workspace_id=${workspaceId}&size=100`, {
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'GET /documents')
+  return (await response.json()) as ApiPage<DocumentSummary>
+}
+
+/** GET /documents/{id}: the response itself, so a spec can also check a 404. */
+export function fetchDocument(
+  api: APIRequestContext,
+  user: TestUser,
+  documentId: string
+): Promise<APIResponse> {
+  return api.get(`/documents/${documentId}`, { headers: authHeaders(user) })
 }
 
 // ---------------------------------------------------------------------------

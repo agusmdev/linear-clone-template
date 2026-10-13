@@ -1,4 +1,4 @@
-"""Favorite model (sidebar favorites). The API is not implemented yet (see docs/API.md)."""
+"""Favorite model (sidebar favorites)."""
 
 import enum
 import uuid

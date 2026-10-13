@@ -1,4 +1,4 @@
-"""Cycle model. The API for cycles is not implemented yet (see docs/API.md)."""
+"""Cycle model (API: docs/API.md, CYC-1)."""
 
 import uuid
 from datetime import date

@@ -3,7 +3,7 @@ import type { UserSummary } from '@/types/user'
 
 export type NotificationType = 'assigned' | 'commented' | 'status_changed' | 'mentioned'
 
-/** Planned: /notifications endpoints (see docs/API.md). */
+/** GET /notifications (see docs/API.md). `issue` and `actor` are null when deleted. */
 export interface Notification {
   id: string
   user_id: string
@@ -21,4 +21,24 @@ export interface Notification {
 export interface UpdateNotificationData {
   read?: boolean
   archived?: boolean
+}
+
+/** Query of GET /notifications. `workspace_id` is required. */
+export interface NotificationsParams {
+  workspace_id: string
+  /** true: only unread; false: only read; undefined: both. */
+  unread?: boolean
+  include_archived?: boolean
+  type?: NotificationType
+  issue_id?: string
+  page?: number
+  size?: number
+}
+
+export interface UnreadNotificationCount {
+  count: number
+}
+
+export interface MarkAllNotificationsReadResponse {
+  updated: number
 }

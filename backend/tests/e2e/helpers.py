@@ -126,6 +126,28 @@ def create_issue(
     return response.json()
 
 
+def create_project(
+    client: httpx.Client, workspace_id: str, name: str = "Project", **extra: Any
+) -> dict[str, Any]:
+    """Create a project through POST /projects and return the response body."""
+    response = client.post(
+        "/projects", json={"workspace_id": workspace_id, "name": name, **extra}
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+def create_document(
+    client: httpx.Client, workspace_id: str, title: str = "Doc", **extra: Any
+) -> dict[str, Any]:
+    """Create a document through POST /documents and return the response body."""
+    response = client.post(
+        "/documents", json={"workspace_id": workspace_id, "title": title, **extra}
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
 def join_workspace(db: Database, workspace_id: str, user_id: str) -> None:
     """Add a user to a workspace as a member, straight in the database.
 
@@ -288,3 +310,26 @@ def _wait_until_server_connections_are_idle(db: Database) -> None:
     ):
         assert time.monotonic() < deadline, "the server's connections stay busy"
         time.sleep(0.01)
+
+
+def list_notifications(
+    client: httpx.Client, workspace_id: str, **params: Any
+) -> list[dict[str, Any]]:
+    """Return my notifications of a workspace (GET /notifications, newest first)."""
+    response = client.get(
+        "/notifications", params={"workspace_id": workspace_id, **params}
+    )
+    assert response.status_code == 200, response.text
+    return response.json()["items"]
+
+
+def create_cycle(
+    client: httpx.Client, team_id: str, starts_at: str, ends_at: str, **extra: Any
+) -> dict[str, Any]:
+    """Create a cycle through POST /teams/{team_id}/cycles and return the body."""
+    response = client.post(
+        f"/teams/{team_id}/cycles",
+        json={"starts_at": starts_at, "ends_at": ends_at, **extra},
+    )
+    assert response.status_code == 201, response.text
+    return response.json()

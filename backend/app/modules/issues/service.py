@@ -19,6 +19,7 @@ from app.modules.issues.repository import IssueRepository
 from app.modules.issues.schemas import IssueCreate, IssueUpdate
 from app.modules.labels.models import Label
 from app.modules.labels.service import LabelService
+from app.modules.notifications.service import NotificationService
 from app.modules.teams.models import Team, WorkflowState, WorkflowStateType
 from app.modules.teams.service import TeamService
 from app.modules.workspaces.exceptions import InvalidReferenceError
@@ -63,11 +64,13 @@ class IssueService(BaseService[Issue]):
         workspace_service: WorkspaceService,
         team_service: TeamService,
         label_service: LabelService,
+        notification_service: NotificationService,
     ) -> None:
         self.repo = repo
         self.workspace_service = workspace_service
         self.team_service = team_service
         self.label_service = label_service
+        self.notification_service = notification_service
 
     # --- reads -------------------------------------------------------------
 
@@ -237,6 +240,12 @@ class IssueService(BaseService[Issue]):
             subscriber_ids=subscribers,
             activities=[{"actor_id": user_id, "action": IssueActivityAction.created}],
         )
+        await self.notification_service.notify_assigned(
+            workspace_id=workspace_id,
+            issue_id=issue.id,
+            assignee_id=issue.assignee_id,
+            actor_id=user_id,
+        )
         self._log_entity(issue.id)
         return issue
 
@@ -357,6 +366,17 @@ class IssueService(BaseService[Issue]):
             subscriber_ids=subscribers,
             activities=activities,
         )
+        if "assignee_id" in values:
+            await self.notification_service.notify_assigned(
+                workspace_id=issue.workspace_id,
+                issue_id=issue.id,
+                assignee_id=values["assignee_id"],
+                actor_id=user_id,
+            )
+        if "state_id" in values:
+            await self.notification_service.notify_status_changed(
+                workspace_id=issue.workspace_id, issue_id=issue.id, actor_id=user_id
+            )
         self._log_entity(issue.id)
         return updated
 

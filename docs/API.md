@@ -285,16 +285,16 @@ No extra endpoints. My issues: `assignee_id=me` / `creator_id=me` /
 
 ## 3. Documents
 
-`DocumentSummary = {id, workspace_id, project_id, team_id, title, icon, creator_id, creator: UserSummary|null, last_edited_by_id, last_edited_by: UserSummary|null, sort_order, created_at, updated_at}`
+`DocumentSummary = {id, workspace_id, project_id, team_id, title, icon, creator_id, creator: UserSummary|null, last_edited_by_id, last_edited_by: UserSummary|null, project: {id, name}|null, sort_order, created_at, updated_at}`
 `Document = DocumentSummary & {content}` (HTML)
 
 | Status | Method | Path | Body | Response |
 |---|---|---|---|---|
-| PLANNED | GET | `/documents?workspace_id=..&project_id=&team_id=&search=&order_by=-updated_at` | – | `Page<DocumentSummary>` (search: title and content ILIKE) |
-| PLANNED | POST | `/documents` | `{workspace_id, title, content?, icon?, project_id?, team_id?}` | 201 `Document` |
-| PLANNED | GET | `/documents/{document_id}` | – | `Document` |
-| PLANNED | PATCH | `/documents/{document_id}` | `{title?, content?, icon?, project_id?, team_id?, sort_order?}` | `Document` (`last_edited_by_id = me`) |
-| PLANNED | DELETE | `/documents/{document_id}` | – | 204 |
+| IMPLEMENTED | GET | `/documents?workspace_id=..&project_id=&team_id=&search=&order_by=-updated_at` | – | `Page<DocumentSummary>` (search: title and content ILIKE) |
+| IMPLEMENTED | POST | `/documents` | `{workspace_id, title, content?, icon?, project_id?, team_id?}` | 201 `Document` |
+| IMPLEMENTED | GET | `/documents/{document_id}` | – | `Document` |
+| IMPLEMENTED | PATCH | `/documents/{document_id}` | `{title?, content?, icon?, project_id?, team_id?, sort_order?}` | `Document` (`last_edited_by_id = me`) |
+| IMPLEMENTED | DELETE | `/documents/{document_id}` | – | 204 |
 
 DOC-7 (issue mentions): the client renders `ENG-12` text as a link to
 `/<url_key>/issue/ENG-12` and resolves it with the IMPLEMENTED by-identifier endpoint.
@@ -305,30 +305,36 @@ DOC-7 (issue mentions): the client renders `ENG-12` text as a link to
 
 ### Projects (PRJ-1..3)
 
-`Project = {id, workspace_id, name, description, status, lead_id, lead: UserSummary|null, start_date, target_date, color, icon, sort_order, team_ids: string[], issue_count, completed_issue_count, created_at, updated_at}`
-(`status`: planned|started|paused|completed|canceled; counts ignore archived issues; progress = completed / count.)
+`Project = {id, workspace_id, name, description, status, lead_id, lead: UserSummary|null, start_date, target_date, color, icon, sort_order, team_ids: string[], teams: TeamSummary[], issue_count, completed_issue_count, progress: {total, completed, percentage}, created_at, updated_at}`
+(`status`: planned|started|paused|completed|canceled; `description` is HTML. Counts ignore archived and canceled issues; completed = state type `completed`; `progress.total = issue_count`, `progress.completed = completed_issue_count`, `percentage` = 0-100 rounded down, 0 when there are no issues. `teams` by name.)
 
 | Status | Method | Path | Body | Response |
 |---|---|---|---|---|
-| PLANNED | GET | `/workspaces/{workspace_id}/projects?status=` | – | `Project[]` (by `sort_order`) |
-| PLANNED | POST | `/projects` | `{workspace_id, name, description?, status?, lead_id?, start_date?, target_date?, color?, icon?, team_ids?}` | 201 `Project` |
-| PLANNED | GET | `/projects/{project_id}` | – | `Project` |
-| PLANNED | PATCH | `/projects/{project_id}` | any field of POST except `workspace_id`, plus `sort_order` (`team_ids` replaces) | `Project` |
-| PLANNED | DELETE | `/projects/{project_id}` | – | 204 (issues and documents keep existing, `project_id = null`) |
+| IMPLEMENTED | GET | `/workspaces/{workspace_id}/projects?status=&team_id=` | – | `Project[]` (by `sort_order`; `team_id` = projects that have this team) |
+| IMPLEMENTED | POST | `/projects` | `{workspace_id, name, description?, status?, lead_id?, start_date?, target_date?, color?, icon?, team_ids?}` | 201 `Project` (`sort_order` = after the last project; lead must be a member and teams in the workspace, else 400 `invalid_reference`) |
+| IMPLEMENTED | GET | `/projects/{project_id}` | – | `Project` |
+| IMPLEMENTED | PATCH | `/projects/{project_id}` | any field of POST except `workspace_id`, plus `sort_order` (`team_ids` replaces) | `Project` |
+| IMPLEMENTED | DELETE | `/projects/{project_id}` | – | 204 (issues and documents keep existing, `project_id = null`) |
 
 Project issues: `GET /issues?workspace_id=..&project_id=..`. Project documents: `GET /documents?workspace_id=..&project_id=..`.
 
 ### Cycles (CYC-1)
 
-`Cycle = {id, team_id, number, name, starts_at, ends_at, status: "current"|"upcoming"|"past", issue_count, completed_issue_count, created_at, updated_at}`
+`Cycle = {id, team_id, number, name, starts_at, ends_at, status: "current"|"upcoming"|"past", issue_count, completed_issue_count, progress: CycleProgress, created_at, updated_at}`
+`CycleProgress = {total, completed, percentage, scope: {backlog, unstarted, started, completed, canceled}}`
+
+- `status` from today's date (UTC): `starts_at <= today <= ends_at` = current, `starts_at > today` = upcoming, else past.
+- Dates are inclusive. `ends_at` must be after `starts_at` (else 400 `invalid_cycle_dates`); two cycles of one team never share a day (else 400 `cycle_overlap`).
+- `scope` counts the non-archived issues of the cycle by state type. `total` = `issue_count` = scope without canceled; `completed` = `completed_issue_count`; `percentage` = round(completed * 100 / total), 0 when empty.
 
 | Status | Method | Path | Body | Response |
 |---|---|---|---|---|
-| PLANNED | GET | `/teams/{team_id}/cycles` | – | `Cycle[]` (by `starts_at`) |
-| PLANNED | POST | `/teams/{team_id}/cycles` | `{name?, starts_at, ends_at}` | 201 `Cycle` (`number` = next per team; `ends_at >= starts_at`) |
-| PLANNED | GET | `/cycles/{cycle_id}` | – | `Cycle` |
-| PLANNED | PATCH | `/cycles/{cycle_id}` | `{name?, starts_at?, ends_at?}` | `Cycle` |
-| PLANNED | DELETE | `/cycles/{cycle_id}` | – | 204 (issues keep existing, `cycle_id = null`) |
+| IMPLEMENTED | GET | `/teams/{team_id}/cycles` | – | `Cycle[]` (by `starts_at`) |
+| IMPLEMENTED | POST | `/teams/{team_id}/cycles` | `{name?, starts_at, ends_at}` | 201 `Cycle` (`number` = next per team) |
+| IMPLEMENTED | GET | `/cycles/{cycle_id}` | – | `Cycle` |
+| IMPLEMENTED | PATCH | `/cycles/{cycle_id}` | `{name?, starts_at?, ends_at?}` | `Cycle` |
+| IMPLEMENTED | DELETE | `/cycles/{cycle_id}` | – | 204 (issues keep existing, `cycle_id = null`) |
+| IMPLEMENTED | POST | `/cycles/{cycle_id}/complete` | `{target_cycle_id?}` (optional body) | `{moved, target_cycle: Cycle}`: moves the non-archived issues in backlog/unstarted/started states to `target_cycle_id` (default: the next cycle of the team; none: 400 `no_next_cycle`; not another cycle of the team: 400 `invalid_reference`). One `cycle` history row per moved issue |
 
 Assign issues with `PATCH /issues/{id} {cycle_id}`; cycle issues with `GET /issues?cycle_id=..`.
 
@@ -347,30 +353,46 @@ the actor.
 
 | Status | Method | Path | Body | Response |
 |---|---|---|---|---|
-| PLANNED | GET | `/notifications?workspace_id=..&unread=&include_archived=` | – | `Page<Notification>` (newest first, mine only) |
-| PLANNED | GET | `/notifications/unread-count?workspace_id=..` | – | `{count}` |
-| PLANNED | PATCH | `/notifications/{notification_id}` | `{read?, archived?}` | `Notification` |
-| PLANNED | POST | `/notifications/mark-all-read` | `{workspace_id}` | `{updated}` |
+| IMPLEMENTED | GET | `/notifications?workspace_id=..&unread=&include_archived=&type=&issue_id=` | – | `Page<Notification>` (newest first, mine only; archived left out unless `include_archived=true`; `unread=true` only unread, `false` only read) |
+| IMPLEMENTED | GET | `/notifications/unread-count?workspace_id=..` | – | `{count}` (unread and not archived) |
+| IMPLEMENTED | PATCH | `/notifications/{notification_id}` | `{read?, archived?}` | `Notification` (`true` sets `read_at`/`archived_at` to now, `false` clears it) |
+| IMPLEMENTED | POST | `/notifications/mark-all-read` | `{workspace_id}` | `{updated}` |
+| IMPLEMENTED | DELETE | `/notifications/{notification_id}` | – | 204 |
+
+Another user's notification is a 404 (`not_found`), like a missing one. A
+non-member of the workspace gets 404 on list, count and mark-all-read.
+Creation: `NotificationService` (`backend/app/modules/notifications/service.py`)
+is called by `IssueService` after a create/update (`assigned` also when an
+issue is created with an assignee). Other features (comments, mentions) call
+`NotificationService.notify_subscribers(...)` or insert rows themselves.
 
 ### Search (UX-1, UX-4)
 
 | Status | Method | Path | Body | Response |
 |---|---|---|---|---|
-| PLANNED | GET | `/workspaces/{workspace_id}/search?q=&types=issue,document,project&limit=10` | – | `{issues: IssueRef[], documents: {id, title, icon, project_id}[], projects: {id, name, icon, status}[]}` |
+| IMPLEMENTED | GET | `/workspaces/{workspace_id}/search?q=&types=issue,document,project&limit=10` | – | `{issues: (IssueRef & {team: TeamSummary})[], documents: {id, title, icon, project_id}[], projects: {id, name, icon, color, status}[]}` |
 
-Issue search matches title, description and identifier (`ENG-12`).
+Issue search matches title, description and identifier (`ENG-12`, or the bare
+number `12`); an exact identifier match comes first, then the newest updated;
+archived issues are left out. Documents match title or content, projects name
+or description. `limit` (1..50) is per type. An empty `q` returns empty lists.
+`%` and `_` match literally.
 
 ### Favorites (UX-5)
 
-`Favorite = {id, user_id, workspace_id, entity_type: "issue"|"project"|"document"|"team", entity_id, sort_order, name, created_at}`
-(`name` = display name: `ENG-12 Title`, project name, document title, team name.)
+`Favorite = {id, user_id, workspace_id, entity_type: "issue"|"project"|"document"|"team", entity_id, sort_order, name, identifier, icon, color, created_at}`
+(`name` = display name: `ENG-12 Title`, project name, document title, team name.
+`identifier` = issue identifier `ENG-12` or team key `ENG`, else null. `icon`/`color`
+from the project, document or team, else null. Links: issue `/<url_key>/issue/<identifier>`,
+project `/<url_key>/project/<entity_id>`, document `/<url_key>/document/<entity_id>`,
+team `/<url_key>/team/<identifier>/issues`.)
 
 | Status | Method | Path | Body | Response |
 |---|---|---|---|---|
-| PLANNED | GET | `/workspaces/{workspace_id}/favorites` | – | `Favorite[]` (mine, by `sort_order`; rows whose entity is gone are left out) |
-| PLANNED | POST | `/favorites` | `{workspace_id, entity_type, entity_id}` | 201 `Favorite` (again: 400 `duplicate_item`) |
-| PLANNED | PATCH | `/favorites/{favorite_id}` | `{sort_order}` | `Favorite` |
-| PLANNED | DELETE | `/favorites/{favorite_id}` | – | 204 |
+| IMPLEMENTED | GET | `/workspaces/{workspace_id}/favorites` | – | `Favorite[]` (mine, by `sort_order`; rows whose entity is gone are left out) |
+| IMPLEMENTED | POST | `/favorites` | `{workspace_id, entity_type, entity_id}` | 201 `Favorite`, appended last (again: 400 `duplicate_item`; entity not in the workspace: 400 `invalid_reference`) |
+| IMPLEMENTED | PATCH | `/favorites/{favorite_id}` | `{sort_order}` | `Favorite` |
+| IMPLEMENTED | DELETE | `/favorites/{favorite_id}` | – | 204 |
 
 ---
 
@@ -382,11 +404,12 @@ Issue search matches title, description and identifier (`ENG-12`).
 | `teams` | `team`, `team_member`, `workflow_state` | teams, states |
 | `labels` | `label` | labels |
 | `issues` | `issue`, `issue_label`, `issue_relation`, `issue_subscriber`, `comment`, `issue_activity` | issues (+ planned relations, comments, activity, subscribers) |
-| `projects` | `project`, `project_team` | models only |
+| `projects` | `project`, `project_team` | projects (CRUD, progress) |
 | `cycles` | `cycle` | models only |
-| `documents` | `document` | models only |
-| `notifications` | `notification` | models only |
-| `favorites` | `favorite` | models only |
+| `documents` | `document` | documents |
+| `notifications` | `notification` | notifications (inbox); `NotificationService.notify_*` = creation, used by `IssueService` |
+| `favorites` | `favorite` | favorites |
+| `search` | – (reads `issue`, `document`, `project`) | search |
 
 All tables exist (migration `add linear entities`). New endpoints need no
 migration unless they change a model.
