@@ -18,6 +18,7 @@ import {
   useUpdateNotification,
 } from '@/hooks/useNotifications'
 import { toastApiError } from '@/lib/error-handler'
+import { cn } from '@/lib/utils'
 import type { Notification, UpdateNotificationData } from '@/types/notification'
 
 /** Inbox (UX-3): my notifications on the left, the selected one's issue on the right. */
@@ -222,7 +223,13 @@ function InboxPage() {
         }
       />
       <div className="flex min-h-0 flex-1">
-        <div className="flex min-h-0 w-full shrink-0 flex-col border-r border-border-subtle md:w-[380px]">
+        {/* Phone widths have room for one pane: the preview replaces the list. */}
+        <div
+          className={cn(
+            'min-h-0 w-full shrink-0 flex-col border-r border-border-subtle md:flex md:w-[380px]',
+            selected ? 'hidden' : 'flex'
+          )}
+        >
           {unreadOnly ? (
             <div className="flex h-8 shrink-0 items-center border-b border-border-subtle px-4 text-mini text-text-secondary">
               Unread notifications
@@ -275,7 +282,7 @@ function InboxPage() {
             ) : null}
           </div>
         </div>
-        <div className="hidden min-h-0 min-w-0 flex-1 md:flex">
+        <div className={cn('min-h-0 min-w-0 flex-1 md:flex', selected ? 'flex' : 'hidden')}>
           {selected ? (
             <NotificationPreview
               key={selected.id}
@@ -286,6 +293,10 @@ function InboxPage() {
               onToggleRead={() => toggleRead(selected)}
               onToggleArchive={() => toggleArchive(selected)}
               onDelete={() => deleteNotification(selected)}
+              onBack={() => {
+                setSelectedId(null)
+                setSticky(null)
+              }}
             />
           ) : (
             <EmptyState
