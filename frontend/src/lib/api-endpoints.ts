@@ -1,6 +1,7 @@
 import type { DocumentsParams } from '@/types/document'
 import type { IssuesParams } from '@/types/issue'
 import type { ItemsParams } from '@/types/item'
+import type { ProjectsParams } from '@/types/project'
 import type { NotificationsParams } from '@/types/notification'
 
 export const API = {
@@ -34,6 +35,11 @@ export const API = {
     DETAIL: (id: string) => `/issues/${id}`,
     BY_IDENTIFIER: (workspaceId: string, identifier: string) =>
       `/workspaces/${workspaceId}/issues/by-identifier/${identifier}`,
+  },
+  PROJECTS: {
+    LIST: (workspaceId: string) => `/workspaces/${workspaceId}/projects`,
+    CREATE: '/projects',
+    DETAIL: (id: string) => `/projects/${id}`,
   },
   NOTIFICATIONS: {
     LIST: '/notifications',
@@ -80,6 +86,16 @@ export function buildIssuesListUrl(params: IssuesParams): string {
     }
   }
   return `${API.ISSUES.LIST}?${queryParams.toString()}`
+}
+
+/** Builds the GET /workspaces/{id}/projects URL (optional `status` and `team_id` filters). */
+export function buildProjectsListUrl(workspaceId: string, params?: ProjectsParams): string {
+  const queryParams = new URLSearchParams()
+  if (params?.status) queryParams.append('status', params.status)
+  if (params?.team_id) queryParams.append('team_id', params.team_id)
+  const queryString = queryParams.toString()
+  const path = API.PROJECTS.LIST(workspaceId)
+  return queryString ? `${path}?${queryString}` : path
 }
 
 /** Builds the GET /notifications URL (newest first). Undefined keys are left out. */
