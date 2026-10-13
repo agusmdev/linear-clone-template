@@ -196,6 +196,29 @@ test.describe('command palette', () => {
     expect(page.url()).toContain(doc.id)
   })
 
+  test('create new issue while the issue modal is open keeps what is typed', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    await page.goto(`/${workspace.url_key}/views`)
+    await expect(page.getByRole('heading', { level: 1, name: 'Views' })).toBeVisible()
+    await page.keyboard.press('c')
+    const modal = page.getByRole('dialog', { name: 'New issue' })
+    await modal.getByLabel('Issue title').fill('Half-written issue')
+    await modal.getByLabel('Issue description').click()
+    await page.keyboard.type('Steps to reproduce')
+
+    await page.keyboard.press('ControlOrMeta+k')
+    await palette(page).getByRole('combobox').fill('create new issue')
+    await page.keyboard.press('Enter')
+    await expect(palette(page)).toBeHidden()
+
+    await expect(modal.getByLabel('Issue title')).toHaveValue('Half-written issue')
+    await expect(modal.getByLabel('Issue description')).toHaveText('Steps to reproduce')
+  })
+
   test('create new project opens the project dialog; search finds the project', async ({
     api,
     user,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { useCurrentWorkspace } from '@/contexts/WorkspaceContext'
@@ -39,13 +39,22 @@ export function CreateIssueHost() {
   const urlTeamKey = /\/team\/([^/]+)/.exec(pathname)?.[1]
   const urlTeam = ws.teams.find(t => t.key.toLowerCase() === urlTeamKey?.toLowerCase())
 
+  // A create request while the modal is open (e.g. "Create new issue" in the
+  // command menu) keeps that modal: a new session would drop what is typed.
+  const openRef = useRef(open)
+  useEffect(() => {
+    openRef.current = open
+  }, [open])
+
   const workspaceId = ws.workspace.id
   useEffect(() => {
     const show = (detail: CreateIssueEventDetail) => {
+      if (openRef.current) return
       const draft = readIssueDraft(workspaceId)
       setSession(prev => ({ id: (prev?.id ?? 0) + 1, detail, draft }))
       setTeamId(undefined)
       setParentSearch('')
+      openRef.current = true
       setOpen(true)
     }
     const onEvent = (event: Event) =>
