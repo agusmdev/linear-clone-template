@@ -149,6 +149,22 @@ def test_filters(
     assert _identifiers(setup, **params) == expected
 
 
+@pytest.mark.parametrize(
+    ("search", "expected"),
+    [("%", ["ENG-6"]), ("_", ["ENG-7"]), ("\\", ["ENG-8"]), ("0%", ["ENG-6"])],
+)
+def test_search_treats_like_wildcards_as_literal_text(
+    setup: dict[str, Any], search: str, expected: list[str]
+) -> None:
+    client = setup["owner"].client
+    team_id = setup["team"]["id"]
+    create_issue(client, team_id, "Reach 100% coverage")
+    create_issue(client, team_id, "Rename snake_case field")
+    create_issue(client, team_id, "Fix C:\\temp path")
+
+    assert _identifiers(setup, search=search) == expected
+
+
 def test_filters_by_ids(setup: dict[str, Any]) -> None:
     issues, states = setup["issues"], setup["states"]
 

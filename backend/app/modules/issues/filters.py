@@ -15,6 +15,7 @@ from sqlalchemy.sql import Select
 
 from app.core.filters import ModelFilter
 from app.modules.issues.models import Issue, IssueLabel, IssueSubscriber
+from app.modules.search.filters import like_pattern
 from app.modules.teams.models import WorkflowState, WorkflowStateType
 
 ME = "me"
@@ -213,9 +214,10 @@ class IssueFilter(ModelFilter):  # ?order_by= accepts Issue columns only (else 4
                 )
             )
         if self.search:
+            pattern = like_pattern(self.search)
             conditions = [
-                Issue.title.ilike(f"%{self.search}%"),
-                Issue.description.ilike(f"%{self.search}%"),
+                Issue.title.ilike(pattern),
+                Issue.description.ilike(pattern),
             ]
             if match := _IDENTIFIER.match(self.search.strip()):
                 conditions.append(Issue.number == int(match.group(1)))
