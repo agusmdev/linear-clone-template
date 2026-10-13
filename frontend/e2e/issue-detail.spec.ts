@@ -11,6 +11,7 @@ import {
   createProject,
   createIssue,
   createRelation,
+  createTeam,
   createWorkspace,
   deleteRelation,
   devices,
@@ -360,6 +361,44 @@ test.describe('issue page', () => {
     await openIssue(page, workspace.url_key, blocker.identifier)
     await expect(activity).toContainText(`marked this as blocking ${issue.identifier}`)
     await expect(activity).toContainText(`removed blocking relation with ${issue.identifier}`)
+  })
+
+  test('long identifiers stay on one line and "duplicated by" reads as a sentence', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const { workspace } = await seedWorkspace(api, user)
+    // A five-letter key with two digits is wider than the old fixed identifier column.
+    const team = await createTeam(api, user, workspace.id, { name: 'Marketing', key: 'MWMWM' })
+    for (let n = 1; n < 10; n++) {
+      await createIssue(api, user, { team_id: team.id, title: `Filler ${n}` })
+    }
+    const parent = await createIssue(api, user, { team_id: team.id, title: 'Launch plan' })
+    const child = await createIssue(api, user, {
+      team_id: team.id,
+      title: 'Landing page',
+      parent_id: parent.id,
+    })
+    const duplicate = await createIssue(api, user, { team_id: team.id, title: 'Launch plan copy' })
+    await createRelation(api, user, duplicate.id, {
+      related_issue_id: parent.id,
+      type: 'duplicate',
+    })
+    await openIssue(page, workspace.url_key, parent.identifier)
+
+    const subIssues = page.getByRole('region', { name: 'Sub-issues' })
+    const relations = page.getByRole('region', { name: 'Relations' })
+    for (const identifier of [
+      subIssues.getByText(child.identifier, { exact: true }),
+      relations.getByText(duplicate.identifier, { exact: true }),
+    ]) {
+      expect(await identifier.evaluate(el => el.getBoundingClientRect().height)).toBeLessThan(20)
+    }
+
+    await expect(page.getByRole('list', { name: 'Activity' })).toContainText(
+      `marked ${duplicate.identifier} as a duplicate of this issue`
+    )
   })
 
   test('the inline sub-issue title stops at 500 characters', async ({

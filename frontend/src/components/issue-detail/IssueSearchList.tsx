@@ -46,7 +46,7 @@ export function IssueSearchList({
             {results.map(issue => (
               <CommandItem key={issue.id} value={issue.id} onSelect={() => onSelect(issue)}>
                 <StatusIcon type={issue.state.type} color={issue.state.color} />
-                <span className="w-14 shrink-0 text-mini text-text-tertiary">
+                <span className="min-w-14 shrink-0 text-mini whitespace-nowrap text-text-tertiary">
                   {issue.identifier}
                 </span>
                 <span className="truncate">{issue.title}</span>
