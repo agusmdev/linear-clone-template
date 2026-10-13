@@ -141,7 +141,13 @@ function IssueDetail({ issue }: { issue: Issue }) {
   const subscribersQuery = useSubscribers(issue.id)
 
   const updateIssue = useUpdateIssueDetail(issue)
-  const deleteIssue = useDeleteIssueDetail(issue.id)
+  const [deleteOpen, setDeleteOpen] = React.useState(false)
+  // Leave the page before the caches change, or it fetches the deleted issue (404s).
+  const deleteIssue = useDeleteIssueDetail(issue, async () => {
+    setDeleteOpen(false)
+    toast.success(`Deleted ${issue.identifier}`)
+    await navigate({ to: path(`/team/${issue.team.key}/issues`) as '/' })
+  })
   const createSubIssue = useCreateSubIssue()
   const createRelation = useCreateRelation(issue.id)
   const deleteRelation = useDeleteRelation()
@@ -153,7 +159,6 @@ function IssueDetail({ issue }: { issue: Issue }) {
   const [relationSearch, setRelationSearch] = React.useState('')
   const debouncedSearch = useDebounce(relationSearch, 200)
   const searchQuery = useIssueSearch(workspace.id, debouncedSearch)
-  const [deleteOpen, setDeleteOpen] = React.useState(false)
   const [openPicker, setOpenPicker] = React.useState<PanelPicker | null>(null)
   const titleRef = React.useRef<HTMLTextAreaElement>(null)
 
@@ -207,11 +212,6 @@ function IssueDetail({ issue }: { issue: Issue }) {
 
   const confirmDelete = () =>
     deleteIssue.mutate(undefined, {
-      onSuccess: () => {
-        setDeleteOpen(false)
-        toast.success(`Deleted ${issue.identifier}`)
-        void navigate({ to: path(`/team/${issue.team.key}/issues`) as '/' })
-      },
       onError: error => toastApiError(error, 'Could not delete issue'),
     })
 

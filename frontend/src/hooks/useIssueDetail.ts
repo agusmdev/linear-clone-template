@@ -62,13 +62,29 @@ export function useUpdateIssueDetail(issue: Pick<Issue, 'id' | 'workspace_id' | 
   })
 }
 
-export function useDeleteIssueDetail(issueId: string) {
+/**
+ * DELETE /issues/{id}. `onDeleted` runs first (the issue page navigates away
+ * in it). Only then are the deleted issue's queries removed and the issue
+ * caches refreshed: while the issue page is still mounted, a refresh or a
+ * re-render fetches the deleted issue again and gets 404s.
+ */
+export function useDeleteIssueDetail(
+  issue: Pick<Issue, 'id' | 'workspace_id' | 'identifier'>,
+  onDeleted: () => unknown
+) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: () => api.delete(API.ISSUES.DETAIL(issueId)),
-    onSuccess: () => {
-      queryClient.removeQueries({ queryKey: queryKeys.issues.detail(issueId) })
-      void invalidateIssueCaches(queryClient)
+    mutationFn: () => api.delete(API.ISSUES.DETAIL(issue.id)),
+    onSuccess: async () => {
+      // detail(id) is the prefix of the sub-resources (comments, relations, ...).
+      const deletedKeys = [
+        queryKeys.issues.detail(issue.id),
+        queryKeys.issues.byIdentifier(issue.workspace_id, issue.identifier),
+      ]
+      await Promise.all(deletedKeys.map(queryKey => queryClient.cancelQueries({ queryKey })))
+      await onDeleted()
+      for (const queryKey of deletedKeys) queryClient.removeQueries({ queryKey })
+      await invalidateIssueCaches(queryClient)
     },
   })
 }

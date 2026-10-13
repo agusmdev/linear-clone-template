@@ -433,6 +433,52 @@ test.describe('issue page', () => {
     expect(response.status()).toBe(404)
   })
 
+  test('deleting the open issue sends no more requests for it', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const { workspace, team } = await seedWorkspace(api, user)
+    const issue = await createIssue(api, user, { team_id: team.id, title: 'Gone soon' })
+    const other = await createIssue(api, user, { team_id: team.id, title: 'Stays here' })
+    await openIssue(page, workspace.url_key, issue.identifier)
+    // Wait until the page has loaded its sub-resources.
+    await expect(
+      page.getByRole('region', { name: 'Activity' }).getByRole('button', { name: 'Unsubscribe' })
+    ).toBeEnabled()
+
+    // Every GET for the deleted issue after the DELETE, and every 404 in the console.
+    let deleted = false
+    const lateRequests: string[] = []
+    const notFoundErrors: string[] = []
+    page.on('request', request => {
+      const url = request.url()
+      const forIssue =
+        url.includes(`/issues/${issue.id}`) ||
+        url.includes(`/issues/by-identifier/${issue.identifier}`)
+      if (forIssue && request.method() === 'DELETE') deleted = true
+      if (deleted && forIssue && request.method() === 'GET') lateRequests.push(url)
+    })
+    page.on('console', message => {
+      if (message.type() === 'error' && message.text().includes('404')) {
+        notFoundErrors.push(message.text())
+      }
+    })
+
+    await page.keyboard.press('ControlOrMeta+Backspace')
+    const dialog = page.getByRole('alertdialog')
+    await expect(dialog).toContainText(`Delete issue ${issue.identifier}?`)
+    await dialog.getByRole('button', { name: 'Delete' }).click()
+
+    await expect(page).toHaveURL(`/${workspace.url_key}/team/${team.key}/issues`)
+    await expect(page.getByText(`Deleted ${issue.identifier}`)).toBeVisible()
+    await expect(page.getByText(other.title)).toBeVisible()
+    await page.waitForLoadState('networkidle')
+    expect(deleted).toBe(true)
+    expect(lateRequests).toEqual([])
+    expect(notFoundErrors).toEqual([])
+  })
+
   test('keyboard shortcuts open the pickers, assign to me and rename', async ({
     api,
     user,
