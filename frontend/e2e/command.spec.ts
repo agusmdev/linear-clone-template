@@ -153,6 +153,30 @@ test.describe('command palette', () => {
     await expect(palette(page).getByRole('option')).toHaveCount(0)
   })
 
+  test('async results above a command that matched first take the highlight', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const [team] = await listTeams(api, user, workspace.id)
+    const issue = await createIssue(api, user, { team_id: team.id, title: 'Login page broken' })
+
+    await page.goto(`/${workspace.url_key}/views`)
+    await expect(page.getByRole('heading', { level: 1, name: 'Views' })).toBeVisible()
+    await page.keyboard.press('ControlOrMeta+k')
+    // "login" fuzzy-matches "Log out" before the issue search answers; the issue
+    // shows above it and Enter must open the issue, not sign the user out.
+    await palette(page).getByRole('combobox').fill('login')
+    const result = palette(page).getByRole('option', {
+      name: `${issue.identifier} Login page broken`,
+    })
+    await expect(result).toHaveAttribute('aria-selected', 'true')
+    await expect(palette(page).getByRole('option', { name: 'Log out' })).toBeVisible()
+    await page.keyboard.press('Enter')
+    await expect(page).toHaveURL(`/${workspace.url_key}/issue/${issue.identifier}`)
+  })
+
   test('results of an earlier query are never selected for the new text', async ({
     api,
     user,
