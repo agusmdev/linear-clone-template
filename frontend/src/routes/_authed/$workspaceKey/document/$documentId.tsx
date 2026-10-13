@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useIsMutating } from '@tanstack/react-query'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { FileText, FolderInput, Link2, MoreHorizontal, SmilePlus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -23,7 +24,12 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCurrentWorkspace } from '@/contexts/WorkspaceContext'
 import { formatRelativeTime } from '@/features/documents/relative-time'
-import { useDeleteDocument, useDocument, useUpdateDocument } from '@/hooks/useDocuments'
+import {
+  documentUpdateMutationKey,
+  useDeleteDocument,
+  useDocument,
+  useUpdateDocument,
+} from '@/hooks/useDocuments'
 import { useIssueHref } from '@/hooks/useIssueHref'
 import { useProjects } from '@/hooks/useProjects'
 import { toastApiError } from '@/lib/error-handler'
@@ -38,8 +44,14 @@ function DocumentPage() {
   const { documentId } = Route.useParams()
   const { workspace, path } = useCurrentWorkspace()
   const query = useDocument(documentId)
+  // The editor starts from the document fetched after the page opened, and after
+  // a save still in flight from the last visit: a cached copy can be out of date.
+  const saving = useIsMutating({ mutationKey: documentUpdateMutationKey(documentId) }) > 0
+  const [readyId, setReadyId] = useState<string | null>(null)
+  if (readyId !== documentId && query.isFetchedAfterMount && !saving) setReadyId(documentId)
+  const ready = readyId === documentId
 
-  if (query.isPending) {
+  if (query.isPending || (!ready && !query.isError)) {
     return (
       <div className="flex min-h-full flex-col" aria-busy="true">
         <PageHeader

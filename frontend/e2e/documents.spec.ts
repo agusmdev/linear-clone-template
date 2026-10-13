@@ -362,6 +362,47 @@ test.describe('document editor', () => {
       .toBe('Meeting notes')
   })
 
+  test('reopening a document shows a teammate edit made since, and typing keeps it', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const doc = await createDocument(api, user, {
+      workspace_id: workspace.id,
+      title: 'Team spec',
+      content: '<p>First version</p>',
+    })
+    const teammate = await registerUser(api)
+    await inviteMember(api, user, workspace.id, teammate.email)
+
+    // Open the document once, so its data is cached, then leave it.
+    await page.goto(`/${workspace.url_key}/documents`)
+    const row = page
+      .getByRole('list', { name: 'Documents' })
+      .getByRole('link', { name: /Team spec/ })
+    await row.click()
+    const editor = page.getByLabel('Document content')
+    await expect(editor).toHaveText('First version')
+    await page.goBack()
+    await expect(row).toBeVisible()
+
+    const response = await api.patch(`/documents/${doc.id}`, {
+      data: { content: '<p>Teammate rewrote this</p>' },
+      headers: authHeaders(teammate),
+    })
+    expect(response.ok()).toBe(true)
+
+    await row.click()
+    await expect(editor).toHaveText('Teammate rewrote this')
+    await editor.click()
+    await page.keyboard.press('ControlOrMeta+End')
+    await page.keyboard.type(' and I added this')
+    await expect
+      .poll(async () => (await (await fetchDocument(api, user, doc.id)).json()).content)
+      .toBe('<p>Teammate rewrote this and I added this</p>')
+  })
+
   test('issue identifiers in the text link to the issue (DOC-7)', async ({
     api,
     user,

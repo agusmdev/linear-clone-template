@@ -39,12 +39,24 @@ export function useDocuments(params: DocumentsParams, enabled = true) {
   })
 }
 
+/**
+ * GET /documents/{id}. Always refetched when the page opens: the editor starts
+ * from this data, so a cached copy would hide (and its saves overwrite) the
+ * edits a teammate made since.
+ */
 export function useDocument(documentId: string) {
   return useQuery({
     queryKey: queryKeys.documents.detail(documentId),
     queryFn: () => api.get<Document>(API.DOCUMENTS.DETAIL(documentId)),
     retry: false,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
+}
+
+/** Identifies the PATCH /documents/{id} mutations of one document (see `useIsMutating`). */
+export function documentUpdateMutationKey(documentId: string) {
+  return ['documents', 'update', documentId] as const
 }
 
 export function useCreateDocument() {
@@ -71,6 +83,7 @@ export interface UpdateDocumentVariables {
 export function useUpdateDocument(documentId: string) {
   const queryClient = useQueryClient()
   return useMutation({
+    mutationKey: documentUpdateMutationKey(documentId),
     mutationFn: ({ data, keepalive }: UpdateDocumentVariables) =>
       api.patch<Document>(API.DOCUMENTS.DETAIL(documentId), data, { keepalive }),
     onSuccess: document => {
