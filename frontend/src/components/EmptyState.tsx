@@ -27,7 +27,9 @@ export function EmptyState({ icon, title, description, action, className }: Empt
       ) : null}
       <div className="flex max-w-sm flex-col gap-1">
         <p className="text-ui font-medium text-foreground">{title}</p>
-        {description ? <p className="text-ui text-text-secondary">{description}</p> : null}
+        {description ? (
+          <p className="text-ui text-text-secondary [overflow-wrap:anywhere]">{description}</p>
+        ) : null}
       </div>
       {action ? <div className="mt-2 flex items-center gap-2">{action}</div> : null}
     </div>

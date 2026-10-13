@@ -13,7 +13,7 @@ import { useDebounce } from '@/hooks/useDebounce'
 import { useSearch } from '@/hooks/useSearch'
 import { cn } from '@/lib/utils'
 import type { FavoriteEntityType } from '@/types/favorite'
-import type { SearchResults } from '@/types/search'
+import { SEARCH_QUERY_MAX_LENGTH, type SearchResults } from '@/types/search'
 
 const TABS = ['all', 'issues', 'documents', 'projects'] as const
 type SearchTab = (typeof TABS)[number]
@@ -134,7 +134,7 @@ function SearchPage() {
   const search = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
   const inputRef = useRef<HTMLInputElement>(null)
-  const [text, setText] = useState(search.q ?? '')
+  const [text, setText] = useState((search.q ?? '').slice(0, SEARCH_QUERY_MAX_LENGTH))
   const [activeIndex, setActiveIndex] = useState(0)
   const query = useDebounce(text, DEBOUNCE_MS)
   const tab: SearchTab = search.type ?? 'all'
@@ -213,6 +213,7 @@ function SearchPage() {
           // eslint-disable-next-line jsx-a11y/no-autofocus
           autoFocus
           type="search"
+          maxLength={SEARCH_QUERY_MAX_LENGTH}
           aria-label="Search workspace"
           placeholder="Search issues, projects and documents…"
           value={text}
