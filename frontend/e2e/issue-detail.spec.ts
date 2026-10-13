@@ -144,6 +144,43 @@ test.describe('issue page', () => {
     await expect(description).toHaveText('Start QUICKRELOAD')
   })
 
+  test('reopening an issue shows a teammate description edit made since, and typing keeps it', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const { workspace, team } = await seedWorkspace(api, user)
+    const issue = await createIssue(api, user, {
+      team_id: team.id,
+      title: 'Shared spec',
+      description: '<p>First version</p>',
+    })
+    const teammate = await registerUser(api)
+    await addWorkspaceMember(api, user, workspace.id, teammate)
+
+    // Open the issue once, so its data is cached, then leave it.
+    await openIssue(page, workspace.url_key, issue.identifier)
+    const description = page.getByRole('textbox', { name: 'Issue description' })
+    await expect(description).toHaveText('First version')
+    await page
+      .getByRole('navigation', { name: 'Breadcrumb' })
+      .getByRole('link', { name: team.name })
+      .click()
+    const row = page.getByRole('main').getByText('Shared spec')
+    await expect(row).toBeVisible()
+
+    await updateIssue(api, teammate, issue.id, { description: '<p>Teammate rewrote this</p>' })
+
+    await row.click()
+    await expect(description).toHaveText('Teammate rewrote this')
+    await description.click()
+    await page.keyboard.press('ControlOrMeta+End')
+    await page.keyboard.type(' and I added this')
+    await expect
+      .poll(async () => (await getIssue(api, user, issue.id)).description)
+      .toBe('<p>Teammate rewrote this and I added this</p>')
+  })
+
   test('changes every property from the side panel', async ({ api, user, authedPage: page }) => {
     const { workspace, team, state } = await seedWorkspace(api, user)
     const me = await getMe(api, user)
