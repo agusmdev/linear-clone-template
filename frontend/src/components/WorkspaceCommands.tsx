@@ -31,6 +31,7 @@ import { StatusIcon } from '@/components/StatusIcon'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useCurrentWorkspace } from '@/contexts/WorkspaceContext'
+import { useNewDocument } from '@/features/documents/useNewDocument'
 import { useDebounce } from '@/hooks/useDebounce'
 import { favoritePath, useFavorites } from '@/hooks/useFavorites'
 import { useSearch } from '@/hooks/useSearch'
@@ -98,6 +99,7 @@ export function WorkspaceCommands() {
   const { logout } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const favoritesQuery = useFavorites(workspace.id)
+  const newDocument = useNewDocument()
 
   const [open, setOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
@@ -153,7 +155,7 @@ export function WorkspaceCommands() {
             label: 'Create new document',
             icon: <FilePlus />,
             keywords: ['new document', 'doc'],
-            onSelect: () => goNew('/documents'),
+            onSelect: () => void newDocument.createAndOpen(),
           },
           {
             id: 'create-project',
@@ -288,7 +290,7 @@ export function WorkspaceCommands() {
     return result
     // go/goNew/goSearch/signOut only close over navigate, path and logout.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [favoritesQuery.data, teams, theme, toggleTheme, path, navigate])
+  }, [favoritesQuery.data, teams, theme, toggleTheme, path, navigate, newDocument])
 
   const results = query.trim() ? searchQuery.data : undefined
   const searchGroups = useMemo<CommandGroupData[]>(() => {

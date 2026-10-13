@@ -126,6 +126,17 @@ def create_issue(
     return response.json()
 
 
+def create_document(
+    client: httpx.Client, workspace_id: str, title: str = "Doc", **extra: Any
+) -> dict[str, Any]:
+    """Create a document through POST /documents and return the response body."""
+    response = client.post(
+        "/documents", json={"workspace_id": workspace_id, "title": title, **extra}
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
 def join_workspace(db: Database, workspace_id: str, user_id: str) -> None:
     """Add a user to a workspace as a member.
 

@@ -1,7 +1,7 @@
 """Favorites: list (mine, resolved names), add, reorder, remove.
 
-Projects and documents are inserted with SQL: their endpoints belong to other
-features (when they exist, seed through them instead).
+Projects are inserted with SQL: their endpoints belong to another feature
+(when they exist, seed through them instead).
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ import pytest
 
 from tests.e2e.helpers import (
     assert_error,
+    create_document,
     create_issue,
     create_workspace,
     join_workspace,
@@ -49,16 +50,6 @@ def insert_project(db: Database, workspace_id: str, name: str) -> str:
         (project_id, workspace_id, name),
     )
     return project_id
-
-
-def insert_document(db: Database, workspace_id: str, title: str) -> str:
-    document_id = str(uuid.uuid4())
-    db.execute(
-        "INSERT INTO document (id, workspace_id, title, content, icon, sort_order, "
-        "created_at, updated_at) VALUES (%s, %s, %s, '', NULL, 0, now(), now())",
-        (document_id, workspace_id, title),
-    )
-    return document_id
 
 
 @pytest.fixture
@@ -103,7 +94,7 @@ def test_add_and_list_every_entity_type(
     team = ws["team"]
     issue = create_issue(owner.client, team["id"], "Fix login")
     project_id = insert_project(db, workspace_id, "Launch")
-    document_id = insert_document(db, workspace_id, "Spec")
+    document_id = create_document(owner.client, workspace_id, "Spec")["id"]
 
     fav_issue = add(owner, workspace_id, "issue", issue["id"])
     assert set(fav_issue) == FAVORITE_FIELDS

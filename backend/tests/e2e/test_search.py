@@ -1,7 +1,7 @@
 """Search: GET /workspaces/{id}/search over issues, documents and projects.
 
-Projects and documents are inserted with SQL: their endpoints belong to other
-features (when they exist, seed through them instead).
+Projects are inserted with SQL: their endpoints belong to another feature
+(when they exist, seed through them instead).
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ import pytest
 
 from tests.e2e.helpers import (
     assert_error,
+    create_document,
     create_issue,
     create_workspace,
     workspace_team,
@@ -36,18 +37,6 @@ def insert_project(
         (project_id, workspace_id, name, description),
     )
     return project_id
-
-
-def insert_document(
-    db: Database, workspace_id: str, title: str, content: str = ""
-) -> str:
-    document_id = str(uuid.uuid4())
-    db.execute(
-        "INSERT INTO document (id, workspace_id, title, content, icon, sort_order, "
-        "created_at, updated_at) VALUES (%s, %s, %s, %s, NULL, 0, now(), now())",
-        (document_id, workspace_id, title, content),
-    )
-    return document_id
 
 
 @pytest.fixture
@@ -80,8 +69,8 @@ def test_search_finds_issues_documents_and_projects(
     create_issue(
         owner.client, team["id"], "Other", description="<p>the rocket fuel</p>"
     )
-    document_id = insert_document(db, workspace_id, "Rocket design doc")
-    insert_document(db, workspace_id, "Notes", content="<p>about rockets</p>")
+    document_id = create_document(owner.client, workspace_id, "Rocket design doc")["id"]
+    create_document(owner.client, workspace_id, "Notes", content="<p>about rockets</p>")
     project_id = insert_project(db, workspace_id, "Rocket program")
 
     body = search(owner, workspace_id, q="rocket")

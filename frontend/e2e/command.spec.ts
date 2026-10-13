@@ -4,6 +4,7 @@
  */
 import {
   addFavorite,
+  createDocument,
   createIssue,
   createWorkspace,
   deleteFavorite,
@@ -114,6 +115,22 @@ test.describe('command palette', () => {
     await expect(page).toHaveURL(`/${workspace.url_key}/issue/${issue.identifier}`)
   })
 
+  test('create new document makes a document and opens it', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    await page.goto(`/${workspace.url_key}/views`)
+    await expect(page.getByRole('heading', { level: 1, name: 'Views' })).toBeVisible()
+    await page.keyboard.press('ControlOrMeta+k')
+    await palette(page).getByRole('combobox').fill('create new document')
+    await page.keyboard.press('Enter')
+    await expect(page).toHaveURL(new RegExp(`/${workspace.url_key}/document/[0-9a-f-]{36}$`))
+    const [doc] = (await searchWorkspace(api, user, workspace.id, 'Untitled')).documents
+    expect(page.url()).toContain(doc.id)
+  })
+
   test('log out from the palette signs the user out', async ({ api, user, authedPage: page }) => {
     const workspace = await createWorkspace(api, user)
     await page.goto(`/${workspace.url_key}/views`)
@@ -188,21 +205,31 @@ test.describe('search page', () => {
       description: '<p>before the rocket goes</p>',
     })
     await createIssue(api, user, { team_id: team.id, title: 'Other' })
+    const doc = await createDocument(api, user, {
+      workspace_id: workspace.id,
+      title: 'Rocket design doc',
+    })
     const apiResults = await searchWorkspace(api, user, workspace.id, 'rocket')
     expect(apiResults.issues).toHaveLength(2)
+    expect(apiResults.documents.map(d => d.id)).toEqual([doc.id])
 
     await page.goto(`/${workspace.url_key}/search?q=rocket`)
     await expect(page.getByRole('heading', { level: 1, name: 'Search' })).toBeVisible()
     const input = page.getByRole('searchbox', { name: 'Search workspace' })
     await expect(input).toHaveValue('rocket')
     const results = page.getByTestId('search-result')
-    await expect(results).toHaveCount(2)
-    await expect(page.getByRole('region', { name: 'Search results' })).toContainText('Issues')
-    await expect(page.getByRole('tab', { name: /All\s*2/ })).toBeVisible()
+    await expect(results).toHaveCount(3)
+    const region = page.getByRole('region', { name: 'Search results' })
+    await expect(region.getByRole('heading', { name: /Issues/ })).toBeVisible()
+    await expect(region.getByRole('heading', { name: /Documents/ })).toBeVisible()
+    await expect(page.getByRole('tab', { name: /All\s*3/ })).toBeVisible()
 
-    // Tabs filter the type; documents have none.
+    // Tabs filter the type; projects have none.
     await page.getByRole('tab', { name: /Documents/ }).click()
     await expect(page).toHaveURL(/type=documents/)
+    await expect(results).toHaveCount(1)
+    await expect(results.first()).toContainText('Rocket design doc')
+    await page.getByRole('tab', { name: /Projects/ }).click()
     await expect(page.getByText('No results')).toBeVisible()
     await page.getByRole('tab', { name: /Issues/ }).click()
     await expect(results).toHaveCount(2)

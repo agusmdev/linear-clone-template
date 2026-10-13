@@ -19,6 +19,8 @@ import { Route as AuthedItemsRouteImport } from './routes/_authed/items'
 import { Route as AuthedWorkspaceKeyRouteImport } from './routes/_authed/$workspaceKey'
 import { Route as AuthedWorkspaceKeyViewsRouteImport } from './routes/_authed/$workspaceKey/views'
 import { Route as AuthedWorkspaceKeySearchRouteImport } from './routes/_authed/$workspaceKey/search'
+import { Route as AuthedWorkspaceKeyDocumentsRouteImport } from './routes/_authed/$workspaceKey/documents'
+import { Route as AuthedWorkspaceKeyDocumentDocumentIdRouteImport } from './routes/_authed/$workspaceKey/document/$documentId'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -70,6 +72,18 @@ const AuthedWorkspaceKeySearchRoute =
     path: '/search',
     getParentRoute: () => AuthedWorkspaceKeyRoute,
   } as any)
+const AuthedWorkspaceKeyDocumentsRoute =
+  AuthedWorkspaceKeyDocumentsRouteImport.update({
+    id: '/documents',
+    path: '/documents',
+    getParentRoute: () => AuthedWorkspaceKeyRoute,
+  } as any)
+const AuthedWorkspaceKeyDocumentDocumentIdRoute =
+  AuthedWorkspaceKeyDocumentDocumentIdRouteImport.update({
+    id: '/document/$documentId',
+    path: '/document/$documentId',
+    getParentRoute: () => AuthedWorkspaceKeyRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -79,8 +93,10 @@ export interface FileRoutesByFullPath {
   '/items': typeof AuthedItemsRoute
   '/oauth/callback': typeof OauthCallbackRoute
   '/oauth/error': typeof OauthErrorRoute
+  '/$workspaceKey/documents': typeof AuthedWorkspaceKeyDocumentsRoute
   '/$workspaceKey/search': typeof AuthedWorkspaceKeySearchRoute
   '/$workspaceKey/views': typeof AuthedWorkspaceKeyViewsRoute
+  '/$workspaceKey/document/$documentId': typeof AuthedWorkspaceKeyDocumentDocumentIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -90,8 +106,10 @@ export interface FileRoutesByTo {
   '/items': typeof AuthedItemsRoute
   '/oauth/callback': typeof OauthCallbackRoute
   '/oauth/error': typeof OauthErrorRoute
+  '/$workspaceKey/documents': typeof AuthedWorkspaceKeyDocumentsRoute
   '/$workspaceKey/search': typeof AuthedWorkspaceKeySearchRoute
   '/$workspaceKey/views': typeof AuthedWorkspaceKeyViewsRoute
+  '/$workspaceKey/document/$documentId': typeof AuthedWorkspaceKeyDocumentDocumentIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -103,8 +121,10 @@ export interface FileRoutesById {
   '/_authed/items': typeof AuthedItemsRoute
   '/oauth/callback': typeof OauthCallbackRoute
   '/oauth/error': typeof OauthErrorRoute
+  '/_authed/$workspaceKey/documents': typeof AuthedWorkspaceKeyDocumentsRoute
   '/_authed/$workspaceKey/search': typeof AuthedWorkspaceKeySearchRoute
   '/_authed/$workspaceKey/views': typeof AuthedWorkspaceKeyViewsRoute
+  '/_authed/$workspaceKey/document/$documentId': typeof AuthedWorkspaceKeyDocumentDocumentIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -116,8 +136,10 @@ export interface FileRouteTypes {
     | '/items'
     | '/oauth/callback'
     | '/oauth/error'
+    | '/$workspaceKey/documents'
     | '/$workspaceKey/search'
     | '/$workspaceKey/views'
+    | '/$workspaceKey/document/$documentId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -127,8 +149,10 @@ export interface FileRouteTypes {
     | '/items'
     | '/oauth/callback'
     | '/oauth/error'
+    | '/$workspaceKey/documents'
     | '/$workspaceKey/search'
     | '/$workspaceKey/views'
+    | '/$workspaceKey/document/$documentId'
   id:
     | '__root__'
     | '/'
@@ -139,8 +163,10 @@ export interface FileRouteTypes {
     | '/_authed/items'
     | '/oauth/callback'
     | '/oauth/error'
+    | '/_authed/$workspaceKey/documents'
     | '/_authed/$workspaceKey/search'
     | '/_authed/$workspaceKey/views'
+    | '/_authed/$workspaceKey/document/$documentId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -224,17 +250,36 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedWorkspaceKeySearchRouteImport
       parentRoute: typeof AuthedWorkspaceKeyRoute
     }
+    '/_authed/$workspaceKey/documents': {
+      id: '/_authed/$workspaceKey/documents'
+      path: '/documents'
+      fullPath: '/$workspaceKey/documents'
+      preLoaderRoute: typeof AuthedWorkspaceKeyDocumentsRouteImport
+      parentRoute: typeof AuthedWorkspaceKeyRoute
+    }
+    '/_authed/$workspaceKey/document/$documentId': {
+      id: '/_authed/$workspaceKey/document/$documentId'
+      path: '/document/$documentId'
+      fullPath: '/$workspaceKey/document/$documentId'
+      preLoaderRoute: typeof AuthedWorkspaceKeyDocumentDocumentIdRouteImport
+      parentRoute: typeof AuthedWorkspaceKeyRoute
+    }
   }
 }
 
 interface AuthedWorkspaceKeyRouteChildren {
+  AuthedWorkspaceKeyDocumentsRoute: typeof AuthedWorkspaceKeyDocumentsRoute
   AuthedWorkspaceKeySearchRoute: typeof AuthedWorkspaceKeySearchRoute
   AuthedWorkspaceKeyViewsRoute: typeof AuthedWorkspaceKeyViewsRoute
+  AuthedWorkspaceKeyDocumentDocumentIdRoute: typeof AuthedWorkspaceKeyDocumentDocumentIdRoute
 }
 
 const AuthedWorkspaceKeyRouteChildren: AuthedWorkspaceKeyRouteChildren = {
+  AuthedWorkspaceKeyDocumentsRoute: AuthedWorkspaceKeyDocumentsRoute,
   AuthedWorkspaceKeySearchRoute: AuthedWorkspaceKeySearchRoute,
   AuthedWorkspaceKeyViewsRoute: AuthedWorkspaceKeyViewsRoute,
+  AuthedWorkspaceKeyDocumentDocumentIdRoute:
+    AuthedWorkspaceKeyDocumentDocumentIdRoute,
 }
 
 const AuthedWorkspaceKeyRouteWithChildren =

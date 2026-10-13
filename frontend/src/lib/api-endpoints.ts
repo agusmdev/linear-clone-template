@@ -1,3 +1,4 @@
+import type { DocumentsParams } from '@/types/document'
 import type { IssuesParams } from '@/types/issue'
 import type { ItemsParams } from '@/types/item'
 import type { SearchParams } from '@/types/search'
@@ -42,6 +43,11 @@ export const API = {
     CREATE: '/favorites',
     DETAIL: (id: string) => `/favorites/${id}`,
   },
+  DOCUMENTS: {
+    LIST: '/documents',
+    CREATE: '/documents',
+    DETAIL: (id: string) => `/documents/${id}`,
+  },
 } as const
 
 /** Makes `%`, `_` and `\` match themselves in an ILIKE pattern (backslash is Postgres' default escape). */
@@ -79,4 +85,18 @@ export function buildSearchUrl(workspaceId: string, params: SearchParams): strin
   if (params.types?.length) queryParams.append('types', params.types.join(','))
   if (params.limit) queryParams.append('limit', String(params.limit))
   return `${API.SEARCH.WORKSPACE(workspaceId)}?${queryParams.toString()}`
+}
+
+/** Builds the GET /documents URL (default order: most recently updated first). */
+export function buildDocumentsListUrl(params: DocumentsParams): string {
+  const queryParams = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '') continue
+    if (Array.isArray(value)) {
+      if (value.length > 0) queryParams.append(key, value.join(','))
+    } else {
+      queryParams.append(key, String(value))
+    }
+  }
+  return `${API.DOCUMENTS.LIST}?${queryParams.toString()}`
 }
