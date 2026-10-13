@@ -48,7 +48,7 @@ tests/
 
 ### Linear-clone modules
 
-`workspaces`, `teams`, `labels`, `issues`, `cycles` have the full API; `projects`, `documents`, `notifications`, `favorites` have models only. The endpoint contract (implemented and planned) is [../docs/API.md](../docs/API.md).
+`workspaces`, `teams`, `labels`, `issues`, `cycles`, `documents` have the full API; `projects`, `notifications`, `favorites` have models only. The endpoint contract (implemented and planned) is [../docs/API.md](../docs/API.md).
 
 - Access rule: every workspace-scoped service calls `WorkspaceService.require_member(workspace_id, user_id)` (`app/modules/workspaces/service.py`); a non-member gets the 404 of a missing row. Bad cross-references (a state of another team, a label of another workspace, ...) raise `InvalidReferenceError` (400 `invalid_reference`, `app/modules/workspaces/exceptions.py`).
 - These modules use each other's services, so their `__init__.py` re-exports only models and schemas (else import cycles). Import services, dependencies and routers from their submodules.
