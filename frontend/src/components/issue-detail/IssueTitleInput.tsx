@@ -10,6 +10,12 @@ interface IssueTitleInputProps {
   ref?: React.Ref<HTMLTextAreaElement>
 }
 
+/** Sets the textarea's height to its content, so every line of the title shows. */
+function fitHeight(el: HTMLTextAreaElement) {
+  el.style.height = '0px'
+  el.style.height = `${el.scrollHeight}px`
+}
+
 /**
  * Inline-editable issue title (looks like text, no border). The textarea grows
  * with the text. Enter saves, Shift+Enter is ignored (titles are one line),
@@ -26,10 +32,22 @@ export function IssueTitleInput({ value, onSave, className, ref: outerRef }: Iss
 
   React.useLayoutEffect(() => {
     const el = ref.current
-    if (!el) return
-    el.style.height = '0px'
-    el.style.height = `${el.scrollHeight}px`
+    if (el) fitHeight(el)
   }, [shown])
+
+  // A narrower or wider page wraps the title into more or fewer lines: fit the height again.
+  React.useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    let width = el.clientWidth
+    const observer = new ResizeObserver(() => {
+      if (el.clientWidth === width) return
+      width = el.clientWidth
+      fitHeight(el)
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   const commit = () => {
     const next = draft.replace(/\s+/g, ' ').trim()
