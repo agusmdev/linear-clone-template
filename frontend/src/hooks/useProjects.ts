@@ -54,10 +54,14 @@ export function useUpdateProject(projectId: string) {
     onSuccess: project => {
       queryClient.setQueryData(detailKey, project)
     },
-    onSettled: () => {
+    onSettled: (_project, _error, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all })
       // A favorite shows the project's name, icon and color (built by the server).
       queryClient.invalidateQueries({ queryKey: queryKeys.favorites.all })
+      // A document shows its project's name (list badge, breadcrumb).
+      if (variables.name !== undefined) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.documents.all })
+      }
     },
   })
 }
@@ -71,6 +75,8 @@ export function useDeleteProject() {
       // project page refetch the deleted project (404) before it navigates away.
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.lists() })
       queryClient.invalidateQueries({ queryKey: queryKeys.issues.all })
+      // The server takes the project's documents out of it.
+      queryClient.invalidateQueries({ queryKey: queryKeys.documents.all })
       // The favorites list leaves out the deleted project.
       queryClient.invalidateQueries({ queryKey: queryKeys.favorites.all })
     },
