@@ -262,6 +262,37 @@ test.describe('inbox', () => {
     await expect(rows(page).nth(1)).toContainText('changed status to In Progress')
   })
 
+  test('the preview shows the issue as it is now, not as it was first opened', async ({
+    api,
+    user: owner,
+    loginAs,
+  }) => {
+    const { workspace, member, memberUser, team, states } = await setUp(api, owner)
+    const done = states.find(s => s.name === 'Done')
+    if (!done) throw new Error('No Done state')
+    const issue = await createIssue(api, owner, {
+      team_id: team.id,
+      title: 'Original title',
+      assignee_id: memberUser.id,
+    })
+    await updateIssue(api, owner, issue.id, { state_id: done.id })
+
+    const page = await loginAs(member)
+    await page.goto(`/${workspace.url_key}/inbox`)
+    await expect(rows(page)).toHaveCount(2)
+    const preview = page.getByRole('region', { name: 'Notification preview' })
+    await rows(page).nth(1).getByRole('button').first().click()
+    await expect(preview.getByRole('heading', { name: 'Original title' })).toBeVisible()
+    await expect(preview.getByText('No priority')).toBeVisible()
+
+    // A teammate changes the issue while the inbox stays open.
+    await updateIssue(api, owner, issue.id, { title: 'Renamed title', priority: 1 })
+    await rows(page).nth(0).getByRole('button').first().click()
+    await expect(preview.getByRole('heading', { name: 'Renamed title' })).toBeVisible()
+    await expect(preview.getByText('Urgent')).toBeVisible()
+    await expect(preview.getByTestId('preview-status')).toHaveText('Done')
+  })
+
   test('on a phone the preview replaces the list, with a way back', async ({
     api,
     user: owner,
