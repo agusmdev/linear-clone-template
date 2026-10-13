@@ -646,6 +646,30 @@ test.describe('issue page', () => {
     await expect(page.getByRole('textbox', { name: 'Issue title' })).toHaveValue('Linked issue')
   })
 
+  test('a checklist in a comment cannot be ticked (the change would not be saved)', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const { workspace, team } = await seedWorkspace(api, user)
+    const issue = await createIssue(api, user, { team_id: team.id, title: 'Checklist comment' })
+    const body =
+      '<ul data-type="taskList"><li data-checked="false" data-type="taskItem"><label><input type="checkbox"><span></span></label><div><p>Write the test</p></div></li></ul>'
+    await createComment(api, user, issue.id, body)
+    await openIssue(page, workspace.url_key, issue.identifier)
+
+    const card = page.getByRole('article').filter({ hasText: 'Write the test' })
+    const checkbox = card.getByRole('checkbox')
+    await expect(checkbox).not.toBeChecked()
+    await expect(checkbox).toBeDisabled()
+    // A real click on the box (it lands on the label) and Space leave it unticked.
+    await card.locator('label').click({ force: true })
+    await page.keyboard.press('Tab')
+    await page.keyboard.press('Space')
+    await expect(checkbox).not.toBeChecked()
+    expect((await listComments(api, user, issue.id))[0].body).toBe(body)
+  })
+
   test("a teammate's comment notifies subscribers and cannot be edited by others", async ({
     api,
     user,
