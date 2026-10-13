@@ -267,6 +267,17 @@ def _wait_until_server_connections_are_idle(db: Database) -> None:
         time.sleep(0.01)
 
 
+def list_notifications(
+    client: httpx.Client, workspace_id: str, **params: Any
+) -> list[dict[str, Any]]:
+    """Return my notifications of a workspace (GET /notifications, newest first)."""
+    response = client.get(
+        "/notifications", params={"workspace_id": workspace_id, **params}
+    )
+    assert response.status_code == 200, response.text
+    return response.json()["items"]
+
+
 def create_cycle(
     client: httpx.Client, team_id: str, starts_at: str, ends_at: str, **extra: Any
 ) -> dict[str, Any]:

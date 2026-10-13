@@ -1,15 +1,17 @@
-"""Notification model (inbox). The API is not implemented yet (see docs/API.md)."""
+"""Notification model (inbox, UX-3). API: ``app/modules/notifications/routers.py``."""
 
 import enum
 import uuid
 from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
 from app.database.enums import str_enum
 from app.database.mixins import TimestampMixin
+from app.modules.issues.models import Issue
+from app.user.models import User
 
 
 class NotificationType(enum.StrEnum):
@@ -45,4 +47,11 @@ class Notification(TimestampMixin, Base):
     )
     archived_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), default=None
+    )
+
+    # Read-only relationships for the response; always loaded explicitly
+    # (notifications.repository.LOAD_OPTIONS), never lazily.
+    issue: Mapped[Issue | None] = relationship(lazy="raise_on_sql", viewonly=True)
+    actor: Mapped[User | None] = relationship(
+        foreign_keys=[actor_id], lazy="raise_on_sql", viewonly=True
     )

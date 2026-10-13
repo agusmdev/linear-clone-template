@@ -12,6 +12,7 @@ import { WorkspaceCommands, openCreateIssue } from '@/components/WorkspaceComman
 import { WorkspaceSwitcher } from '@/components/WorkspaceSwitcher'
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/contexts/AuthContext'
+import { useUnreadNotificationCount } from '@/hooks/useNotifications'
 import { WorkspaceContext, type WorkspaceContextValue } from '@/contexts/WorkspaceContext'
 import type { Favorite } from '@/types/favorite'
 import { favoritePath, useFavorites, useReorderFavorite } from '@/hooks/useFavorites'
@@ -48,6 +49,7 @@ function WorkspaceLayout() {
   const meQuery = useMe()
   const favoritesQuery = useFavorites(workspace?.id)
   const reorderFavorite = useReorderFavorite(workspace?.id ?? '')
+  const unreadCountQuery = useUnreadNotificationCount(workspace?.id)
 
   const value = useMemo<WorkspaceContextValue | null>(() => {
     if (!workspace || !teamsQuery.data || !membersQuery.data || !labelsQuery.data || !meQuery.data)
@@ -138,6 +140,7 @@ function WorkspaceLayout() {
         </>
       }
       inboxTo={`${base}/inbox`}
+      inboxCount={unreadCountQuery.data?.count}
       myIssuesTo={`${base}/my-issues`}
       projectsTo={`${base}/projects`}
       documentsTo={`${base}/documents`}
