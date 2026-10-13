@@ -90,10 +90,12 @@ class IssueRepository(SQLAlchemyRepository[Issue]):
     async def _add_activities(
         self, issue_id: uuid.UUID, activities: list[dict[str, Any]]
     ) -> None:
+        """Insert activity rows on ``issue_id``, or on the row's own ``issue_id``
+        (e.g. the old or new parent of a sub-issue)."""
         if activities:
             await self._session.execute(
                 insert(IssueActivity),
-                [{**activity, "issue_id": issue_id} for activity in activities],
+                [{"issue_id": issue_id, **activity} for activity in activities],
             )
 
     @SQLAlchemyRepository.translate_commit_errors
@@ -104,20 +106,23 @@ class IssueRepository(SQLAlchemyRepository[Issue]):
         label_ids: set[uuid.UUID],
         subscriber_ids: set[uuid.UUID],
         activities: list[dict[str, Any]],
+        parent_activity: dict[str, Any] | None = None,
     ) -> Issue:
         """Insert an issue with the team's next number, in one commit.
 
         The ``UPDATE team ... RETURNING issue_counter`` locks the team row
         until the commit, so concurrent creates get distinct numbers.
+        ``parent_activity`` (a row on the parent) gets the new identifier as
+        ``to_value``.
         """
-        number = (
+        number, team_key = (
             await self._session.execute(
                 update(Team)
                 .where(Team.id == values["team_id"])
                 .values(issue_counter=Team.issue_counter + 1)
-                .returning(Team.issue_counter)
+                .returning(Team.issue_counter, Team.key)
             )
-        ).scalar_one()
+        ).one()
         issue_id = (
             await self._session.execute(
                 insert(Issue).values(**values, number=number).returning(Issue.id)
@@ -130,6 +135,11 @@ class IssueRepository(SQLAlchemyRepository[Issue]):
             )
         await self._add_subscribers(issue_id, subscriber_ids)
         await self._add_activities(issue_id, activities)
+        if parent_activity is not None:
+            # Same format as ``Issue.identifier``.
+            await self._add_activities(
+                issue_id, [{**parent_activity, "to_value": f"{team_key}-{number}"}]
+            )
         await self._session.commit()
         return await self._get_full_or_404(issue_id)
 

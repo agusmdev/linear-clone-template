@@ -14,6 +14,7 @@ from app.modules.issues.models import (
     Comment,
     Issue,
     IssueActivity,
+    IssueActivityAction,
     IssueRelation,
     IssueRelationType,
     IssueSubscriber,
@@ -174,7 +175,10 @@ class IssueRelationRepository(SQLAlchemyRepository[IssueRelation]):
         issue_id: uuid.UUID,
         related_issue_id: uuid.UUID,
         relation_type: IssueRelationType,
+        *,
+        activities: list[dict[str, Any]],
     ) -> IssueRelation:
+        """Insert the relation and its activity rows: one commit."""
         relation_id = (
             await self._session.execute(
                 insert(IssueRelation)
@@ -186,11 +190,25 @@ class IssueRelationRepository(SQLAlchemyRepository[IssueRelation]):
                 .returning(IssueRelation.id)
             )
         ).scalar_one()
+        if activities:
+            await self._session.execute(insert(IssueActivity), activities)
         await self._session.commit()
         relation = await self.get_full(relation_id)
         if relation is None:
             raise NotFoundError(detail=f"Relation {relation_id} not found")
         return relation
+
+    @SQLAlchemyRepository.translate_commit_errors
+    async def delete_relation(
+        self, relation_id: uuid.UUID, *, activities: list[dict[str, Any]]
+    ) -> None:
+        """Delete the relation and log its activity rows: one commit."""
+        if activities:
+            await self._session.execute(insert(IssueActivity), activities)
+        await self._session.execute(
+            delete(IssueRelation).where(IssueRelation.id == relation_id)
+        )
+        await self._session.commit()
 
 
 class IssueSubscriberRepository(SQLAlchemyRepository[IssueSubscriber]):
@@ -233,7 +251,12 @@ class IssueActivityRepository(SQLAlchemyRepository[IssueActivity]):
             select(IssueActivity)
             .options(selectinload(IssueActivity.actor))
             .where(IssueActivity.issue_id == issue_id)
-            .order_by(IssueActivity.created_at, IssueActivity.id)
+            # Rows of one write share created_at: "created" comes first.
+            .order_by(
+                IssueActivity.created_at,
+                IssueActivity.action != IssueActivityAction.created,
+                IssueActivity.id,
+            )
         )
         return (await self._session.execute(query)).scalars().all()
 

@@ -229,6 +229,12 @@ test.describe('issue page', () => {
     await page.reload()
     await expect(section.getByTestId('sub-issues-progress')).toHaveText('1/2')
 
+    // The parent's timeline logs each new sub-issue (ISS-10).
+    const parentActivity = page.getByRole('list', { name: 'Activity' })
+    for (const child of subIssues.items) {
+      await expect(parentActivity).toContainText(`added sub-issue ${child.identifier}`)
+    }
+
     // The sub-issue page links back to its parent.
     await section.getByRole('link', { name: /Ship the release/ }).click()
     await expect(page).toHaveURL(issueUrl(workspace.url_key, subIssues.items[1].identifier))
@@ -237,6 +243,9 @@ test.describe('issue page', () => {
         name: parent.identifier,
       })
     ).toBeVisible()
+    await expect(page.getByRole('list', { name: 'Activity' })).toContainText(
+      `set the parent issue to ${parent.identifier}`
+    )
     await page.getByRole('link', { name: /Sub-issue of/ }).click()
     await expect(page).toHaveURL(issueUrl(workspace.url_key, parent.identifier))
   })
@@ -285,6 +294,16 @@ test.describe('issue page', () => {
     await deleteRelation(api, user, seeded.id)
     await page.reload()
     await expect(relations.getByText('No related issues')).toBeVisible()
+
+    // Every relation change is in the timeline of both issues (ISS-10).
+    const activity = page.getByRole('list', { name: 'Activity' })
+    await expect(activity).toContainText(`marked this as blocking ${blocked.identifier}`)
+    await expect(activity).toContainText(`marked this as blocked by ${blocker.identifier}`)
+    await expect(activity).toContainText(`removed blocked by relation with ${blocker.identifier}`)
+    await expect(activity).toContainText(`removed blocking relation with ${blocked.identifier}`)
+    await openIssue(page, workspace.url_key, blocker.identifier)
+    await expect(activity).toContainText(`marked this as blocking ${issue.identifier}`)
+    await expect(activity).toContainText(`removed blocking relation with ${issue.identifier}`)
   })
 
   test('comments: add with Cmd+Enter, edit, delete, and issue links', async ({

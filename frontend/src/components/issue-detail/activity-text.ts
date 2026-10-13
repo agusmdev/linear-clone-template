@@ -77,6 +77,24 @@ export function describeActivity(activity: IssueActivity): ActivityPart[] {
     case 'parent':
       if (!to) return [t('removed the parent issue '), v(from ?? '')]
       return [t('set the parent issue to '), v(to)]
+    case 'sub_issue':
+      if (!to) return [t('removed sub-issue '), v(from ?? '')]
+      return [t('added sub-issue '), v(to)]
+    case 'relation_blocks':
+      if (!to) return [t('removed blocking relation with '), v(from ?? '')]
+      return [t('marked this as blocking '), v(to)]
+    case 'relation_blocked_by':
+      if (!to) return [t('removed blocked by relation with '), v(from ?? '')]
+      return [t('marked this as blocked by '), v(to)]
+    case 'relation_related':
+      if (!to) return [t('removed related issue '), v(from ?? '')]
+      return [t('marked this as related to '), v(to)]
+    case 'relation_duplicate_of':
+      if (!to) return [t('removed duplicate relation with '), v(from ?? '')]
+      return [t('marked this as a duplicate of '), v(to)]
+    case 'relation_duplicated_by':
+      if (!to) return [t('removed duplicate relation with '), v(from ?? '')]
+      return [v(to), t(' was marked as a duplicate of this')]
     case 'estimate':
       if (!to) return [t('removed the estimate')]
       return [t('set the estimate to '), v(points(to))]

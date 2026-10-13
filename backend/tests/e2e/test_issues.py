@@ -85,7 +85,7 @@ def _activity(db: Database, issue_id: str) -> list[tuple[Any, ...]]:
     # The activity list endpoint does not exist yet: read the history table.
     return db.fetch_all(
         "SELECT action::text, field, from_value, to_value FROM issue_activity "
-        "WHERE issue_id = %s ORDER BY created_at, field",
+        "WHERE issue_id = %s ORDER BY created_at, field NULLS FIRST",
         (issue_id,),
     )
 
@@ -152,7 +152,10 @@ def test_create_issue_with_every_field(
     assert issue["estimate"] == 3
     assert issue["due_date"] == "2026-12-31"
     assert issue["sort_order"] == -5.5
-    assert _activity(db, issue["id"]) == [("created", None, None, None)]
+    assert _activity(db, issue["id"]) == [
+        ("created", None, None, None),
+        ("updated", "parent", None, parent["identifier"]),
+    ]
 
 
 def test_numbers_increase_per_team_and_sort_order_appends(
