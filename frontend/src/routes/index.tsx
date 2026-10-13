@@ -1,10 +1,13 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { useEffect } from 'react'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { ArrowRight } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
 import { StatusIcon, type StatusType } from '@/components/StatusIcon'
 import { PriorityIcon, type Priority } from '@/components/PriorityIcon'
 import { UserAvatar } from '@/components/UserAvatar'
 import { Kbd } from '@/components/Kbd'
+import { useAuth } from '@/contexts/AuthContext'
+import { useWorkspaces } from '@/hooks/useWorkspace'
 import { cn } from '@/lib/utils'
 
 export const Route = createFileRoute('/')({
@@ -69,7 +72,34 @@ const features = [
   { title: 'Projects & cycles', text: 'Plan the roadmap and run focused weekly cycles.' },
 ]
 
+/**
+ * "/" is the landing page for visitors. A signed-in user goes on to the app:
+ * the first workspace's My issues, or onboarding when they have no workspace.
+ * (The token is in localStorage: the server renders the landing page, the
+ * browser redirects after hydration.)
+ */
 function HomePage() {
+  const { isAuthenticated } = useAuth()
+  if (isAuthenticated) return <OpenApp />
+  return <Landing />
+}
+
+function OpenApp() {
+  const navigate = useNavigate()
+  const workspaces = useWorkspaces()
+
+  useEffect(() => {
+    // Wait for fresh data: the list may have just changed (workspace left or deleted).
+    if (!workspaces.data || workspaces.isFetching) return
+    const [first] = workspaces.data
+    if (first) navigate({ to: `/${first.url_key}/my-issues` as '/', replace: true })
+    else navigate({ to: '/onboarding', replace: true })
+  }, [workspaces.data, workspaces.isFetching, navigate])
+
+  return <div className="flex-1 bg-background" aria-busy="true" />
+}
+
+function Landing() {
   return (
     <div className="relative flex flex-1 flex-col overflow-hidden">
       <div

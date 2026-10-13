@@ -226,6 +226,18 @@ The one picker for status, priority, assignee, labels, project, cycle. A popover
 
 `shortcut` keys pick an option while the search box is empty (Linear's number keys). "No assignee" / "No project" are normal options with a special value (e.g. `'none'`): map it in the page.
 
+### Settings components (WS-1..WS-7)
+
+| Component | File | Use |
+|---|---|---|
+| `SettingsSidebar({ backTo, sections })` | `components/SettingsSidebar.tsx` | Replaces the app sidebar under `/<ws>/settings` ("Back to app" + grouped links; `exact` for index pages). Sections come from `settingsSections(base, teams)` in `features/workspaces/settings-nav.tsx` |
+| `SettingsPage({ title, description?, actions?, children })` | `components/SettingsPage.tsx` | Centered 680px column with a 24px title (an h2: the `PageHeader` holds the h1) |
+| `SettingsSection({ title?, description?, actions?, children })`, `SettingsCard`, `SettingsRow({ label, description?, children })` | `components/SettingsPage.tsx` | A titled group; a bordered box whose children get subtle dividers; a "label + control" row |
+| `ColorPicker({ value, onChange, label, trigger?, disabled? })` | `components/ColorPicker.tsx` | Palette popover (Linear's 10 colors, `COLOR_PALETTE`) + hex field. Default trigger: a swatch button named `"<label>: <hex>"` |
+| `ConfirmDialog({ open, onOpenChange, title, description?, confirmLabel, onConfirm, pending?, canConfirm?, destructive?, children? })` | `components/ConfirmDialog.tsx` | Confirmation for delete / remove / leave; `children` adds a field (type-to-confirm, a target select) |
+| `CreateTeamDialog({ open, onOpenChange, onSubmit, pending? })` | `components/CreateTeamDialog.tsx` | Team name, key (follows the name until edited), color |
+| `TeamBadge({ team, size? })` | `features/workspaces/settings-nav.tsx` | Square with the team key on the team color |
+
 ## 6. shadcn/ui primitives (`components/ui/`)
 
 Restyled to the tokens. Same API as shadcn (new-york):

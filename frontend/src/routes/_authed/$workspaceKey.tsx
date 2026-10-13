@@ -1,11 +1,22 @@
 import { useMemo } from 'react'
-import { createFileRoute, Outlet, useNavigate } from '@tanstack/react-router'
-import { Box, CircleDot, FileText, LogOut, Search, SquarePen, Users } from 'lucide-react'
+import { createFileRoute, Outlet, useLocation, useNavigate } from '@tanstack/react-router'
+import {
+  Box,
+  CircleDot,
+  FileText,
+  LogOut,
+  Plus,
+  Search,
+  Settings,
+  SquarePen,
+  Users,
+} from 'lucide-react'
 import { AppShell } from '@/components/AppShell'
 import { ShortcutsProvider } from '@/components/command'
 import { EmptyState } from '@/components/EmptyState'
 import { IconButton } from '@/components/IconButton'
 import { CreateIssueHost } from '@/components/issues/CreateIssueHost'
+import { SettingsSidebar } from '@/components/SettingsSidebar'
 import { Sidebar, type SidebarLink } from '@/components/Sidebar'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { UserAvatar } from '@/components/UserAvatar'
@@ -15,6 +26,7 @@ import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/contexts/AuthContext'
 import { useUnreadNotificationCount } from '@/hooks/useNotifications'
 import { WorkspaceContext, type WorkspaceContextValue } from '@/contexts/WorkspaceContext'
+import { settingsSections } from '@/features/workspaces/settings-nav'
 import type { Favorite } from '@/types/favorite'
 import { favoritePath, useFavorites, useReorderFavorite } from '@/hooks/useFavorites'
 import {
@@ -51,6 +63,10 @@ function WorkspaceLayout() {
   const favoritesQuery = useFavorites(workspace?.id)
   const reorderFavorite = useReorderFavorite(workspace?.id ?? '')
   const unreadCountQuery = useUnreadNotificationCount(workspace?.id)
+  // /<ws>/settings/... swaps the app sidebar for the settings sidebar.
+  const inSettings = useLocation({
+    select: location => location.pathname.startsWith(`/${workspaceKey}/settings`),
+  })
 
   const value = useMemo<WorkspaceContextValue | null>(() => {
     if (!workspace || !teamsQuery.data || !membersQuery.data || !labelsQuery.data || !meQuery.data)
@@ -113,6 +129,14 @@ function WorkspaceLayout() {
             if (target) navigate({ to: `/${target.url_key}/my-issues` as '/' })
           }}
         >
+          <DropdownMenuItem onSelect={() => navigate({ to: `${base}/settings` as '/' })}>
+            <Settings />
+            Settings
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => navigate({ to: '/onboarding' })}>
+            <Plus />
+            Create or join workspace
+          </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={async () => {
               await logout()
@@ -172,7 +196,18 @@ function WorkspaceLayout() {
   return (
     <WorkspaceContext.Provider value={value}>
       <ShortcutsProvider>
-        <AppShell sidebar={sidebar}>
+        <AppShell
+          sidebar={
+            inSettings ? (
+              <SettingsSidebar
+                backTo={`${base}/my-issues`}
+                sections={settingsSections(base, value.teams)}
+              />
+            ) : (
+              sidebar
+            )
+          }
+        >
           <Outlet />
         </AppShell>
         <WorkspaceCommands />

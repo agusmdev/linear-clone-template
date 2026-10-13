@@ -4,7 +4,7 @@ import {
   expect,
   PASSWORD,
   authHeaders,
-  createItem,
+  createWorkspace,
   errorToast,
   loginUser,
   registerUser,
@@ -31,6 +31,9 @@ async function fillLoginForm(page: Page, email: string, password: string) {
 }
 
 const logoutButton = (page: Page) => page.getByRole('button', { name: 'Logout' })
+// A signed-in user without a workspace lands on onboarding (AUTH-3, WS-1).
+const onboardingHeading = (page: Page) =>
+  page.getByRole('heading', { name: 'Create a new workspace' })
 const loginLink = (page: Page) => page.getByRole('link', { name: 'Login', exact: true })
 const sessionExpiredToast = (page: Page) =>
   page.locator('[data-sonner-toast]').filter({ hasText: SESSION_EXPIRED })
@@ -64,8 +67,9 @@ test.describe('register', () => {
     await fillRegisterForm(page, email, PASSWORD)
     await page.getByRole('button', { name: 'Create account' }).click()
 
-    await expect(page).toHaveURL('/')
-    await expect(logoutButton(page)).toBeVisible()
+    await expect(page).toHaveURL('/onboarding')
+    await expect(onboardingHeading(page)).toBeVisible()
+    await expect(page.getByText(`Logged in as ${email}`)).toBeVisible()
     // The account exists on the backend: the same credentials sign in.
     const token = await loginUser(api, email, PASSWORD)
     expect(token).toMatch(/\S/)
@@ -128,9 +132,21 @@ test.describe('login', () => {
     await fillLoginForm(page, user.email, user.password)
     await page.getByRole('button', { name: 'Sign in' }).click()
 
-    await expect(page).toHaveURL('/')
-    await expect(logoutButton(page)).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Items' })).toBeVisible()
+    await expect(page).toHaveURL('/onboarding')
+    await expect(onboardingHeading(page)).toBeVisible()
+  })
+
+  test('a user with a workspace goes to its My issues after sign-in', async ({
+    page,
+    api,
+    user,
+  }) => {
+    const workspace = await createWorkspace(api, user, { name: 'Sign-in Co' })
+    await page.goto('/login')
+    await fillLoginForm(page, user.email, user.password)
+    await page.getByRole('button', { name: 'Sign in' }).click()
+
+    await expect(page).toHaveURL(`/${workspace.url_key}/my-issues`)
   })
 
   test('signing in as another user over a session shows only the new user', async ({
@@ -138,23 +154,21 @@ test.describe('login', () => {
     user,
     authedPage: page,
   }) => {
-    await createItem(api, user, { name: 'Owned by the first user' })
     const other = await registerUser(api)
-    await createItem(api, other, { name: 'Owned by the second user' })
-    await page.goto('/items')
-    await expect(page.getByText('Owned by the first user')).toBeVisible()
+    // Signed in, without a workspace: "/" opens onboarding, which shows the user.
+    await page.goto('/')
+    await expect(page).toHaveURL('/onboarding')
+    await expect(page.getByText(`Logged in as ${user.email}`)).toBeVisible()
 
     // In-app navigation only, so the first user's cached data is still there.
-    await page.getByRole('link', { name: 'Home' }).click()
-    await page.getByRole('link', { name: 'Sign In', exact: true }).first().click()
+    await page.getByRole('link', { name: 'Use another account' }).click()
     await expect(page).toHaveURL('/login')
     await fillLoginForm(page, other.email, other.password)
     await page.getByRole('button', { name: 'Sign in' }).click()
-    await expect(page).toHaveURL('/')
-    await page.getByRole('link', { name: 'Items' }).click()
+    await expect(page).toHaveURL('/onboarding')
 
-    await expect(page.getByText('Owned by the second user')).toBeVisible()
-    await expect(page.getByText('Owned by the first user')).toHaveCount(0)
+    await expect(page.getByText(`Logged in as ${other.email}`)).toBeVisible()
+    await expect(page.getByText(user.email)).toHaveCount(0)
     expect(await storedToken(page)).not.toBe(user.token)
     // The replaced session is revoked on the server, not only forgotten.
     await expect
@@ -168,8 +182,8 @@ test.describe('login', () => {
     await fillLoginForm(page, user.email.toUpperCase(), user.password)
     await page.getByRole('button', { name: 'Sign in' }).click()
 
-    await expect(page).toHaveURL('/')
-    await expect(logoutButton(page)).toBeVisible()
+    await expect(page).toHaveURL('/onboarding')
+    await expect(onboardingHeading(page)).toBeVisible()
   })
 
   test('ignores a redirect target that is not a path in the app', async ({ page, user }) => {
@@ -177,9 +191,8 @@ test.describe('login', () => {
       await page.goto(`/login?redirect=${encodeURIComponent(target)}`)
       await fillLoginForm(page, user.email, user.password)
       await page.getByRole('button', { name: 'Sign in' }).click()
-      await expect(page).toHaveURL('/')
-      await expect(logoutButton(page)).toBeVisible()
-      await logoutButton(page).click()
+      await expect(page).toHaveURL('/onboarding')
+      await page.getByRole('button', { name: 'Log out' }).click()
       await expect(page).toHaveURL('/login')
     }
   })
@@ -309,7 +322,8 @@ test.describe('session', () => {
     // Wait for the loaded list, so no list request is still running at logout.
     await expect(otherTab.getByText('No items yet')).toBeVisible()
 
-    await page.goto('/')
+    // ("/" would open onboarding: the user has no workspace.)
+    await page.goto('/items')
     await logoutButton(page).click()
     await expect(page).toHaveURL('/login')
 

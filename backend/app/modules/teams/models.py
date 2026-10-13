@@ -11,11 +11,12 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
 from app.database.enums import str_enum
 from app.database.mixins import TimestampMixin
+from app.user.models import User
 
 
 class Team(TimestampMixin, Base):
@@ -53,6 +54,9 @@ class TeamMember(TimestampMixin, Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("user.id", ondelete="CASCADE"), index=True
     )
+
+    # Read-only, for the response; always loaded explicitly.
+    user: Mapped[User] = relationship(lazy="raise_on_sql", viewonly=True)
 
 
 class WorkflowStateType(enum.StrEnum):

@@ -54,7 +54,7 @@ import type {
   UpdateIssueData,
 } from '../src/types/issue'
 import type { CreateItemData, Item, ItemsResponse } from '../src/types/item'
-import type { Label } from '../src/types/label'
+import type { CreateLabelData, Label, UpdateLabelData } from '../src/types/label'
 import type { CreateProjectData, Project, UpdateProjectData } from '../src/types/project'
 import type {
   Notification,
@@ -63,9 +63,20 @@ import type {
 } from '../src/types/notification'
 import type { Page as ApiPage } from '../src/types/page'
 import type { SearchResults } from '../src/types/search'
-import type { Team, WorkflowState } from '../src/types/team'
+import type {
+  CreateTeamData,
+  Team,
+  TeamMember,
+  UpdateWorkflowStateData,
+  WorkflowState,
+} from '../src/types/team'
 import type { User } from '../src/types/user'
-import type { CreateWorkspaceData, Workspace, WorkspaceMember } from '../src/types/workspace'
+import type {
+  CreateWorkspaceData,
+  Workspace,
+  WorkspaceMember,
+  WorkspaceRole,
+} from '../src/types/workspace'
 import { BACKEND_URL, DB_CONTAINER, FRONTEND_URL } from './support/stack'
 
 export { expect }
@@ -323,6 +334,127 @@ export async function bulkDeleteIssues(
     headers: authHeaders(user),
   })
   await expectOk(response, 'POST /issues/bulk-delete')
+}
+
+// --- Workspace settings (members, teams, workflow states, labels) -----------
+
+/** POST /workspaces/{id}/members: adds an existing user (by email) at once. */
+export async function inviteMember(
+  api: APIRequestContext,
+  admin: TestUser,
+  workspaceId: string,
+  email: string,
+  role: WorkspaceRole = 'member'
+): Promise<WorkspaceMember> {
+  const response = await api.post(`/workspaces/${workspaceId}/members`, {
+    data: { email, role },
+    headers: authHeaders(admin),
+  })
+  await expectOk(response, 'POST /workspaces/{id}/members')
+  return (await response.json()) as WorkspaceMember
+}
+
+/** PATCH /workspaces/{id}/members/{member_id}: changes the role (admins). */
+export async function updateMemberRole(
+  api: APIRequestContext,
+  admin: TestUser,
+  workspaceId: string,
+  memberId: string,
+  role: WorkspaceRole
+): Promise<WorkspaceMember> {
+  const response = await api.patch(`/workspaces/${workspaceId}/members/${memberId}`, {
+    data: { role },
+    headers: authHeaders(admin),
+  })
+  await expectOk(response, 'PATCH /workspaces/{id}/members/{member_id}')
+  return (await response.json()) as WorkspaceMember
+}
+
+/** POST /workspaces/{id}/teams: the creator joins; the team gets the default states. */
+export async function createTeam(
+  api: APIRequestContext,
+  user: TestUser,
+  workspaceId: string,
+  data: CreateTeamData
+): Promise<Team> {
+  const response = await api.post(`/workspaces/${workspaceId}/teams`, {
+    data,
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'POST /workspaces/{id}/teams')
+  return (await response.json()) as Team
+}
+
+export async function getTeam(
+  api: APIRequestContext,
+  user: TestUser,
+  teamId: string
+): Promise<Team> {
+  const response = await api.get(`/teams/${teamId}`, { headers: authHeaders(user) })
+  await expectOk(response, 'GET /teams/{id}')
+  return (await response.json()) as Team
+}
+
+export async function listTeamMembers(
+  api: APIRequestContext,
+  user: TestUser,
+  teamId: string
+): Promise<TeamMember[]> {
+  const response = await api.get(`/teams/${teamId}/members`, { headers: authHeaders(user) })
+  await expectOk(response, 'GET /teams/{id}/members')
+  return (await response.json()) as TeamMember[]
+}
+
+/** DELETE /teams/{id}/members/{user_id}; `'me'` leaves the team. */
+export async function removeTeamMember(
+  api: APIRequestContext,
+  user: TestUser,
+  teamId: string,
+  userId: string
+): Promise<void> {
+  const response = await api.delete(`/teams/${teamId}/members/${userId}`, {
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'DELETE /teams/{id}/members/{user_id}')
+}
+
+export async function updateWorkflowState(
+  api: APIRequestContext,
+  user: TestUser,
+  stateId: string,
+  data: UpdateWorkflowStateData
+): Promise<WorkflowState> {
+  const response = await api.patch(`/workflow-states/${stateId}`, {
+    data,
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'PATCH /workflow-states/{id}')
+  return (await response.json()) as WorkflowState
+}
+
+export async function createLabel(
+  api: APIRequestContext,
+  user: TestUser,
+  workspaceId: string,
+  data: CreateLabelData
+): Promise<Label> {
+  const response = await api.post(`/workspaces/${workspaceId}/labels`, {
+    data,
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'POST /workspaces/{id}/labels')
+  return (await response.json()) as Label
+}
+
+export async function updateLabel(
+  api: APIRequestContext,
+  user: TestUser,
+  labelId: string,
+  data: UpdateLabelData
+): Promise<Label> {
+  const response = await api.patch(`/labels/${labelId}`, { data, headers: authHeaders(user) })
+  await expectOk(response, 'PATCH /labels/{id}')
+  return (await response.json()) as Label
 }
 
 // --- Search and favorites (slice "command") ---------------------------------

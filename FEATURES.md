@@ -13,19 +13,19 @@ left sidebar, Inter font, subtle borders, small type 13px).
 |---|---|---|
 | AUTH-1 | Register with name, email, password (no email verification; user is signed in at once) | todo |
 | AUTH-2 | Log in with email + password; log out | todo |
-| AUTH-3 | Protected app routes redirect to /login; after login go to the workspace | todo |
+| AUTH-3 | Protected app routes redirect to /login; after login go to the workspace | done |
 
 ## 1. Workspaces, teams, members (P0)
 
 | ID | Feature | Status |
 |---|---|---|
-| WS-1 | After first sign-in, onboarding asks for a workspace name + URL key; creates the workspace, a default team (e.g. "Engineering", key `ENG`) and default workflow states | todo |
-| WS-2 | A user can belong to many workspaces; workspace switcher in the sidebar | todo |
-| WS-3 | Invite members by email (existing users are added at once; no email sent) ; member list with roles (admin, member); remove member | todo |
-| WS-4 | Teams: create / rename / delete team, team key (2–5 uppercase letters), join/leave team, team members | todo |
-| WS-5 | Workflow states per team: Backlog, Todo, In Progress, In Review, Done, Canceled (types backlog/unstarted/started/completed/canceled); add/rename/recolor/reorder/delete states in team settings | todo |
-| WS-6 | Labels per workspace (name + color); create/edit/delete in settings | todo |
-| WS-7 | Profile settings: change display name; account page | todo |
+| WS-1 | After first sign-in, onboarding asks for a workspace name + URL key; creates the workspace, a default team (e.g. "Engineering", key `ENG`) and default workflow states | done |
+| WS-2 | A user can belong to many workspaces; workspace switcher in the sidebar | done |
+| WS-3 | Invite members by email (existing users are added at once; no email sent) ; member list with roles (admin, member); remove member | done |
+| WS-4 | Teams: create / rename / delete team, team key (2–5 uppercase letters), join/leave team, team members | done |
+| WS-5 | Workflow states per team: Backlog, Todo, In Progress, In Review, Done, Canceled (types backlog/unstarted/started/completed/canceled); add/rename/recolor/reorder/delete states in team settings | done |
+| WS-6 | Labels per workspace (name + color); create/edit/delete in settings | done |
+| WS-7 | Profile settings: change display name; account page | done |
 
 ## 2. Issues — the ticketing system (P0)
 
