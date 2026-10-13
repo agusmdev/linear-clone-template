@@ -373,6 +373,43 @@ test('shows progress and the issues of a project; New issue opens the create mod
   await expect(dialog).toBeHidden()
 })
 
+test('the Issues tab counts the issues its list shows, canceled ones too', async ({
+  authedPage: page,
+  api,
+  user,
+}) => {
+  const workspace = await createWorkspace(api, user)
+  const [team] = await listTeams(api, user, workspace.id)
+  const states = await listStates(api, user, team.id)
+  const project = await createProject(api, user, {
+    workspace_id: workspace.id,
+    name: 'Counted',
+    team_ids: [team.id],
+  })
+  const inProject = { team_id: team.id, project_id: project.id }
+  await createIssue(api, user, { ...inProject, title: 'Still todo' })
+  const done = await createIssue(api, user, { ...inProject, title: 'Finished' })
+  await updateIssue(api, user, done.id, {
+    state_id: states.find(s => s.type === 'completed')!.id,
+  })
+  const canceled = await createIssue(api, user, { ...inProject, title: 'Dropped' })
+  await updateIssue(api, user, canceled.id, {
+    state_id: states.find(s => s.type === 'canceled')!.id,
+  })
+  const archived = await createIssue(api, user, { ...inProject, title: 'Put away' })
+  await updateIssue(api, user, archived.id, { archived: true })
+
+  await page.goto(`/${workspace.url_key}/project/${project.id}`)
+  // Progress leaves canceled issues out; the tab counts every listed issue.
+  await expect(page.getByRole('region', { name: 'Progress' })).toContainText(
+    '1 of 2 issues completed'
+  )
+  await page.getByRole('tab', { name: /Issues/ }).click()
+  const rows = page.getByRole('listbox', { name: 'Issues' }).getByRole('option')
+  await expect(rows).toHaveCount(3)
+  await expect(page.getByRole('tab', { name: /Issues/ })).toHaveText(/^Issues\s*3$/)
+})
+
 test('deletes a project after confirmation and keeps its issues', async ({
   authedPage: page,
   api,

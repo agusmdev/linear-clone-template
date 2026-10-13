@@ -29,6 +29,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCurrentWorkspace } from '@/contexts/WorkspaceContext'
 import { useNewDocument } from '@/features/documents/useNewDocument'
+import { useIssuesPage } from '@/hooks/useIssues'
 import { usePageIssueDefaults } from '@/hooks/usePageIssueDefaults'
 import {
   projectUpdateMutationKey,
@@ -85,6 +86,12 @@ function ProjectPage() {
   const newDocument = useNewDocument({ project_id: projectId })
   // A project of another workspace is not opened under this one.
   const project = projectQuery.data?.workspace_id === workspace.id ? projectQuery.data : undefined
+  // The Issues tab counts what its list shows: every issue of the project,
+  // canceled ones too (`issue_count` is the progress scope, without them).
+  const issueTotal = useIssuesPage(
+    { workspace_id: workspace.id, project_id: projectId, size: 1 },
+    !!project
+  ).data?.total
   // `C` creates an issue in this project, like "New issue".
   usePageIssueDefaults({ projectId: project?.id, teamId: project?.team_ids[0] })
 
@@ -186,9 +193,7 @@ function ProjectPage() {
             >
               {label}
               {value === 'issues' ? (
-                <span className="text-micro text-text-tertiary tabular-nums">
-                  {project.issue_count}
-                </span>
+                <span className="text-micro text-text-tertiary tabular-nums">{issueTotal}</span>
               ) : null}
             </button>
           ))}
