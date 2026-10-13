@@ -380,8 +380,15 @@ function IssueDetail({ issue }: { issue: Issue }) {
                 })
               }
               onCreate={title =>
+                // Like the full form: the sub-issue starts in the parent's project and cycle.
                 createSubIssue
-                  .mutateAsync({ team_id: issue.team_id, title, parent_id: issue.id })
+                  .mutateAsync({
+                    team_id: issue.team_id,
+                    title,
+                    parent_id: issue.id,
+                    project_id: issue.project_id,
+                    cycle_id: issue.cycle_id,
+                  })
                   .catch(error => {
                     toastApiError(error, 'Could not create sub-issue')
                     throw error

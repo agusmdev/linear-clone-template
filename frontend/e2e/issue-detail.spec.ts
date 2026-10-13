@@ -7,6 +7,7 @@ import {
   addWorkspaceMember,
   createComment,
   createCycle,
+  createLabel,
   createProject,
   createIssue,
   createRelation,
@@ -378,6 +379,77 @@ test.describe('issue page', () => {
     await expect(input).toHaveValue('')
     const subIssues = await listSubIssues(api, user, parent.id)
     expect(subIssues.items.map(i => i.title.length)).toEqual([500])
+  })
+
+  test("an inline sub-issue starts in the parent's project and cycle", async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const { workspace, team } = await seedWorkspace(api, user)
+    const cycle = await createCycle(api, user, team.id, {
+      starts_at: isoDay(-1),
+      ends_at: isoDay(6),
+    })
+    const project = await createProject(api, user, {
+      workspace_id: workspace.id,
+      name: 'Billing',
+    })
+    const parent = await createIssue(api, user, {
+      team_id: team.id,
+      title: 'Launch v2',
+      project_id: project.id,
+      cycle_id: cycle.id,
+    })
+    await openIssue(page, workspace.url_key, parent.identifier)
+
+    await page.getByRole('button', { name: 'Add sub-issues' }).click()
+    const input = page.getByRole('textbox', { name: 'Sub-issue title' })
+    await input.fill('Write the docs')
+    await input.press('Enter')
+    await expect(input).toHaveValue('')
+
+    const [child] = (await listSubIssues(api, user, parent.id)).items
+    expect(child).toMatchObject({ project_id: project.id, cycle_id: cycle.id })
+  })
+
+  test('long label names and long values stay inside the side panel and the timeline', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const { workspace, team } = await seedWorkspace(api, user)
+    const label = await createLabel(api, user, workspace.id, {
+      name: 'Needs design review from the platform team',
+      color: '#4ea7fc',
+    })
+    const issue = await createIssue(api, user, {
+      team_id: team.id,
+      title: 'Crash',
+      label_ids: [label.id],
+    })
+    await updateIssue(api, user, issue.id, {
+      title: `Crash at https://example.com/${'a'.repeat(200)}`,
+    })
+    await openIssue(page, workspace.url_key, issue.identifier)
+
+    // The chip keeps one line inside the panel; the name is cut, not wrapped out of it.
+    const chip = page
+      .getByRole('button', { name: 'Change labels' })
+      .locator('span', { hasText: label.name })
+      .first()
+    await expect(chip).toBeVisible()
+    const panel = await page.getByRole('complementary', { name: 'Issue properties' }).boundingBox()
+    const chipBox = await chip.boundingBox()
+    if (!panel || !chipBox) throw new Error('label chip is not laid out')
+    expect(chipBox.height).toBeLessThanOrEqual(22)
+    expect(chipBox.x + chipBox.width).toBeLessThanOrEqual(panel.x + panel.width)
+    expect(await chip.evaluate(el => el.scrollHeight <= el.clientHeight + 1)).toBe(true)
+
+    // A long unbroken title in the timeline wraps inside the activity column.
+    const line = page.getByTestId('activity-line').filter({ hasText: 'changed the title' })
+    await expect(line).toBeVisible()
+    expect(await line.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
   })
 
   test('the add-relation menu works with the keyboard alone', async ({

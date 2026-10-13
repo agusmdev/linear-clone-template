@@ -72,7 +72,7 @@ function ActivityLine({ activity }: { activity: IssueActivity }) {
       <span className="mt-px flex size-5 shrink-0 items-center justify-center">
         <UserAvatar name={actor} size="xs" />
       </span>
-      <p className="min-w-0 leading-5" data-testid="activity-line">
+      <p className="min-w-0 leading-5 [overflow-wrap:anywhere]" data-testid="activity-line">
         <span className="font-medium text-foreground">{actor}</span>{' '}
         {describeActivity(activity).map((part, index) =>
           part.strong ? (
