@@ -40,6 +40,7 @@ import type { AuthSessionResponse } from '../src/types/auth'
 import type { CreateIssueData, Issue, UpdateIssueData } from '../src/types/issue'
 import type { CreateItemData, Item, ItemsResponse } from '../src/types/item'
 import type { Label } from '../src/types/label'
+import type { CreateProjectData, Project, UpdateProjectData } from '../src/types/project'
 import type { Page as ApiPage } from '../src/types/page'
 import type { Team, WorkflowState } from '../src/types/team'
 import type { User } from '../src/types/user'
@@ -277,6 +278,53 @@ export async function deleteIssue(
 ): Promise<void> {
   const response = await api.delete(`/issues/${issueId}`, { headers: authHeaders(user) })
   await expectOk(response, 'DELETE /issues/{id}')
+}
+
+export async function createProject(
+  api: APIRequestContext,
+  user: TestUser,
+  data: CreateProjectData
+): Promise<Project> {
+  const response = await api.post('/projects', { data, headers: authHeaders(user) })
+  await expectOk(response, 'POST /projects')
+  return (await response.json()) as Project
+}
+
+/** GET /workspaces/{id}/projects, with the optional `status` / `team_id` filters. */
+export async function listProjects(
+  api: APIRequestContext,
+  user: TestUser,
+  workspaceId: string,
+  query = ''
+): Promise<Project[]> {
+  const response = await api.get(`/workspaces/${workspaceId}/projects${query}`, {
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'GET /workspaces/{id}/projects')
+  return (await response.json()) as Project[]
+}
+
+/** GET /projects/{id}; returns null on 404. */
+export async function getProject(
+  api: APIRequestContext,
+  user: TestUser,
+  projectId: string
+): Promise<Project | null> {
+  const response = await api.get(`/projects/${projectId}`, { headers: authHeaders(user) })
+  if (response.status() === 404) return null
+  await expectOk(response, 'GET /projects/{id}')
+  return (await response.json()) as Project
+}
+
+export async function updateProject(
+  api: APIRequestContext,
+  user: TestUser,
+  projectId: string,
+  data: UpdateProjectData
+): Promise<Project> {
+  const response = await api.patch(`/projects/${projectId}`, { data, headers: authHeaders(user) })
+  await expectOk(response, 'PATCH /projects/{id}')
+  return (await response.json()) as Project
 }
 
 // ---------------------------------------------------------------------------

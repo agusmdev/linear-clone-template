@@ -17,6 +17,9 @@ import { Route as OauthErrorRouteImport } from './routes/oauth/error'
 import { Route as OauthCallbackRouteImport } from './routes/oauth/callback'
 import { Route as AuthedItemsRouteImport } from './routes/_authed/items'
 import { Route as AuthedWorkspaceKeyRouteImport } from './routes/_authed/$workspaceKey'
+import { Route as AuthedWorkspaceKeyProjectsRouteImport } from './routes/_authed/$workspaceKey/projects'
+import { Route as AuthedWorkspaceKeyProjectProjectIdRouteImport } from './routes/_authed/$workspaceKey/project/$projectId'
+import { Route as AuthedWorkspaceKeyTeamTeamKeyProjectsRouteImport } from './routes/_authed/$workspaceKey/team/$teamKey/projects'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -57,24 +60,48 @@ const AuthedWorkspaceKeyRoute = AuthedWorkspaceKeyRouteImport.update({
   path: '/$workspaceKey',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedWorkspaceKeyProjectsRoute =
+  AuthedWorkspaceKeyProjectsRouteImport.update({
+    id: '/projects',
+    path: '/projects',
+    getParentRoute: () => AuthedWorkspaceKeyRoute,
+  } as any)
+const AuthedWorkspaceKeyProjectProjectIdRoute =
+  AuthedWorkspaceKeyProjectProjectIdRouteImport.update({
+    id: '/project/$projectId',
+    path: '/project/$projectId',
+    getParentRoute: () => AuthedWorkspaceKeyRoute,
+  } as any)
+const AuthedWorkspaceKeyTeamTeamKeyProjectsRoute =
+  AuthedWorkspaceKeyTeamTeamKeyProjectsRouteImport.update({
+    id: '/team/$teamKey/projects',
+    path: '/team/$teamKey/projects',
+    getParentRoute: () => AuthedWorkspaceKeyRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/$workspaceKey': typeof AuthedWorkspaceKeyRoute
+  '/$workspaceKey': typeof AuthedWorkspaceKeyRouteWithChildren
   '/items': typeof AuthedItemsRoute
   '/oauth/callback': typeof OauthCallbackRoute
   '/oauth/error': typeof OauthErrorRoute
+  '/$workspaceKey/projects': typeof AuthedWorkspaceKeyProjectsRoute
+  '/$workspaceKey/project/$projectId': typeof AuthedWorkspaceKeyProjectProjectIdRoute
+  '/$workspaceKey/team/$teamKey/projects': typeof AuthedWorkspaceKeyTeamTeamKeyProjectsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/$workspaceKey': typeof AuthedWorkspaceKeyRoute
+  '/$workspaceKey': typeof AuthedWorkspaceKeyRouteWithChildren
   '/items': typeof AuthedItemsRoute
   '/oauth/callback': typeof OauthCallbackRoute
   '/oauth/error': typeof OauthErrorRoute
+  '/$workspaceKey/projects': typeof AuthedWorkspaceKeyProjectsRoute
+  '/$workspaceKey/project/$projectId': typeof AuthedWorkspaceKeyProjectProjectIdRoute
+  '/$workspaceKey/team/$teamKey/projects': typeof AuthedWorkspaceKeyTeamTeamKeyProjectsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -82,10 +109,13 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/_authed/$workspaceKey': typeof AuthedWorkspaceKeyRoute
+  '/_authed/$workspaceKey': typeof AuthedWorkspaceKeyRouteWithChildren
   '/_authed/items': typeof AuthedItemsRoute
   '/oauth/callback': typeof OauthCallbackRoute
   '/oauth/error': typeof OauthErrorRoute
+  '/_authed/$workspaceKey/projects': typeof AuthedWorkspaceKeyProjectsRoute
+  '/_authed/$workspaceKey/project/$projectId': typeof AuthedWorkspaceKeyProjectProjectIdRoute
+  '/_authed/$workspaceKey/team/$teamKey/projects': typeof AuthedWorkspaceKeyTeamTeamKeyProjectsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -97,6 +127,9 @@ export interface FileRouteTypes {
     | '/items'
     | '/oauth/callback'
     | '/oauth/error'
+    | '/$workspaceKey/projects'
+    | '/$workspaceKey/project/$projectId'
+    | '/$workspaceKey/team/$teamKey/projects'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -106,6 +139,9 @@ export interface FileRouteTypes {
     | '/items'
     | '/oauth/callback'
     | '/oauth/error'
+    | '/$workspaceKey/projects'
+    | '/$workspaceKey/project/$projectId'
+    | '/$workspaceKey/team/$teamKey/projects'
   id:
     | '__root__'
     | '/'
@@ -116,6 +152,9 @@ export interface FileRouteTypes {
     | '/_authed/items'
     | '/oauth/callback'
     | '/oauth/error'
+    | '/_authed/$workspaceKey/projects'
+    | '/_authed/$workspaceKey/project/$projectId'
+    | '/_authed/$workspaceKey/team/$teamKey/projects'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -185,16 +224,54 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedWorkspaceKeyRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/$workspaceKey/projects': {
+      id: '/_authed/$workspaceKey/projects'
+      path: '/projects'
+      fullPath: '/$workspaceKey/projects'
+      preLoaderRoute: typeof AuthedWorkspaceKeyProjectsRouteImport
+      parentRoute: typeof AuthedWorkspaceKeyRoute
+    }
+    '/_authed/$workspaceKey/project/$projectId': {
+      id: '/_authed/$workspaceKey/project/$projectId'
+      path: '/project/$projectId'
+      fullPath: '/$workspaceKey/project/$projectId'
+      preLoaderRoute: typeof AuthedWorkspaceKeyProjectProjectIdRouteImport
+      parentRoute: typeof AuthedWorkspaceKeyRoute
+    }
+    '/_authed/$workspaceKey/team/$teamKey/projects': {
+      id: '/_authed/$workspaceKey/team/$teamKey/projects'
+      path: '/team/$teamKey/projects'
+      fullPath: '/$workspaceKey/team/$teamKey/projects'
+      preLoaderRoute: typeof AuthedWorkspaceKeyTeamTeamKeyProjectsRouteImport
+      parentRoute: typeof AuthedWorkspaceKeyRoute
+    }
   }
 }
 
+interface AuthedWorkspaceKeyRouteChildren {
+  AuthedWorkspaceKeyProjectsRoute: typeof AuthedWorkspaceKeyProjectsRoute
+  AuthedWorkspaceKeyProjectProjectIdRoute: typeof AuthedWorkspaceKeyProjectProjectIdRoute
+  AuthedWorkspaceKeyTeamTeamKeyProjectsRoute: typeof AuthedWorkspaceKeyTeamTeamKeyProjectsRoute
+}
+
+const AuthedWorkspaceKeyRouteChildren: AuthedWorkspaceKeyRouteChildren = {
+  AuthedWorkspaceKeyProjectsRoute: AuthedWorkspaceKeyProjectsRoute,
+  AuthedWorkspaceKeyProjectProjectIdRoute:
+    AuthedWorkspaceKeyProjectProjectIdRoute,
+  AuthedWorkspaceKeyTeamTeamKeyProjectsRoute:
+    AuthedWorkspaceKeyTeamTeamKeyProjectsRoute,
+}
+
+const AuthedWorkspaceKeyRouteWithChildren =
+  AuthedWorkspaceKeyRoute._addFileChildren(AuthedWorkspaceKeyRouteChildren)
+
 interface AuthedRouteChildren {
-  AuthedWorkspaceKeyRoute: typeof AuthedWorkspaceKeyRoute
+  AuthedWorkspaceKeyRoute: typeof AuthedWorkspaceKeyRouteWithChildren
   AuthedItemsRoute: typeof AuthedItemsRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
-  AuthedWorkspaceKeyRoute: AuthedWorkspaceKeyRoute,
+  AuthedWorkspaceKeyRoute: AuthedWorkspaceKeyRouteWithChildren,
   AuthedItemsRoute: AuthedItemsRoute,
 }
 
