@@ -7,8 +7,9 @@ import { useSearchTab, ViewTabs, type ViewTab } from '@/components/issues/ViewTa
 import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { useCurrentWorkspace } from '@/contexts/WorkspaceContext'
+import { usePageIssueDefaults } from '@/hooks/usePageIssueDefaults'
 import { openCreateIssue } from '@/lib/issue-events'
-import type { IssuesParams } from '@/types/issue'
+import type { CreateIssueEventDetail, IssuesParams } from '@/types/issue'
 import type { WorkflowStateType } from '@/types/team'
 
 /** Team issues (ISS-13): All issues / Active / Backlog tabs over the shared IssuesView. */
@@ -35,6 +36,11 @@ function TeamIssuesPage() {
   const ws = useCurrentWorkspace()
   const team = ws.teams.find(t => t.key.toLowerCase() === teamKey.toLowerCase())
   const [tab, setTab] = useSearchTab(TABS)
+  // New issues land in the open tab: the Backlog tab creates them in the backlog.
+  const createDefaults: CreateIssueEventDetail = team
+    ? { teamId: team.id, stateType: tab === 'backlog' ? 'backlog' : undefined }
+    : {}
+  usePageIssueDefaults(createDefaults)
 
   if (!team) {
     return (
@@ -73,7 +79,7 @@ function TeamIssuesPage() {
             label="New issue"
             shortcut="C"
             icon={<SquarePen />}
-            onClick={() => openCreateIssue({ teamId: team.id })}
+            onClick={() => openCreateIssue(createDefaults)}
           />
         }
       >
@@ -82,7 +88,7 @@ function TeamIssuesPage() {
       <IssuesView
         key={`${team.id}-${tab}`}
         params={params}
-        createDefaults={{ teamId: team.id }}
+        createDefaults={createDefaults}
         emptyState={
           <EmptyState
             icon={<Layers />}
@@ -95,7 +101,7 @@ function TeamIssuesPage() {
             }
             description="Create an issue to plan and track the work of this team."
             action={
-              <Button size="sm" onClick={() => openCreateIssue({ teamId: team.id })}>
+              <Button size="sm" onClick={() => openCreateIssue(createDefaults)}>
                 Create issue
               </Button>
             }

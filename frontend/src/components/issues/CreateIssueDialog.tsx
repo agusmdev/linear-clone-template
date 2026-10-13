@@ -17,11 +17,20 @@ import { PriorityIcon, PRIORITY_LABELS } from '@/components/PriorityIcon'
 import { DateInput } from '@/components/DateInput'
 import { PropertyPicker, type PropertyOption } from '@/components/PropertyPicker'
 import { UserAvatar } from '@/components/UserAvatar'
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Switch } from '@/components/ui/switch'
+import { hasDraftContent } from '@/features/issues/issue-draft'
 import {
   createIssueFormToPayload,
   createIssueSchema,
@@ -54,6 +63,12 @@ export interface CreateIssueDialogProps {
   onOpenChange: (open: boolean) => void
   /** Defaults (from the `linear:create-issue` event). */
   defaults: CreateIssueEventDetail & { teamId: string }
+  /** A saved draft: restored instead of the defaults (its team is `defaults.teamId`). */
+  draft?: CreateIssueFormData | null
+  /** "Save draft" in the close prompt (Esc, X or a click outside with text typed). */
+  onSaveDraft?: (draft: CreateIssueFormData) => void
+  /** "Discard" in the close prompt, or a close with nothing typed. */
+  onDiscardDraft?: () => void
   teams: Team[]
   /** States of every team. */
   states: WorkflowState[]
@@ -99,6 +114,9 @@ export function CreateIssueDialog({
   open,
   onOpenChange,
   defaults,
+  draft,
+  onSaveDraft,
+  onDiscardDraft,
   teams,
   states,
   members,
@@ -117,23 +135,26 @@ export function CreateIssueDialog({
   const [editorKey, setEditorKey] = useState(0)
   // The picked parent, kept when a later parent search no longer returns it.
   const [pickedParent, setPickedParent] = useState<Issue | undefined>()
+  const [confirmClose, setConfirmClose] = useState(false)
 
   const form = useForm<CreateIssueFormData>({
     resolver: zodResolver(createIssueSchema),
-    defaultValues: {
-      team_id: defaults.teamId,
-      title: '',
-      description: '',
-      state_id: defaults.stateId ?? null,
-      priority: defaults.priority ?? 0,
-      assignee_id: defaults.assigneeId ?? null,
-      label_ids: [],
-      project_id: defaults.projectId ?? null,
-      cycle_id: defaults.cycleId ?? null,
-      parent_id: defaults.parentId ?? null,
-      estimate: null,
-      due_date: null,
-    },
+    defaultValues: draft
+      ? { ...draft, team_id: defaults.teamId }
+      : {
+          team_id: defaults.teamId,
+          title: '',
+          description: '',
+          state_id: defaults.stateId ?? null,
+          priority: defaults.priority ?? 0,
+          assignee_id: defaults.assigneeId ?? null,
+          label_ids: [],
+          project_id: defaults.projectId ?? null,
+          cycle_id: defaults.cycleId ?? null,
+          parent_id: defaults.parentId ?? null,
+          estimate: null,
+          due_date: null,
+        },
   })
   const values = useWatch({ control: form.control }) as CreateIssueFormData
   const set = <K extends keyof CreateIssueFormData>(key: K, value: CreateIssueFormData[K]) =>
@@ -143,7 +164,8 @@ export function CreateIssueDialog({
   const teamStates = states
     .filter(s => s.team_id === team?.id)
     .sort((a, b) => a.position - b.position)
-  const defaultState = teamStates.find(s => s.type === 'unstarted') ?? teamStates[0]
+  const defaultState =
+    teamStates.find(s => s.type === (defaults.stateType ?? 'unstarted')) ?? teamStates[0]
   const state = teamStates.find(s => s.id === values.state_id) ?? defaultState
   const assignee = members.find(m => m.user_id === values.assignee_id)
   const pickedLabels = labels.filter(l => values.label_ids.includes(l.id))
@@ -164,12 +186,20 @@ export function CreateIssueDialog({
   const submit = form.handleSubmit(async data => {
     if (inFlight.current) return
     inFlight.current = true
+    let created = false
     try {
-      await onCreate(createIssueFormToPayload(data))
+      // Send the state the chip shows: the server default (Todo) can differ from it.
+      await onCreate(
+        createIssueFormToPayload({ ...data, state_id: data.state_id ?? state?.id ?? null })
+      )
+      created = true
     } catch {
       return // the host shows the error toast
     } finally {
-      inFlight.current = false
+      // After a create that closes the modal it stays blocked: a key press that
+      // lands before the modal closes must not create the same issue again (the
+      // next modal is a new instance).
+      if (!created || createMore) inFlight.current = false
     }
     if (createMore) {
       form.reset({ ...data, title: '', description: '' })
@@ -178,6 +208,24 @@ export function CreateIssueDialog({
       onOpenChange(false)
     }
   })
+
+  // Esc, X or a click outside: with text typed, ask to save a draft instead of
+  // silently losing it (Linear's "Save issue as draft?").
+  const requestOpenChange = (next: boolean) => {
+    if (next) return onOpenChange(true)
+    if (hasDraftContent(form.getValues())) {
+      setConfirmClose(true)
+      return
+    }
+    onDiscardDraft?.()
+    onOpenChange(false)
+  }
+  const closeWithDraft = (save: boolean) => {
+    if (save) onSaveDraft?.(form.getValues())
+    else onDiscardDraft?.()
+    setConfirmClose(false)
+    onOpenChange(false)
+  }
 
   // After a "Create more" submit (editorKey > 0), give focus back to the title
   // once the submit button is enabled again and the editor has remounted. A
@@ -208,281 +256,301 @@ export function CreateIssueDialog({
   ]
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        showCloseButton={false}
-        aria-label="New issue"
-        className="top-[10%] translate-y-0 gap-0 p-0 sm:max-w-[760px]"
-        onKeyDown={event => {
-          if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
-            event.preventDefault()
-            if (!pending) void submit()
-          }
-        }}
-      >
-        <Form {...form}>
-          <form onSubmit={submit} noValidate className="flex min-w-0 flex-col">
-            <div className="flex items-center gap-1.5 px-4 pt-3.5 pb-1">
-              <PropertyPicker
-                label="Team"
-                placeholder="Pick a team..."
-                options={teamOptions}
-                value={values.team_id}
-                onChange={teamId => {
-                  if (teamId === values.team_id) return
-                  set('team_id', teamId)
-                  set('state_id', null)
-                  set('cycle_id', null)
-                  set('parent_id', null)
-                  onTeamChange?.(teamId)
-                }}
-                trigger={
-                  <button
-                    type="button"
-                    aria-label={`Team: ${team?.name ?? ''}`}
-                    className="inline-flex h-6 items-center gap-1.5 rounded-md border border-border px-1.5 text-mini font-medium text-foreground hover:bg-surface-hover"
-                  >
-                    <span className="flex size-4 items-center justify-center rounded bg-surface-active text-[9px] font-semibold">
-                      {team?.key.slice(0, 2)}
-                    </span>
-                    {team?.key}
-                  </button>
-                }
-              />
-              <ChevronRight className="size-3 text-text-tertiary" aria-hidden />
-              <DialogTitle className="text-mini font-normal text-text-secondary">
-                New issue
-              </DialogTitle>
-              <DialogDescription className="sr-only">
-                Write a title and description, set the properties and create the issue.
-              </DialogDescription>
-              <button
-                type="button"
-                aria-label="Close"
-                onClick={() => onOpenChange(false)}
-                className="ml-auto rounded-md p-1 text-text-secondary hover:bg-surface-hover hover:text-foreground"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-
-            <div className="min-w-0 px-5 pt-2">
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <textarea
-                        {...field}
-                        rows={1}
-                        aria-label="Issue title"
-                        placeholder="Issue title"
-                        // eslint-disable-next-line jsx-a11y/no-autofocus
-                        autoFocus
-                        // Titles are one line: a pasted line break becomes a space.
-                        onChange={event => field.onChange(singleLineTitle(event.target.value))}
-                        onKeyDown={event => {
-                          if (event.key === 'Enter' && !event.metaKey && !event.ctrlKey)
-                            event.preventDefault()
-                        }}
-                        className="field-sizing-content w-full max-w-full min-w-0 resize-none bg-transparent [overflow-wrap:anywhere] text-title font-medium text-foreground outline-none placeholder:text-text-tertiary"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <RichTextEditor
-                key={editorKey}
-                value={values.description}
-                onChange={html => set('description', html)}
-                placeholder="Add description…"
-                ariaLabel="Issue description"
-                className="mt-1 max-h-[40vh] min-h-20 overflow-y-auto"
-              />
-            </div>
-
-            <div className="flex flex-wrap items-center gap-1.5 px-4 pt-3 pb-3">
-              <PropertyPicker
-                label="Status"
-                placeholder="Change status..."
-                options={statusOptions(teamStates)}
-                value={state?.id ?? null}
-                onChange={stateId => set('state_id', stateId)}
-                trigger={
-                  <Chip label={`Status: ${state?.name ?? ''}`}>
-                    {state ? <StateIcon state={state} teamStates={teamStates} /> : null}
-                    <span className="truncate">{state?.name}</span>
-                  </Chip>
-                }
-              />
-              <PropertyPicker
-                label="Priority"
-                placeholder="Set priority to..."
-                options={priorityOptions()}
-                value={String(values.priority)}
-                onChange={value => set('priority', Number(value))}
-                trigger={
-                  <Chip label={`Priority: ${PRIORITY_LABELS[values.priority as IssuePriority]}`}>
-                    <PriorityIcon priority={values.priority as IssuePriority} />
-                    {values.priority === 0
-                      ? 'Priority'
-                      : PRIORITY_LABELS[values.priority as IssuePriority]}
-                  </Chip>
-                }
-              />
-              <PropertyPicker
-                label="Assignee"
-                placeholder="Assign to..."
-                options={assigneeOptions(members, { meId })}
-                value={values.assignee_id ?? NONE}
-                onChange={value => set('assignee_id', value === NONE ? null : value)}
-                trigger={
-                  <Chip label={`Assignee: ${assignee ? memberName(assignee) : 'Unassigned'}`}>
-                    {assignee ? (
-                      <UserAvatar name={memberName(assignee)} size="xs" />
-                    ) : (
-                      <UserRound />
-                    )}
-                    <span className="truncate">{assignee ? memberName(assignee) : 'Assignee'}</span>
-                  </Chip>
-                }
-              />
-              <PropertyPicker
-                multiple
-                label="Labels"
-                placeholder="Add labels..."
-                options={labels.map(l => ({
-                  value: l.id,
-                  label: l.name,
-                  icon: <LabelDot color={l.color} />,
-                }))}
-                value={values.label_ids}
-                onChange={ids => set('label_ids', ids)}
-                trigger={
-                  <Chip label={`Labels: ${pickedLabels.map(l => l.name).join(', ') || 'none'}`}>
-                    {pickedLabels.length ? (
-                      <>
-                        <span className="flex -space-x-0.5">
-                          {pickedLabels.slice(0, 3).map(l => (
-                            <LabelDot key={l.id} color={l.color} />
-                          ))}
-                        </span>
-                        <span className="truncate">
-                          {pickedLabels.length <= 2
-                            ? pickedLabels.map(l => l.name).join(', ')
-                            : `${pickedLabels.length} labels`}
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <Tag />
-                        Labels
-                      </>
-                    )}
-                  </Chip>
-                }
-              />
-              <PropertyPicker
-                label="Project"
-                placeholder="Add to project..."
-                emptyText="No projects"
-                options={[
-                  { value: NONE, label: 'No project' },
-                  ...projects.map(p => ({
-                    value: p.id,
-                    label: p.name,
-                    icon: <ProjectIcon color={p.color} />,
-                  })),
-                ]}
-                value={values.project_id ?? NONE}
-                onChange={value => set('project_id', value === NONE ? null : value)}
-                trigger={
-                  <Chip label={`Project: ${project?.name ?? 'none'}`}>
-                    {project ? <ProjectIcon color={project.color} /> : <Hexagon />}
-                    <span className="truncate">{project?.name ?? 'Project'}</span>
-                  </Chip>
-                }
-              />
-              <PropertyPicker
-                label="Cycle"
-                placeholder="Add to cycle..."
-                options={cycleOptions(teamCycles)}
-                value={values.cycle_id ?? NONE}
-                onChange={value => set('cycle_id', value === NONE ? null : value)}
-                trigger={
-                  <Chip label={`Cycle: ${cycle?.name ?? 'none'}`}>
-                    <RefreshCcw />
-                    <span className="truncate">{cycle?.name ?? 'Cycle'}</span>
-                  </Chip>
-                }
-              />
-              <PropertyPicker
-                label="Estimate"
-                placeholder="Set estimate..."
-                options={estimateOptions()}
-                value={values.estimate === null ? NONE : String(values.estimate)}
-                onChange={value => set('estimate', value === NONE ? null : Number(value))}
-                trigger={
-                  <Chip label={`Estimate: ${values.estimate ?? 'none'}`}>
-                    <Triangle />
-                    {values.estimate === null ? 'Estimate' : `${values.estimate} pts`}
-                  </Chip>
-                }
-              />
-              <DueDatePicker value={values.due_date} onChange={value => set('due_date', value)} />
-              <PropertyPicker
-                label="Parent issue"
-                placeholder="Set parent issue..."
-                emptyText="No issues"
-                contentClassName="w-80"
-                options={parentOptions}
-                value={values.parent_id ?? NONE}
-                onSearchChange={onParentSearchChange}
-                onChange={value => {
-                  setPickedParent(parentCandidates.find(i => i.id === value))
-                  set('parent_id', value === NONE ? null : value)
-                }}
-                trigger={
-                  <Chip label={`Parent issue: ${parent?.identifier ?? 'none'}`}>
-                    <svg viewBox="0 0 16 16" fill="none" aria-hidden>
-                      <path
-                        d="M4 3v6a2 2 0 0 0 2 2h6M9 8l3 3-3 3"
-                        stroke="currentColor"
-                        strokeWidth="1.4"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    {parent ? <span className="truncate">{parent.identifier}</span> : 'Parent'}
-                  </Chip>
-                }
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-3 border-t border-border-subtle px-4 py-2.5">
-              <div className="flex items-center gap-2 text-mini text-text-secondary">
-                <Switch
-                  aria-label="Create more"
-                  checked={createMore}
-                  onCheckedChange={setCreateMore}
-                  className="scale-90"
+    <>
+      <Dialog open={open} onOpenChange={requestOpenChange}>
+        <DialogContent
+          showCloseButton={false}
+          aria-label="New issue"
+          className="top-[10%] translate-y-0 gap-0 p-0 sm:max-w-[760px]"
+          onKeyDown={event => {
+            if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+              event.preventDefault()
+              if (!pending) void submit()
+            }
+          }}
+        >
+          <Form {...form}>
+            <form onSubmit={submit} noValidate className="flex min-w-0 flex-col">
+              <div className="flex items-center gap-1.5 px-4 pt-3.5 pb-1">
+                <PropertyPicker
+                  label="Team"
+                  placeholder="Pick a team..."
+                  options={teamOptions}
+                  value={values.team_id}
+                  onChange={teamId => {
+                    if (teamId === values.team_id) return
+                    set('team_id', teamId)
+                    set('state_id', null)
+                    set('cycle_id', null)
+                    set('parent_id', null)
+                    onTeamChange?.(teamId)
+                  }}
+                  trigger={
+                    <button
+                      type="button"
+                      aria-label={`Team: ${team?.name ?? ''}`}
+                      className="inline-flex h-6 items-center gap-1.5 rounded-md border border-border px-1.5 text-mini font-medium text-foreground hover:bg-surface-hover"
+                    >
+                      <span className="flex size-4 items-center justify-center rounded bg-surface-active text-[9px] font-semibold">
+                        {team?.key.slice(0, 2)}
+                      </span>
+                      {team?.key}
+                    </button>
+                  }
                 />
-                <span aria-hidden>Create more</span>
+                <ChevronRight className="size-3 text-text-tertiary" aria-hidden />
+                <DialogTitle className="text-mini font-normal text-text-secondary">
+                  New issue
+                </DialogTitle>
+                <DialogDescription className="sr-only">
+                  Write a title and description, set the properties and create the issue.
+                </DialogDescription>
+                <button
+                  type="button"
+                  aria-label="Close"
+                  onClick={() => requestOpenChange(false)}
+                  className="ml-auto rounded-md p-1 text-text-secondary hover:bg-surface-hover hover:text-foreground"
+                >
+                  <X className="size-4" />
+                </button>
               </div>
-              <Button type="submit" size="sm" disabled={pending} className="gap-2">
-                {pending ? 'Creating...' : 'Create issue'}
-                <span className="hidden items-center gap-0.5 sm:flex" aria-hidden>
-                  <Kbd className="border-white/20 bg-white/10 text-primary-foreground">⌘</Kbd>
-                  <Kbd className="border-white/20 bg-white/10 text-primary-foreground">↵</Kbd>
-                </span>
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+
+              <div className="min-w-0 px-5 pt-2">
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <textarea
+                          {...field}
+                          rows={1}
+                          aria-label="Issue title"
+                          placeholder="Issue title"
+                          // eslint-disable-next-line jsx-a11y/no-autofocus
+                          autoFocus
+                          // Titles are one line: a pasted line break becomes a space.
+                          onChange={event => field.onChange(singleLineTitle(event.target.value))}
+                          onKeyDown={event => {
+                            if (event.key === 'Enter' && !event.metaKey && !event.ctrlKey)
+                              event.preventDefault()
+                          }}
+                          className="field-sizing-content w-full max-w-full min-w-0 resize-none bg-transparent [overflow-wrap:anywhere] text-title font-medium text-foreground outline-none placeholder:text-text-tertiary"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <RichTextEditor
+                  key={editorKey}
+                  value={values.description}
+                  onChange={html => set('description', html)}
+                  placeholder="Add description…"
+                  ariaLabel="Issue description"
+                  className="mt-1 max-h-[40vh] min-h-20 overflow-y-auto"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5 px-4 pt-3 pb-3">
+                <PropertyPicker
+                  label="Status"
+                  placeholder="Change status..."
+                  options={statusOptions(teamStates)}
+                  value={state?.id ?? null}
+                  onChange={stateId => set('state_id', stateId)}
+                  trigger={
+                    <Chip label={`Status: ${state?.name ?? ''}`}>
+                      {state ? <StateIcon state={state} teamStates={teamStates} /> : null}
+                      <span className="truncate">{state?.name}</span>
+                    </Chip>
+                  }
+                />
+                <PropertyPicker
+                  label="Priority"
+                  placeholder="Set priority to..."
+                  options={priorityOptions()}
+                  value={String(values.priority)}
+                  onChange={value => set('priority', Number(value))}
+                  trigger={
+                    <Chip label={`Priority: ${PRIORITY_LABELS[values.priority as IssuePriority]}`}>
+                      <PriorityIcon priority={values.priority as IssuePriority} />
+                      {values.priority === 0
+                        ? 'Priority'
+                        : PRIORITY_LABELS[values.priority as IssuePriority]}
+                    </Chip>
+                  }
+                />
+                <PropertyPicker
+                  label="Assignee"
+                  placeholder="Assign to..."
+                  options={assigneeOptions(members, { meId })}
+                  value={values.assignee_id ?? NONE}
+                  onChange={value => set('assignee_id', value === NONE ? null : value)}
+                  trigger={
+                    <Chip label={`Assignee: ${assignee ? memberName(assignee) : 'Unassigned'}`}>
+                      {assignee ? (
+                        <UserAvatar name={memberName(assignee)} size="xs" />
+                      ) : (
+                        <UserRound />
+                      )}
+                      <span className="truncate">
+                        {assignee ? memberName(assignee) : 'Assignee'}
+                      </span>
+                    </Chip>
+                  }
+                />
+                <PropertyPicker
+                  multiple
+                  label="Labels"
+                  placeholder="Add labels..."
+                  options={labels.map(l => ({
+                    value: l.id,
+                    label: l.name,
+                    icon: <LabelDot color={l.color} />,
+                  }))}
+                  value={values.label_ids}
+                  onChange={ids => set('label_ids', ids)}
+                  trigger={
+                    <Chip label={`Labels: ${pickedLabels.map(l => l.name).join(', ') || 'none'}`}>
+                      {pickedLabels.length ? (
+                        <>
+                          <span className="flex -space-x-0.5">
+                            {pickedLabels.slice(0, 3).map(l => (
+                              <LabelDot key={l.id} color={l.color} />
+                            ))}
+                          </span>
+                          <span className="truncate">
+                            {pickedLabels.length <= 2
+                              ? pickedLabels.map(l => l.name).join(', ')
+                              : `${pickedLabels.length} labels`}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Tag />
+                          Labels
+                        </>
+                      )}
+                    </Chip>
+                  }
+                />
+                <PropertyPicker
+                  label="Project"
+                  placeholder="Add to project..."
+                  emptyText="No projects"
+                  options={[
+                    { value: NONE, label: 'No project' },
+                    ...projects.map(p => ({
+                      value: p.id,
+                      label: p.name,
+                      icon: <ProjectIcon color={p.color} />,
+                    })),
+                  ]}
+                  value={values.project_id ?? NONE}
+                  onChange={value => set('project_id', value === NONE ? null : value)}
+                  trigger={
+                    <Chip label={`Project: ${project?.name ?? 'none'}`}>
+                      {project ? <ProjectIcon color={project.color} /> : <Hexagon />}
+                      <span className="truncate">{project?.name ?? 'Project'}</span>
+                    </Chip>
+                  }
+                />
+                <PropertyPicker
+                  label="Cycle"
+                  placeholder="Add to cycle..."
+                  options={cycleOptions(teamCycles)}
+                  value={values.cycle_id ?? NONE}
+                  onChange={value => set('cycle_id', value === NONE ? null : value)}
+                  trigger={
+                    <Chip label={`Cycle: ${cycle?.name ?? 'none'}`}>
+                      <RefreshCcw />
+                      <span className="truncate">{cycle?.name ?? 'Cycle'}</span>
+                    </Chip>
+                  }
+                />
+                <PropertyPicker
+                  label="Estimate"
+                  placeholder="Set estimate..."
+                  options={estimateOptions()}
+                  value={values.estimate === null ? NONE : String(values.estimate)}
+                  onChange={value => set('estimate', value === NONE ? null : Number(value))}
+                  trigger={
+                    <Chip label={`Estimate: ${values.estimate ?? 'none'}`}>
+                      <Triangle />
+                      {values.estimate === null ? 'Estimate' : `${values.estimate} pts`}
+                    </Chip>
+                  }
+                />
+                <DueDatePicker value={values.due_date} onChange={value => set('due_date', value)} />
+                <PropertyPicker
+                  label="Parent issue"
+                  placeholder="Set parent issue..."
+                  emptyText="No issues"
+                  contentClassName="w-80"
+                  options={parentOptions}
+                  value={values.parent_id ?? NONE}
+                  onSearchChange={onParentSearchChange}
+                  onChange={value => {
+                    setPickedParent(parentCandidates.find(i => i.id === value))
+                    set('parent_id', value === NONE ? null : value)
+                  }}
+                  trigger={
+                    <Chip label={`Parent issue: ${parent?.identifier ?? 'none'}`}>
+                      <svg viewBox="0 0 16 16" fill="none" aria-hidden>
+                        <path
+                          d="M4 3v6a2 2 0 0 0 2 2h6M9 8l3 3-3 3"
+                          stroke="currentColor"
+                          strokeWidth="1.4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      {parent ? <span className="truncate">{parent.identifier}</span> : 'Parent'}
+                    </Chip>
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 border-t border-border-subtle px-4 py-2.5">
+                <div className="flex items-center gap-2 text-mini text-text-secondary">
+                  <Switch
+                    aria-label="Create more"
+                    checked={createMore}
+                    onCheckedChange={setCreateMore}
+                    className="scale-90"
+                  />
+                  <span aria-hidden>Create more</span>
+                </div>
+                <Button type="submit" size="sm" disabled={pending} className="gap-2">
+                  {pending ? 'Creating...' : 'Create issue'}
+                  <span className="hidden items-center gap-0.5 sm:flex" aria-hidden>
+                    <Kbd className="border-white/20 bg-white/10 text-primary-foreground">⌘</Kbd>
+                    <Kbd className="border-white/20 bg-white/10 text-primary-foreground">↵</Kbd>
+                  </span>
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      <AlertDialog open={confirmClose} onOpenChange={setConfirmClose}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Save issue as draft?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A saved draft opens again the next time you create an issue.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={() => closeWithDraft(false)}>
+              Discard
+            </Button>
+            <Button onClick={() => closeWithDraft(true)}>Save draft</Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }
 
