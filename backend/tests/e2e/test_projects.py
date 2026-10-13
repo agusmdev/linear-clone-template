@@ -275,6 +275,70 @@ def test_invalid_references(
     )
 
 
+def test_target_date_must_not_be_before_start_date(
+    owner: RegisteredUser, ws: dict[str, Any]
+) -> None:
+    workspace_id = ws["workspace"]["id"]
+
+    assert_error(
+        owner.client.post(
+            "/projects",
+            json={
+                "workspace_id": workspace_id,
+                "name": "X",
+                "start_date": "2027-01-02",
+                "target_date": "2026-01-01",
+            },
+        ),
+        400,
+        "invalid_project_dates",
+    )
+
+    # The same day is a valid range.
+    project = create_project(
+        owner.client,
+        workspace_id,
+        "Launch",
+        start_date="2027-03-01",
+        target_date="2027-03-01",
+    )
+    url = f"/projects/{project['id']}"
+
+    # A PATCH with one date is compared with the stored other date.
+    assert_error(
+        owner.client.patch(url, json={"target_date": "2026-12-01"}),
+        400,
+        "invalid_project_dates",
+    )
+    assert_error(
+        owner.client.patch(url, json={"start_date": "2027-04-01"}),
+        400,
+        "invalid_project_dates",
+    )
+    assert_error(
+        owner.client.patch(
+            url, json={"start_date": "2027-05-01", "target_date": "2027-04-01"}
+        ),
+        400,
+        "invalid_project_dates",
+    )
+    stored = owner.client.get(url).json()
+    assert stored["start_date"] == "2027-03-01"
+    assert stored["target_date"] == "2027-03-01"
+
+    # Both dates move together, or one side is cleared: accepted.
+    moved = owner.client.patch(
+        url, json={"start_date": "2027-05-01", "target_date": "2027-06-01"}
+    )
+    assert moved.status_code == 200, moved.text
+    cleared = owner.client.patch(url, json={"target_date": None})
+    assert cleared.status_code == 200, cleared.text
+    later_start = owner.client.patch(url, json={"start_date": "2028-01-01"})
+    assert later_start.status_code == 200, later_start.text
+    assert later_start.json()["start_date"] == "2028-01-01"
+    assert later_start.json()["target_date"] is None
+
+
 def test_delete_project_keeps_its_issues(
     owner: RegisteredUser, ws: dict[str, Any]
 ) -> None:
