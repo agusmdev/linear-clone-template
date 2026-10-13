@@ -52,6 +52,8 @@ interface PropertyPickerBaseProps<V extends string> {
   /** Runs when the picker closes, before focus goes back to the trigger. Call
    * `event.preventDefault()` to put focus somewhere else (e.g. an issue list). */
   onCloseAutoFocus?: (event: Event) => void
+  /** Called with the search text (and '' on close), e.g. to load options from the server. */
+  onSearchChange?: (search: string) => void
 }
 
 interface SingleProps<V extends string> extends PropertyPickerBaseProps<V> {
@@ -101,15 +103,21 @@ export function PropertyPicker<V extends string = string>(props: PropertyPickerP
     contentClassName,
     footer,
     onCloseAutoFocus,
+    onSearchChange,
   } = props
   const [innerOpen, setInnerOpen] = React.useState(false)
   const [search, setSearch] = React.useState('')
   const open = props.open ?? innerOpen
 
+  const changeSearch = (next: string) => {
+    setSearch(next)
+    onSearchChange?.(next)
+  }
+
   const setOpen = (next: boolean) => {
     if (props.open === undefined) setInnerOpen(next)
     props.onOpenChange?.(next)
-    if (!next) setSearch('')
+    if (!next) changeSearch('')
   }
 
   const isSelected = (value: V) =>
@@ -149,7 +157,7 @@ export function PropertyPicker<V extends string = string>(props: PropertyPickerP
         onCloseAutoFocus={onCloseAutoFocus}
       >
         <Command filter={filterOption} label={label} loop>
-          <CommandInput placeholder={placeholder} value={search} onValueChange={setSearch} />
+          <CommandInput placeholder={placeholder} value={search} onValueChange={changeSearch} />
           <CommandList>
             <CommandEmpty>{emptyText}</CommandEmpty>
             {groups.map(([group, groupOpts]) => (

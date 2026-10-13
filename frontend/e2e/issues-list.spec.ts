@@ -5,6 +5,7 @@
  * multi-select bulk actions, keyboard navigation and the context menu.
  */
 import {
+  authHeaders,
   bulkDeleteIssues,
   bulkUpdateIssues,
   createIssue,
@@ -20,6 +21,7 @@ import {
   type Page,
   type TestUser,
 } from './fixtures'
+import type { Issue } from '../src/types/issue'
 
 async function seedWorkspace(api: Parameters<typeof createWorkspace>[0], user: TestUser) {
   const workspace = await createWorkspace(api, user)
@@ -179,6 +181,52 @@ test.describe('issues list', () => {
     expect(await total()).toBe(3)
     const titles = (await listIssues(api, user, workspace.id)).items.map(i => i.title).sort()
     expect(titles).toEqual(['Create more twice', 'Double click', 'Double submit'])
+  })
+
+  test('the parent picker searches every issue of the team, not only the latest 100 (ISS-1)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    test.slow() // seeds 101 issues
+    const { workspace, team, key } = await seedWorkspace(api, user)
+    const oldest = await createIssue(api, user, { team_id: team.id, title: 'Oldest parent' })
+    for (let i = 1; i <= 100; i++) {
+      await createIssue(api, user, { team_id: team.id, title: `Filler ${i}` })
+    }
+    const page = await loginAs(user)
+    await page.goto(`/${key}/team/ENG/issues`)
+    await expect(row(page, 'Filler 100')).toBeVisible()
+    await page.locator('body').click()
+    await page.keyboard.press('c')
+    const dialog = page.getByRole('dialog', { name: 'New issue' })
+    await expect(dialog).toBeVisible()
+
+    // A long assignee name stays on one line inside its chip.
+    await dialog.getByRole('button', { name: /^Assignee:/ }).click()
+    await page.getByRole('option', { name: user.email }).click()
+    const assigneeChip = dialog.getByRole('button', { name: `Assignee: ${user.email}` })
+    expect((await assigneeChip.boundingBox())!.height).toBeLessThanOrEqual(30)
+
+    // ENG-1 is outside the first page of candidates: the search finds it on the server.
+    await dialog.getByRole('button', { name: 'Parent issue: none' }).click()
+    await page.getByPlaceholder('Set parent issue...').fill('Oldest')
+    await page.getByRole('option', { name: 'ENG-1 Oldest parent' }).click()
+    await expect(dialog.getByRole('button', { name: 'Parent issue: ENG-1' })).toBeVisible()
+    await dialog.getByLabel('Issue title').fill('Child of the oldest')
+    await dialog.getByRole('button', { name: 'Create issue' }).click()
+    await expect(page.getByText('Created ENG-102')).toBeVisible()
+    const response = await api.get(`/workspaces/${workspace.id}/issues/by-identifier/ENG-102`, {
+      headers: authHeaders(user),
+    })
+    expect(((await response.json()) as Issue).parent_id).toBe(oldest.id)
+
+    // "Create sub-issue with all properties" on ENG-1 shows the parent in the chip.
+    await page.goto(`/${key}/issue/ENG-1`)
+    await expect(page.getByRole('textbox', { name: 'Issue title' })).toHaveValue('Oldest parent')
+    await page.getByRole('button', { name: /^Add sub-issues?$/ }).click()
+    await page.getByRole('button', { name: 'Create sub-issue with all properties' }).click()
+    await expect(dialog.getByRole('button', { name: 'Parent issue: ENG-1' })).toBeVisible()
   })
 
   test('a long title with no spaces wraps inside the create modal (ISS-1)', async ({

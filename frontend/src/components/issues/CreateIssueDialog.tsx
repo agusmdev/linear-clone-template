@@ -62,8 +62,12 @@ export interface CreateIssueDialogProps {
   projects: NamedRef[]
   cycles: NamedRef[]
   meId: string
-  /** Candidate parent issues of the selected team. */
+  /** Candidate parent issues of the selected team (matching the parent picker search). */
   parentCandidates: Issue[]
+  /** The parent issue from `defaults.parentId`, when it is loaded. */
+  defaultParent?: Issue
+  /** Search text of the parent picker (to load matching candidates). */
+  onParentSearchChange?: (search: string) => void
   /** Called when the team changes (to load its parent candidates). */
   onTeamChange?: (teamId: string) => void
   /** Creates the issue; resolves with the new issue. */
@@ -103,12 +107,16 @@ export function CreateIssueDialog({
   cycles,
   meId,
   parentCandidates,
+  defaultParent,
+  onParentSearchChange,
   onTeamChange,
   onCreate,
   pending,
 }: CreateIssueDialogProps) {
   const [createMore, setCreateMore] = useState(false)
   const [editorKey, setEditorKey] = useState(0)
+  // The picked parent, kept when a later parent search no longer returns it.
+  const [pickedParent, setPickedParent] = useState<Issue | undefined>()
 
   const form = useForm<CreateIssueFormData>({
     resolver: zodResolver(createIssueSchema),
@@ -142,7 +150,9 @@ export function CreateIssueDialog({
   const project = projects.find(p => p.id === values.project_id)
   const teamCycles = cycles.filter(c => (!c.team_id || c.team_id === team?.id) && !c.past)
   const cycle = teamCycles.find(c => c.id === values.cycle_id)
-  const parent = parentCandidates.find(i => i.id === values.parent_id)
+  const parent = [...parentCandidates, pickedParent, defaultParent].find(
+    i => i && i.id === values.parent_id
+  )
 
   // Blocks a second submit (Cmd+Enter pressed again, double-click) while the
   // create request is in flight. A ref, not `pending`: `pending` changes only
@@ -300,7 +310,7 @@ export function CreateIssueDialog({
                 trigger={
                   <Chip label={`Status: ${state?.name ?? ''}`}>
                     {state ? <StateIcon state={state} teamStates={teamStates} /> : null}
-                    {state?.name}
+                    <span className="truncate">{state?.name}</span>
                   </Chip>
                 }
               />
@@ -332,7 +342,7 @@ export function CreateIssueDialog({
                     ) : (
                       <UserRound />
                     )}
-                    {assignee ? memberName(assignee) : 'Assignee'}
+                    <span className="truncate">{assignee ? memberName(assignee) : 'Assignee'}</span>
                   </Chip>
                 }
               />
@@ -388,7 +398,7 @@ export function CreateIssueDialog({
                 trigger={
                   <Chip label={`Project: ${project?.name ?? 'none'}`}>
                     {project ? <ProjectIcon color={project.color} /> : <Hexagon />}
-                    {project?.name ?? 'Project'}
+                    <span className="truncate">{project?.name ?? 'Project'}</span>
                   </Chip>
                 }
               />
@@ -401,7 +411,7 @@ export function CreateIssueDialog({
                 trigger={
                   <Chip label={`Cycle: ${cycle?.name ?? 'none'}`}>
                     <RefreshCcw />
-                    {cycle?.name ?? 'Cycle'}
+                    <span className="truncate">{cycle?.name ?? 'Cycle'}</span>
                   </Chip>
                 }
               />
@@ -426,7 +436,11 @@ export function CreateIssueDialog({
                 contentClassName="w-80"
                 options={parentOptions}
                 value={values.parent_id ?? NONE}
-                onChange={value => set('parent_id', value === NONE ? null : value)}
+                onSearchChange={onParentSearchChange}
+                onChange={value => {
+                  setPickedParent(parentCandidates.find(i => i.id === value))
+                  set('parent_id', value === NONE ? null : value)
+                }}
                 trigger={
                   <Chip label={`Parent issue: ${parent?.identifier ?? 'none'}`}>
                     <svg viewBox="0 0 16 16" fill="none" aria-hidden>
