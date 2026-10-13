@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { X } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 export interface BulkActionBarProps {
   /** Number of selected items. The bar is hidden when it is 0. */
   count: number
-  /** Called by the clear (X) button. */
+  /** Called by the clear (X) button and by Escape anywhere on the page. */
   onClear: () => void
   /** Action buttons (slot). */
   children?: ReactNode
@@ -15,7 +15,12 @@ export interface BulkActionBarProps {
   className?: string
 }
 
-/** Floating bar at the bottom of the viewport for actions on a selection. */
+/**
+ * Floating bar at the bottom of the viewport for actions on a selection.
+ * While it is visible, Escape clears the selection wherever the focus is
+ * (list, bar buttons, header or body), as in Linear. Escape that an open
+ * popover/dialog or a text field already handles is left alone.
+ */
 export function BulkActionBar({
   count,
   onClear,
@@ -23,7 +28,31 @@ export function BulkActionBar({
   label = 'selected',
   className,
 }: BulkActionBarProps) {
-  if (count <= 0) return null
+  const onClearRef = useRef(onClear)
+  useEffect(() => {
+    onClearRef.current = onClear
+  })
+
+  const visible = count > 0
+  useEffect(() => {
+    if (!visible) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return
+      if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return
+      const target = event.target as HTMLElement | null
+      if (target?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target?.tagName ?? '')) {
+        return
+      }
+      event.preventDefault()
+      onClearRef.current()
+    }
+    // Bubble phase: Radix layers (pickers, dialogs) handle Escape first in the
+    // capture phase and mark it `defaultPrevented`.
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [visible])
+
+  if (!visible) return null
 
   return (
     <div

@@ -87,7 +87,7 @@ Interaction:
 | Prop        | Type         | Notes                                       |
 | ----------- | ------------ | ------------------------------------------- |
 | `count`     | `number`     | Hidden when 0                               |
-| `onClear`   | `() => void` | The X button                                |
+| `onClear`   | `() => void` | The X button, and Escape anywhere (not in a text field or open popover/dialog) |
 | `children`  | `ReactNode`  | Action buttons                              |
 | `label`     | `string`     | Text after the count (default `"selected"`) |
 | `className` | `string`     |                                             |
