@@ -315,7 +315,12 @@ export function WorkspaceCommands() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [favoritesQuery.data, teams, theme, toggleTheme, path, navigate, newDocument])
 
-  const results = query.trim() ? searchQuery.data : undefined
+  // Only results of the text in the box: older ones (still debouncing, or kept
+  // on screen by keepPreviousData) would be preselected and opened by Enter.
+  const results =
+    query.trim() && query === debouncedQuery && !searchQuery.isPlaceholderData
+      ? searchQuery.data
+      : undefined
   const searchGroups = useMemo<CommandGroupData[]>(() => {
     if (!results) return []
     const groups: CommandGroupData[] = []
