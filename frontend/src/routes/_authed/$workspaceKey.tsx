@@ -1,20 +1,11 @@
 import { useMemo } from 'react'
 import { createFileRoute, Link, Outlet, useLocation, useNavigate } from '@tanstack/react-router'
-import {
-  Box,
-  CircleDot,
-  FileText,
-  LogOut,
-  Plus,
-  Search,
-  Settings,
-  SquarePen,
-  Users,
-} from 'lucide-react'
+import { Box, CircleDot, LogOut, Plus, Search, Settings, SquarePen, Users } from 'lucide-react'
 import { AppShell } from '@/components/AppShell'
 import { ShortcutsProvider } from '@/components/command'
 import { EmptyState } from '@/components/EmptyState'
 import { IconButton } from '@/components/IconButton'
+import { DocumentIcon } from '@/components/documents/DocumentIcon'
 import { CreateIssueHost } from '@/components/issues/CreateIssueHost'
 import { SettingsSidebar } from '@/components/SettingsSidebar'
 import { Sidebar, type SidebarLink } from '@/components/Sidebar'
@@ -245,7 +236,7 @@ function FavoriteIcon({ favorite }: { favorite: Favorite }) {
     case 'project':
       return <Box style={style} />
     case 'document':
-      return <FileText />
+      return <DocumentIcon icon={favorite.icon} />
     case 'team':
       return <Users style={style} />
   }
