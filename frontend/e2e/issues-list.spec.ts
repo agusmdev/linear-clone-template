@@ -1424,6 +1424,36 @@ test.describe('issues list', () => {
     await expect(page).toHaveURL(`/${key}/issue/ENG-2`)
   })
 
+  test('C on my issues > Assigned assigns the new issue to me, like the New issue button (ISS-13)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { workspace, key } = await seedWorkspace(api, user)
+    const me = await getMe(api, user)
+    const page = await loginAs(user)
+    await page.goto(`/${key}/my-issues`)
+    await expect(page.getByText('Issues assigned to you show up here.')).toBeVisible()
+
+    await page.locator('body').click()
+    await page.keyboard.press('c')
+    const dialog = page.getByRole('dialog', { name: 'New issue' })
+    await expect(dialog.getByRole('button', { name: `Assignee: ${user.email}` })).toBeVisible()
+    await dialog.getByLabel('Issue title').fill('Made with C')
+    await page.keyboard.press('ControlOrMeta+Enter')
+    await expect(page.getByText('Created ENG-1')).toBeVisible()
+    await expect(row(page, 'Made with C')).toBeVisible()
+    const [issue] = (await listIssues(api, user, workspace.id)).items
+    expect(issue.assignee_id).toBe(me.id)
+
+    // The Created tab assigns nobody.
+    await page.getByRole('tab', { name: 'Created' }).click()
+    await expect(row(page, 'Made with C')).toBeVisible()
+    await page.locator('body').click()
+    await page.keyboard.press('c')
+    await expect(dialog.getByRole('button', { name: 'Assignee: Unassigned' })).toBeVisible()
+  })
+
   test("new issue defaults to one of the user's own teams, listed first in the picker (ISS-1)", async ({
     api,
     user,
