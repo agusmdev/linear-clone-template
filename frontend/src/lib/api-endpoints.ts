@@ -1,5 +1,6 @@
 import type { IssuesParams } from '@/types/issue'
 import type { ItemsParams } from '@/types/item'
+import type { NotificationsParams } from '@/types/notification'
 
 export const API = {
   AUTH: {
@@ -33,6 +34,13 @@ export const API = {
     BY_IDENTIFIER: (workspaceId: string, identifier: string) =>
       `/workspaces/${workspaceId}/issues/by-identifier/${identifier}`,
   },
+  NOTIFICATIONS: {
+    LIST: '/notifications',
+    UNREAD_COUNT: (workspaceId: string) =>
+      `/notifications/unread-count?workspace_id=${workspaceId}`,
+    MARK_ALL_READ: '/notifications/mark-all-read',
+    DETAIL: (id: string) => `/notifications/${id}`,
+  },
 } as const
 
 /** Makes `%`, `_` and `\` match themselves in an ILIKE pattern (backslash is Postgres' default escape). */
@@ -62,4 +70,14 @@ export function buildIssuesListUrl(params: IssuesParams): string {
     }
   }
   return `${API.ISSUES.LIST}?${queryParams.toString()}`
+}
+
+/** Builds the GET /notifications URL (newest first). Undefined keys are left out. */
+export function buildNotificationsListUrl(params: NotificationsParams): string {
+  const queryParams = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '') continue
+    queryParams.append(key, String(value))
+  }
+  return `${API.NOTIFICATIONS.LIST}?${queryParams.toString()}`
 }

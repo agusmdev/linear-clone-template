@@ -25,6 +25,7 @@
  *   authedPage  A page in its own browser context, already signed in as `user`.
  *   loginAs     (user) => a new signed-in page for any other user.
  */
+import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import {
   test as base,
@@ -40,11 +41,16 @@ import type { AuthSessionResponse } from '../src/types/auth'
 import type { CreateIssueData, Issue, UpdateIssueData } from '../src/types/issue'
 import type { CreateItemData, Item, ItemsResponse } from '../src/types/item'
 import type { Label } from '../src/types/label'
+import type {
+  Notification,
+  UnreadNotificationCount,
+  UpdateNotificationData,
+} from '../src/types/notification'
 import type { Page as ApiPage } from '../src/types/page'
 import type { Team, WorkflowState } from '../src/types/team'
 import type { User } from '../src/types/user'
 import type { CreateWorkspaceData, Workspace, WorkspaceMember } from '../src/types/workspace'
-import { BACKEND_URL, FRONTEND_URL } from './support/stack'
+import { BACKEND_URL, DB_CONTAINER, FRONTEND_URL } from './support/stack'
 
 export { expect }
 export type { Locator, Page } from '@playwright/test'
@@ -277,6 +283,89 @@ export async function deleteIssue(
 ): Promise<void> {
   const response = await api.delete(`/issues/${issueId}`, { headers: authHeaders(user) })
   await expectOk(response, 'DELETE /issues/{id}')
+}
+
+/**
+ * Adds an existing user to a workspace as a member, straight in the e2e
+ * database (docker exec psql). Invites (POST /workspaces/{id}/members) are not
+ * implemented on this branch; when they are, use the endpoint instead.
+ */
+export async function addWorkspaceMember(
+  api: APIRequestContext,
+  workspaceId: string,
+  user: TestUser
+): Promise<User> {
+  const me = await getMe(api, user)
+  if (!/^[0-9a-f-]{36}$/.test(workspaceId)) throw new Error(`Bad workspace id ${workspaceId}`)
+  execFileSync(
+    'docker',
+    [
+      'exec',
+      DB_CONTAINER,
+      'psql',
+      '--username=app',
+      '--dbname=app',
+      '--set=ON_ERROR_STOP=1',
+      '--command',
+      'INSERT INTO workspace_member (id, workspace_id, user_id, role, created_at, updated_at) ' +
+        `VALUES (gen_random_uuid(), '${workspaceId}', '${me.id}', 'member', now(), now())`,
+    ],
+    { stdio: 'pipe' }
+  )
+  return me
+}
+
+/** GET /notifications?workspace_id=…: my notifications, newest first (archived left out). */
+export async function listNotifications(
+  api: APIRequestContext,
+  user: TestUser,
+  workspaceId: string,
+  query = ''
+): Promise<Notification[]> {
+  const response = await api.get(`/notifications?workspace_id=${workspaceId}&size=100${query}`, {
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'GET /notifications')
+  return ((await response.json()) as ApiPage<Notification>).items
+}
+
+export async function getUnreadNotificationCount(
+  api: APIRequestContext,
+  user: TestUser,
+  workspaceId: string
+): Promise<number> {
+  const response = await api.get(`/notifications/unread-count?workspace_id=${workspaceId}`, {
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'GET /notifications/unread-count')
+  return ((await response.json()) as UnreadNotificationCount).count
+}
+
+export async function updateNotification(
+  api: APIRequestContext,
+  user: TestUser,
+  notificationId: string,
+  data: UpdateNotificationData
+): Promise<Notification> {
+  const response = await api.patch(`/notifications/${notificationId}`, {
+    data,
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'PATCH /notifications/{id}')
+  return (await response.json()) as Notification
+}
+
+export async function markAllNotificationsRead(
+  api: APIRequestContext,
+  user: TestUser,
+  workspaceId: string
+): Promise<number> {
+  const response = await api.post('/notifications/mark-all-read', {
+    data: { workspace_id: workspaceId },
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'POST /notifications/mark-all-read')
+  return ((await response.json()) as { updated: number }).updated
 }
 
 // ---------------------------------------------------------------------------
