@@ -9,14 +9,10 @@ import { CREATE_ISSUE_EVENT } from '@/lib/issue-events'
 import type { CreateIssueData, CreateIssueEventDetail } from '@/types/issue'
 import { CreateIssueDialog } from './CreateIssueDialog'
 
-function isTypingTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false
-  return target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)
-}
-
 /**
  * Mounted once in the workspace layout. Opens the create-issue modal on the
- * `linear:create-issue` window event (see `openCreateIssue`) and on the `C` key.
+ * `linear:create-issue` window event (see `openCreateIssue`; the `C` shortcut of
+ * WorkspaceCommands dispatches it).
  * The default team is the event's team, else the team of the current URL
  * (`/<ws>/team/<KEY>/...`), else the first team.
  */
@@ -41,26 +37,9 @@ export function CreateIssueHost() {
     }
     const onEvent = (event: Event) =>
       show((event as CustomEvent<CreateIssueEventDetail>).detail ?? {})
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== 'c' && event.key !== 'C') return
-      if (
-        event.metaKey ||
-        event.ctrlKey ||
-        event.altKey ||
-        event.shiftKey ||
-        event.defaultPrevented
-      )
-        return
-      if (isTypingTarget(event.target)) return
-      if (document.querySelector('[role="dialog"], [role="alertdialog"], [role="menu"]')) return
-      event.preventDefault()
-      show({})
-    }
     window.addEventListener(CREATE_ISSUE_EVENT, onEvent)
-    window.addEventListener('keydown', onKey)
     return () => {
       window.removeEventListener(CREATE_ISSUE_EVENT, onEvent)
-      window.removeEventListener('keydown', onKey)
     }
   }, [])
 

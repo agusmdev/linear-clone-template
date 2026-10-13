@@ -50,14 +50,14 @@ test.describe('issues list', () => {
     const { workspace, key } = await seedWorkspace(api, user)
     const page = await loginAs(user)
     await page.goto(`/${key}`)
-    await expect(page.getByRole('button', { name: 'New issue' }).first()).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Compose issue' })).toBeVisible()
 
     await page.goto(`/${key}/team/ENG/issues`)
     await expect(page.getByRole('heading', { level: 1, name: 'Issues' })).toBeVisible()
     await expect(page.getByText('No issues yet')).toBeVisible()
 
-    // The sidebar "New issue" button opens the modal.
-    await page.getByRole('button', { name: 'New issue' }).first().click()
+    // The sidebar "Compose issue" button opens the modal.
+    await page.getByRole('button', { name: 'Compose issue' }).click()
     const dialog = page.getByRole('dialog', { name: 'New issue' })
     await expect(dialog).toBeVisible()
     await expect(dialog.getByRole('button', { name: 'Team: Engineering' })).toBeVisible()
