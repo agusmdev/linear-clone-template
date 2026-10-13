@@ -416,7 +416,9 @@ issue is created with an assignee). Other features (comments, mentions) call
 Issue search matches title, description and identifier (`ENG-12`, or the bare
 number `12`); an exact identifier match comes first, then the newest updated;
 archived issues are left out. Documents match title or content, projects name
-or description. `limit` (1..50) is per type. An empty `q` returns empty lists.
+or description. Descriptions and content match their visible text only (not the
+HTML markup; `a & b` matches the stored `a &amp; b`). `limit` (1..50) is per type. An empty `q` returns empty lists; `q` is at most
+200 characters (longer: 422 `validation_error`).
 `%` and `_` match literally.
 
 ### Favorites (UX-5)

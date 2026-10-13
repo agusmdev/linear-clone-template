@@ -4,6 +4,9 @@ import type { TeamSummary } from '@/types/team'
 
 export type SearchType = 'issue' | 'document' | 'project'
 
+/** Longest `q` the search endpoint accepts (longer is a 422). */
+export const SEARCH_QUERY_MAX_LENGTH = 200
+
 /** An issue in search results: IssueRef plus its team. */
 export interface IssueSearchResult extends IssueRef {
   team: TeamSummary

@@ -21,7 +21,8 @@ class SearchRepository(SQLAlchemyRepository[Issue]):
     async def search_issues(
         self, workspace_id: uuid.UUID, text: str, limit: int
     ) -> list[Issue]:
-        """Issues whose title, description or identifier match (not archived).
+        """Issues whose title, description (visible text) or identifier match
+        (not archived).
 
         An exact identifier match (``ENG-12`` or ``12``) comes first, then the
         most recently updated issues.
@@ -29,7 +30,7 @@ class SearchRepository(SQLAlchemyRepository[Issue]):
         pattern = like_pattern(text)
         conditions: list[Any] = [
             Issue.title.ilike(pattern),
-            Issue.description.ilike(pattern),
+            html_visible_text(Issue.description).ilike(pattern),
         ]
         exact: Any = None
         if match := IDENTIFIER_PATTERN.match(text):
@@ -80,7 +81,10 @@ class SearchRepository(SQLAlchemyRepository[Issue]):
             select(Project)
             .where(
                 Project.workspace_id == workspace_id,
-                or_(Project.name.ilike(pattern), Project.description.ilike(pattern)),
+                or_(
+                    Project.name.ilike(pattern),
+                    html_visible_text(Project.description).ilike(pattern),
+                ),
             )
             .order_by(Project.updated_at.desc(), Project.id)
             .limit(limit)

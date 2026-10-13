@@ -391,6 +391,35 @@ test.describe('search page', () => {
     await expect(page).toHaveURL(`/${workspace.url_key}/issue/${rocket.identifier}`)
   })
 
+  test('a pasted query longer than the API accepts searches its first characters', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const [team] = await listTeams(api, user, workspace.id)
+    await createIssue(api, user, { team_id: team.id, title: 'Rocket launch' })
+    // 260 characters: the API takes at most 200 (longer used to fail with a 422).
+    const long = `Rocket launch${' '.repeat(240)}tail end`
+    const tooLong: string[] = []
+    page.on('response', response => {
+      if (response.url().includes('/search?') && response.status() === 422) {
+        tooLong.push(response.url())
+      }
+    })
+
+    await page.goto(`/${workspace.url_key}/search`)
+    await page.getByRole('searchbox', { name: 'Search workspace' }).fill(long)
+    await expect(page.getByTestId('search-result')).toHaveCount(1)
+    await expect(page.getByText('Search failed')).toHaveCount(0)
+
+    await page.keyboard.press('ControlOrMeta+k')
+    await expect(palette(page)).toBeVisible()
+    await page.keyboard.insertText(long)
+    await expect(palette(page).getByRole('option', { name: /Rocket launch/ })).toBeVisible()
+    expect(tooLong).toEqual([])
+  })
+
   test('an empty query shows the search prompt', async ({ api, user, authedPage: page }) => {
     const workspace = await createWorkspace(api, user)
     await page.goto(`/${workspace.url_key}/search`)

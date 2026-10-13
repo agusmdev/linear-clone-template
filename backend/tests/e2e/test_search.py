@@ -151,6 +151,34 @@ def test_search_documents_match_visible_text_only(
     assert found("tom & jerry") == [doc["id"]]
 
 
+def test_search_issue_and_project_descriptions_match_visible_text_only(
+    owner: RegisteredUser, ws: dict[str, Any]
+) -> None:
+    workspace_id = ws["workspace"]["id"]
+    issue = create_issue(
+        owner.client,
+        ws["team"]["id"],
+        "Budget",
+        description="<p>Plan the <strong>R</strong>&amp;D budget</p>",
+    )
+    project = create_project(
+        owner.client,
+        workspace_id,
+        "Site",
+        description='<p>Ship the <em>new</em> <a href="https://x.dev">site</a></p>',
+    )
+
+    def found(q: str) -> tuple[list[str], list[str]]:
+        body = search(owner, workspace_id, q=q, types="issue,project")
+        return [i["id"] for i in body["issues"]], [p["id"] for p in body["projects"]]
+
+    assert found("strong") == ([], [])
+    assert found("href") == ([], [])
+    assert found("em") == ([], [])
+    assert found("r&d budget") == ([issue["id"]], [])
+    assert found("the new site") == ([], [project["id"]])
+
+
 def test_search_skips_archived_issues(
     owner: RegisteredUser, ws: dict[str, Any]
 ) -> None:
