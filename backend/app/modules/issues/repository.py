@@ -58,8 +58,13 @@ class IssueRepository(SQLAlchemyRepository[Issue]):
         )
         return (await self._session.execute(query)).scalar_one_or_none()
 
-    async def next_sort_order(self, team_id: uuid.UUID) -> float:
-        query = select(func.max(Issue.sort_order)).where(Issue.team_id == team_id)
+    async def next_sort_order(self, workspace_id: uuid.UUID) -> float:
+        # One sequence per workspace, not per team: views that mix teams (My
+        # issues, projects) order by sort_order too, and per-team sequences
+        # would tie there, so a drag between two tied issues could not move.
+        query = select(func.max(Issue.sort_order)).where(
+            Issue.workspace_id == workspace_id
+        )
         current = (await self._session.execute(query)).scalar_one_or_none()
         return (current or 0.0) + 1.0
 

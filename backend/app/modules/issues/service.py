@@ -251,7 +251,7 @@ class IssueService(BaseService[Issue]):
             "sort_order": (
                 data.sort_order
                 if data.sort_order is not None
-                else await self.repo.next_sort_order(team.id)
+                else await self.repo.next_sort_order(workspace_id)
             ),
             **state_timestamps(None, state.type, now),
         }

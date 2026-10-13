@@ -16,6 +16,7 @@ import pytest
 from tests.e2e.helpers import (
     assert_error,
     create_issue,
+    create_team,
     create_workspace,
     join_workspace,
     team_states,
@@ -171,6 +172,19 @@ def test_numbers_increase_per_team_and_sort_order_appends(
     assert [first["identifier"], second["identifier"]] == ["ENG-1", "ENG-2"]
     assert other["identifier"] == "OPS-1"
     assert second["sort_order"] > first["sort_order"]
+
+
+def test_sort_order_appends_across_the_teams_of_a_workspace(
+    owner: RegisteredUser, ws: dict[str, Any]
+) -> None:
+    # My issues mixes teams in one manual order: sort orders must not tie.
+    ops = create_team(owner.client, ws["workspace"]["id"], name="Operations", key="OPS")
+    first = create_issue(owner.client, ws["team"]["id"], "A")
+    second = create_issue(owner.client, ops["id"], "B")
+    third = create_issue(owner.client, ws["team"]["id"], "C")
+
+    assert second["identifier"] == "OPS-1"
+    assert first["sort_order"] < second["sort_order"] < third["sort_order"]
 
 
 def test_concurrent_creates_get_distinct_numbers(
