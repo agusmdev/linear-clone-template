@@ -10,16 +10,26 @@ export interface AutosaveResult {
   flush: () => void
 }
 
+export interface AutosaveContext {
+  /**
+   * True when the page is being hidden, reloaded or closed. The save must then
+   * send its request with `keepalive`, or the browser cancels it.
+   */
+  keepalive: boolean
+}
+
 const NOT_SAVED: unique symbol = Symbol('not-saved')
 
 /**
  * Saves `value` after it has not changed for `delay` ms. The first value is
- * taken as already saved. A pending change is saved when the component unmounts.
+ * taken as already saved. A pending change is saved when the component unmounts,
+ * and with `keepalive` when the page is hidden, reloaded or closed (a reload or
+ * a closed tab does not unmount React components).
  * When saves overlap, only the newest one sets the status.
  */
 export function useDebouncedAutosave<T>(
   value: T,
-  save: (value: T) => Promise<unknown> | unknown,
+  save: (value: T, context: AutosaveContext) => Promise<unknown> | unknown,
   delay = 800
 ): AutosaveResult {
   const [status, setStatus] = useState<AutosaveStatus>('idle')
@@ -34,13 +44,13 @@ export function useDebouncedAutosave<T>(
     valueRef.current = value
   })
 
-  const runSave = useCallback(async (next: T) => {
+  const runSave = useCallback(async (next: T, keepalive = false) => {
     if (Object.is(next, lastSavedRef.current)) return
     const request = ++requestRef.current
     lastSavedRef.current = next
     setStatus('saving')
     try {
-      await saveRef.current(next)
+      await saveRef.current(next, { keepalive })
       if (request === requestRef.current) {
         setError(null)
         setStatus('saved')
@@ -60,11 +70,26 @@ export function useDebouncedAutosave<T>(
     return () => clearTimeout(timer)
   }, [value, delay, runSave])
 
+  useEffect(() => {
+    const flushOnExit = () => void runSave(valueRef.current, true)
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') flushOnExit()
+    }
+    window.addEventListener('pagehide', flushOnExit)
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => {
+      window.removeEventListener('pagehide', flushOnExit)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+    }
+  }, [runSave])
+
   useEffect(
     () => () => {
       if (Object.is(valueRef.current, lastSavedRef.current)) return
       try {
-        void Promise.resolve(saveRef.current(valueRef.current)).catch(() => undefined)
+        void Promise.resolve(saveRef.current(valueRef.current, { keepalive: false })).catch(
+          () => undefined
+        )
       } catch {
         // The component is gone: there is no status left to report.
       }

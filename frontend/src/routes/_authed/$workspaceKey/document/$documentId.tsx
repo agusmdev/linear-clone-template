@@ -96,13 +96,13 @@ function DocumentEditor({ document }: { document: Document }) {
   const [projectPickerOpen, setProjectPickerOpen] = useState(false)
   const openPickerAfterMenu = useRef(false)
 
-  const titleSave = useDebouncedAutosave(title, next => {
+  const titleSave = useDebouncedAutosave(title, (next, { keepalive }) => {
     if (deletedRef.current) return
-    return update.mutateAsync({ title: next.trim() || 'Untitled' })
+    return update.mutateAsync({ data: { title: next.trim() || 'Untitled' }, keepalive })
   })
-  const contentSave = useDebouncedAutosave(content, next => {
+  const contentSave = useDebouncedAutosave(content, (next, { keepalive }) => {
     if (deletedRef.current) return
-    return update.mutateAsync({ content: next })
+    return update.mutateAsync({ data: { content: next }, keepalive })
   })
   const [fieldStatus, setFieldStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const status = combineSaveStatus([titleSave.status, contentSave.status, fieldStatus])
@@ -111,7 +111,7 @@ function DocumentEditor({ document }: { document: Document }) {
   const saveField = async (data: { icon?: string | null; project_id?: string | null }) => {
     setFieldStatus('saving')
     try {
-      await update.mutateAsync(data)
+      await update.mutateAsync({ data })
       setFieldStatus('saved')
     } catch (error) {
       setFieldStatus('error')

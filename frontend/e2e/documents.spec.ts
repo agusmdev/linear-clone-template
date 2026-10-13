@@ -117,6 +117,62 @@ test.describe('document editor', () => {
     await expect(editor.locator('strong')).toHaveText('editor')
   })
 
+  test('saves edits typed just before a reload (keepalive flush on pagehide)', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const doc = await createDocument(api, user, {
+      workspace_id: workspace.id,
+      title: 'Draft',
+      content: '<p>Start</p>',
+    })
+
+    await page.goto(`/${workspace.url_key}/document/${doc.id}`)
+    const editor = page.getByLabel('Document content')
+    await expect(editor).toContainText('Start')
+
+    await page.getByLabel('Document title').fill('Draft fast')
+    await editor.click()
+    await page.keyboard.press('End')
+    await page.keyboard.type(' QUICKRELOAD')
+    // Reload inside the 800 ms debounce: no React unmount runs.
+    await page.reload()
+
+    await expect
+      .poll(async () => (await (await fetchDocument(api, user, doc.id)).json()).content)
+      .toBe('<p>Start QUICKRELOAD</p>')
+    expect((await (await fetchDocument(api, user, doc.id)).json()).title).toBe('Draft fast')
+
+    await page.reload()
+    await expect(page.getByLabel('Document title')).toHaveValue('Draft fast')
+    await expect(editor).toHaveText('Start QUICKRELOAD')
+  })
+
+  test('saves edits typed just before the tab closes', async ({ api, user, loginAs }) => {
+    const workspace = await createWorkspace(api, user)
+    const doc = await createDocument(api, user, {
+      workspace_id: workspace.id,
+      title: 'Draft',
+      content: '<p>Start</p>',
+    })
+    const page = await loginAs(user)
+
+    await page.goto(`/${workspace.url_key}/document/${doc.id}`)
+    const editor = page.getByLabel('Document content')
+    await expect(editor).toContainText('Start')
+    await editor.click()
+    await page.keyboard.press('End')
+    await page.keyboard.type(' QUICKCLOSE')
+    // Close inside the 800 ms debounce, as a user closing the tab.
+    await page.close({ runBeforeUnload: true })
+
+    await expect
+      .poll(async () => (await (await fetchDocument(api, user, doc.id)).json()).content)
+      .toBe('<p>Start QUICKCLOSE</p>')
+  })
+
   test('issue identifiers in the text link to the issue (DOC-7)', async ({
     api,
     user,
