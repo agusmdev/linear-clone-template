@@ -1,6 +1,6 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { Command } from 'cmdk'
-import { useState, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 
 import { cn } from '@/lib/utils'
 
@@ -106,16 +106,35 @@ export function CommandPalette({
 }: CommandPaletteProps) {
   const [pages, setPages] = useState<CommandItemData[]>([])
   const [search, setSearch] = useState('')
+  // The highlighted item (cmdk `value`), controlled so new async results can move it.
+  const [selected, setSelected] = useState('')
   const [wasOpen, setWasOpen] = useState(open)
+  const listRef = useRef<HTMLDivElement>(null)
 
-  // Reset the pages and the search text each time the palette closes.
+  // Reset the pages, the search text and the highlight each time the palette closes.
   if (open !== wasOpen) {
     setWasOpen(open)
     if (!open) {
       setPages([])
       setSearch('')
+      setSelected('')
     }
   }
+
+  // cmdk highlights the first match only while nothing is highlighted, so async
+  // results arriving above a command that matched first ("login" -> "Log out")
+  // would leave Enter on that command. Highlight the first visible item instead,
+  // once cmdk has sorted the new items (next frame).
+  const searchResultIds = searchGroups.flatMap(group => group.items.map(item => item.id)).join()
+  useEffect(() => {
+    if (!searchResultIds) return
+    const frame = requestAnimationFrame(() => {
+      const first = listRef.current?.querySelector('[cmdk-item]:not([aria-disabled="true"])')
+      const value = first?.getAttribute('data-value')
+      if (value) setSelected(value)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [searchResultIds])
 
   const page = pages.at(-1)
   const visibleGroups = page?.children ?? groups
@@ -168,7 +187,14 @@ export function CommandPalette({
           <DialogPrimitive.Description className="sr-only">
             Search for a command to run.
           </DialogPrimitive.Description>
-          <Command label="Command menu" filter={filterItems} loop onKeyDown={handleKeyDown}>
+          <Command
+            label="Command menu"
+            filter={filterItems}
+            loop
+            value={selected}
+            onValueChange={setSelected}
+            onKeyDown={handleKeyDown}
+          >
             {pages.length > 0 && (
               <div className="flex flex-wrap items-center gap-1 px-4 pt-3">
                 {pages.map(p => (
@@ -187,7 +213,10 @@ export function CommandPalette({
               placeholder={page?.childrenPlaceholder ?? placeholder}
               className="h-12 w-full border-b border-[var(--color-border,#2a2b2e)] bg-transparent px-4 text-[15px] text-[var(--color-foreground,#f7f8f8)] outline-none placeholder:text-[var(--color-muted-foreground,#8a8f98)]"
             />
-            <Command.List className="max-h-[min(400px,60vh)] overflow-y-auto overscroll-contain py-1 [scroll-padding-block:8px]">
+            <Command.List
+              ref={listRef}
+              className="max-h-[min(400px,60vh)] overflow-y-auto overscroll-contain py-1 [scroll-padding-block:8px]"
+            >
               {loading && !page && (
                 <Command.Loading className="px-5 py-2 text-[var(--color-muted-foreground,#8a8f98)]">
                   Searching…

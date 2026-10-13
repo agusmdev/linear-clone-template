@@ -382,14 +382,18 @@ test.describe('issues list', () => {
     await expect(dialog.getByRole('button', { name: 'Priority: Urgent' })).toBeFocused()
     await page.keyboard.press('Escape')
     await expect(prompt).toBeVisible()
+    // The prompt takes the focus: typing must not edit the title behind it.
+    await expect(prompt.getByRole('button', { name: 'Save draft' })).toBeFocused()
     await page.keyboard.press('Escape')
     await expect(prompt).toBeHidden()
     await expect(dialog).toBeVisible()
     await expect(title).toHaveValue('Half written issue')
+    await expect(title).toBeFocused()
 
-    // "Save draft" from the X button; the draft survives a reload.
+    // "Save draft" (Enter) from the X button; the draft survives a reload.
     await dialog.getByRole('button', { name: 'Close' }).click()
-    await prompt.getByRole('button', { name: 'Save draft' }).click()
+    await expect(prompt.getByRole('button', { name: 'Save draft' })).toBeFocused()
+    await page.keyboard.press('Enter')
     await expect(dialog).toBeHidden()
     await page.reload()
     await expect(page.getByText('No issues yet')).toBeVisible()
