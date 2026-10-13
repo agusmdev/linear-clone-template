@@ -210,6 +210,32 @@ def test_join_and_leave_a_team(register_user: Callable[..., RegisteredUser]) -> 
     assert member.id not in ids
 
 
+def test_list_only_the_teams_i_joined(
+    register_user: Callable[..., RegisteredUser],
+) -> None:
+    owner, member = register_user(), register_user()
+    workspace = create_workspace(owner.client)
+    invite_member(owner.client, workspace["id"], member.email)
+    first = workspace_team(owner.client, workspace["id"])
+    design = create_team(owner.client, workspace["id"], name="Design", key="DES")
+    url = f"/workspaces/{workspace['id']}/teams"
+
+    def joined_keys(client: httpx.Client) -> list[str]:
+        response = client.get(url, params={"joined": "true"})
+        assert response.status_code == 200, response.text
+        return [team["key"] for team in response.json()]
+
+    # The full list has every team; ?joined=true only the user's teams.
+    assert [t["key"] for t in member.client.get(url).json()] == ["DES", first["key"]]
+    assert joined_keys(owner.client) == ["DES", first["key"]]
+    assert joined_keys(member.client) == []
+
+    member.client.post(f"/teams/{design['id']}/members")
+    assert joined_keys(member.client) == ["DES"]
+    owner.client.delete(f"/teams/{design['id']}/members/me")
+    assert joined_keys(owner.client) == [first["key"]]
+
+
 def test_team_manager_adds_and_removes_a_workspace_member(
     register_user: Callable[..., RegisteredUser],
 ) -> None:
@@ -346,7 +372,19 @@ def test_team_and_state_names_are_trimmed_and_never_blank(
     assert renamed.json()["name"] == "Platform"
     assert state.status_code == 201, state.text
     assert state.json()["name"] == "QA"
-    for blank in ("", "   "):
+    # Names are one line: a pasted line break becomes one space.
+    multi_line = auth_client.post(
+        f"/workspaces/{workspace['id']}/teams",
+        json={"name": "Data\nPlatform", "key": "DAT"},
+    )
+    assert multi_line.status_code == 201, multi_line.text
+    assert multi_line.json()["name"] == "Data Platform"
+    retyped = auth_client.patch(
+        f"/workflow-states/{state.json()['id']}", json={"name": "Q\r\n A"}
+    )
+    assert retyped.status_code == 200, retyped.text
+    assert retyped.json()["name"] == "Q A"
+    for blank in ("", "   ", "\n\n"):
         assert_error(
             auth_client.post(
                 f"/workspaces/{workspace['id']}/teams",

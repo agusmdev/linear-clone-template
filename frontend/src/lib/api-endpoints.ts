@@ -25,6 +25,8 @@ export const API = {
     BY_URL_KEY: (urlKey: string) => `/workspaces/${urlKey}`,
     MEMBERS: (workspaceId: string) => `/workspaces/${workspaceId}/members`,
     TEAMS: (workspaceId: string) => `/workspaces/${workspaceId}/teams`,
+    /** Only the teams the signed-in user is a member of ("Your teams"). */
+    MY_TEAMS: (workspaceId: string) => `/workspaces/${workspaceId}/teams?joined=true`,
     LABELS: (workspaceId: string) => `/workspaces/${workspaceId}/labels`,
     DETAIL: (workspaceId: string) => `/workspaces/${workspaceId}`,
     MEMBER: (workspaceId: string, memberId: string) =>

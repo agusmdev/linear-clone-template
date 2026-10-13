@@ -22,6 +22,7 @@ export const queryKeys = {
   teams: {
     all: ['teams'] as const,
     list: (workspaceId: string) => ['teams', 'list', workspaceId] as const,
+    joined: (workspaceId: string) => ['teams', 'joined', workspaceId] as const,
     states: (teamId: string) => ['teams', teamId, 'states'] as const,
     members: (teamId: string) => ['teams', teamId, 'members'] as const,
   },
