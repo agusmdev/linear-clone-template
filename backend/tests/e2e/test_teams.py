@@ -325,6 +325,58 @@ def test_state_payloads_are_validated(auth_client: httpx.Client) -> None:
     )
 
 
+def test_team_and_state_names_are_trimmed_and_never_blank(
+    auth_client: httpx.Client,
+) -> None:
+    workspace = create_workspace(auth_client)
+    team = workspace_team(auth_client, workspace["id"])
+
+    created = auth_client.post(
+        f"/workspaces/{workspace['id']}/teams", json={"name": "  Design ", "key": "DES"}
+    )
+    renamed = auth_client.patch(f"/teams/{team['id']}", json={"name": " Platform  "})
+    state = auth_client.post(
+        f"/teams/{team['id']}/states",
+        json={"name": "  QA ", "type": "started", "color": "#ffffff"},
+    )
+
+    assert created.status_code == 201, created.text
+    assert created.json()["name"] == "Design"
+    assert renamed.status_code == 200, renamed.text
+    assert renamed.json()["name"] == "Platform"
+    assert state.status_code == 201, state.text
+    assert state.json()["name"] == "QA"
+    for blank in ("", "   "):
+        assert_error(
+            auth_client.post(
+                f"/workspaces/{workspace['id']}/teams",
+                json={"name": blank, "key": "BLK"},
+            ),
+            422,
+            "validation_error",
+        )
+        assert_error(
+            auth_client.patch(f"/teams/{team['id']}", json={"name": blank}),
+            422,
+            "validation_error",
+        )
+        assert_error(
+            auth_client.post(
+                f"/teams/{team['id']}/states",
+                json={"name": blank, "type": "started", "color": "#ffffff"},
+            ),
+            422,
+            "validation_error",
+        )
+        assert_error(
+            auth_client.patch(
+                f"/workflow-states/{state.json()['id']}", json={"name": blank}
+            ),
+            422,
+            "validation_error",
+        )
+
+
 def test_state_names_are_unique_in_a_team(auth_client: httpx.Client) -> None:
     workspace = create_workspace(auth_client)
     team = workspace_team(auth_client, workspace["id"])

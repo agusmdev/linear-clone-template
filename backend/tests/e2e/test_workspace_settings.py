@@ -374,6 +374,58 @@ def test_label_names_are_unique_per_workspace_in_any_case(
     create_label(auth_client, other["id"], "Design")
 
 
+def test_workspace_and_label_names_are_trimmed_and_never_blank(
+    auth_client: httpx.Client,
+) -> None:
+    workspace = create_workspace(auth_client)
+    url = f"/workspaces/{workspace['id']}"
+
+    renamed = auth_client.patch(url, json={"name": "  Acme Corp  "})
+    label = auth_client.post(
+        f"{url}/labels", json={"name": "  Backend ", "color": "#eb5757"}
+    )
+
+    assert renamed.status_code == 200, renamed.text
+    assert renamed.json()["name"] == "Acme Corp"
+    assert label.status_code == 201, label.text
+    assert label.json()["name"] == "Backend"
+    # A padded name is the same name: no near-duplicate " Bug " next to "Bug".
+    assert_error(
+        auth_client.post(f"{url}/labels", json={"name": " bug ", "color": "#eb5757"}),
+        400,
+        "duplicate_item",
+    )
+    for blank in ("", "   "):
+        assert_error(
+            auth_client.patch(url, json={"name": blank}), 422, "validation_error"
+        )
+        assert_error(
+            auth_client.post(
+                "/workspaces", json={"name": blank, "url_key": unique_url_key()}
+            ),
+            422,
+            "validation_error",
+        )
+        assert_error(
+            auth_client.post(
+                "/workspaces",
+                json={"name": "X", "url_key": unique_url_key(), "team_name": blank},
+            ),
+            422,
+            "validation_error",
+        )
+        assert_error(
+            auth_client.post(f"{url}/labels", json={"name": blank, "color": "#eb5757"}),
+            422,
+            "validation_error",
+        )
+        assert_error(
+            auth_client.patch(f"/labels/{label.json()['id']}", json={"name": blank}),
+            422,
+            "validation_error",
+        )
+
+
 def test_label_color_must_be_a_hex_color(auth_client: httpx.Client) -> None:
     workspace = create_workspace(auth_client)
 

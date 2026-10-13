@@ -5,6 +5,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.core.names import Name
 from app.core.optional_model import partial_model
 from app.database.mixins import OrmBaseModel
 from app.modules.teams.models import WorkflowStateType
@@ -33,7 +34,7 @@ class TeamResponse(TeamSummary):
 
 
 class TeamFields(BaseModel):
-    name: str = Field(..., min_length=1, max_length=255)
+    name: Name
     # 2-5 uppercase letters, unique in the workspace: the issue prefix (ENG-12).
     key: str = Field(..., pattern=TEAM_KEY_PATTERN)
     description: str | None = Field(None, max_length=10_000)
@@ -85,7 +86,7 @@ class WorkflowStateResponse(WorkflowStateSummary):
 
 
 class WorkflowStateFields(BaseModel):
-    name: str = Field(..., min_length=1, max_length=255)
+    name: Name
     type: WorkflowStateType
     color: str = Field(..., pattern=COLOR_PATTERN)
     position: float = Field(..., allow_inf_nan=False)

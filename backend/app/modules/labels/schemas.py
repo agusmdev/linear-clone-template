@@ -5,6 +5,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.core.names import Name
 from app.core.optional_model import partial_model
 from app.database.mixins import OrmBaseModel
 
@@ -28,7 +29,7 @@ class LabelResponse(LabelSummary):
 
 class LabelFields(BaseModel):
     # Unique per workspace.
-    name: str = Field(..., min_length=1, max_length=255)
+    name: Name
     color: str = Field(..., pattern=COLOR_PATTERN)
 
 
