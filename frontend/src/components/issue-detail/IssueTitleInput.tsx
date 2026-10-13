@@ -62,7 +62,7 @@ export function IssueTitleInput({ value, onSave, className }: IssueTitleInputPro
         }
       }}
       className={cn(
-        'w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-title leading-snug font-semibold text-foreground outline-none placeholder:text-text-tertiary',
+        'w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-2xl leading-tight font-semibold tracking-tight text-foreground outline-none placeholder:text-text-tertiary',
         className
       )}
     />
