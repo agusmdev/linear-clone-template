@@ -40,6 +40,27 @@ def _text(value: Any) -> str | None:
     return None if value is None else str(value)
 
 
+def _change(
+    actor_id: uuid.UUID,
+    field: str,
+    old: Any,
+    new: Any,
+    *,
+    issue_id: uuid.UUID | None = None,
+) -> dict[str, Any]:
+    """An ``updated`` activity row; ``issue_id`` logs it on another issue."""
+    row: dict[str, Any] = {
+        "actor_id": actor_id,
+        "action": IssueActivityAction.updated,
+        "field": field,
+        "from_value": _text(old),
+        "to_value": _text(new),
+    }
+    if issue_id is not None:
+        row["issue_id"] = issue_id
+    return row
+
+
 def state_timestamps(
     issue: Issue | None, new_type: WorkflowStateType, now: datetime
 ) -> dict[str, datetime | None]:
@@ -219,7 +240,7 @@ class IssueService(BaseService[Issue]):
         await self._labels(workspace_id, label_ids)
         await self._project_name(workspace_id, data.project_id)
         await self._cycle_name(team.id, data.cycle_id)
-        await self._parent_identifier(workspace_id, data.parent_id)
+        parent = await self._parent_identifier(workspace_id, data.parent_id)
 
         now = datetime.now(tz=UTC)
         values: dict[str, Any] = {
@@ -235,12 +256,30 @@ class IssueService(BaseService[Issue]):
             **state_timestamps(None, state.type, now),
         }
         subscribers = {user_id} | ({data.assignee_id} if data.assignee_id else set())
+        activities: list[dict[str, Any]] = [
+            {"actor_id": user_id, "action": IssueActivityAction.created}
+        ]
+        if parent is not None:
+            activities.append(_change(user_id, "parent", None, parent))
         issue = await self.repo.create_issue(
             values,
             label_ids=label_ids,
             subscriber_ids=subscribers,
-            activities=[{"actor_id": user_id, "action": IssueActivityAction.created}],
+            activities=activities,
         )
+        if data.parent_id is not None:
+            # The number (so the identifier) exists only after the insert.
+            await self.repo.add_activities(
+                [
+                    _change(
+                        user_id,
+                        "sub_issue",
+                        None,
+                        issue.identifier,
+                        issue_id=data.parent_id,
+                    )
+                ]
+            )
         await self.notification_service.notify_assigned(
             workspace_id=workspace_id,
             issue_id=issue.id,
@@ -296,15 +335,7 @@ class IssueService(BaseService[Issue]):
         now = datetime.now(tz=UTC)
 
         def log(field: str, old: Any, new: Any) -> None:
-            activities.append(
-                {
-                    "actor_id": user_id,
-                    "action": IssueActivityAction.updated,
-                    "field": field,
-                    "from_value": _text(old),
-                    "to_value": _text(new),
-                }
-            )
+            activities.append(_change(user_id, field, old, new))
 
         for field in _PLAIN_FIELDS:
             if field in changes and changes[field] != getattr(issue, field):
@@ -376,6 +407,27 @@ class IssueService(BaseService[Issue]):
             )
             values["parent_id"] = changes["parent_id"]
             log("parent", old_parent, new_parent)
+            # The old and the new parent log the sub-issue too.
+            if issue.parent_id is not None:
+                activities.append(
+                    _change(
+                        user_id,
+                        "sub_issue",
+                        issue.identifier,
+                        None,
+                        issue_id=issue.parent_id,
+                    )
+                )
+            if changes["parent_id"] is not None:
+                activities.append(
+                    _change(
+                        user_id,
+                        "sub_issue",
+                        None,
+                        issue.identifier,
+                        issue_id=changes["parent_id"],
+                    )
+                )
 
         if "archived" in changes and changes["archived"] != (
             issue.archived_at is not None
@@ -402,9 +454,37 @@ class IssueService(BaseService[Issue]):
         }
 
     async def delete_issue(self, issue_id: uuid.UUID, *, user_id: uuid.UUID) -> None:
-        await self.get_for_member(issue_id, user_id=user_id)
-        await self.repo.delete(issue_id)
+        issue = await self.get_for_member(issue_id, user_id=user_id)
+        await self._delete_issues([issue], user_id=user_id)
         self._log_entity(issue_id)
+
+    async def _delete_issues(self, issues: list[Issue], *, user_id: uuid.UUID) -> None:
+        """Delete the issues; their sub-issues and parents that stay log it."""
+        deleted = {issue.id: issue for issue in issues}
+        activities: list[dict[str, Any]] = [
+            _change(
+                user_id,
+                "sub_issue",
+                issue.identifier,
+                None,
+                issue_id=issue.parent_id,
+            )
+            for issue in issues
+            if issue.parent_id is not None and issue.parent_id not in deleted
+        ]
+        for child in await self.repo.children_of(list(deleted)):
+            if child.id in deleted or child.parent_id is None:
+                continue
+            activities.append(
+                _change(
+                    user_id,
+                    "parent",
+                    deleted[child.parent_id].identifier,
+                    None,
+                    issue_id=child.id,
+                )
+            )
+        await self.repo.delete_many(list(deleted), activities=activities)
 
     # --- bulk --------------------------------------------------------------
 
@@ -462,5 +542,5 @@ class IssueService(BaseService[Issue]):
         self, issue_ids: list[uuid.UUID], *, user_id: uuid.UUID
     ) -> None:
         issues = await self._issues_for_member(issue_ids, user_id=user_id)
-        await self.repo.delete_many([issue.id for issue in issues])
+        await self._delete_issues(issues, user_id=user_id)
         log_entities("issue", [issue.id for issue in issues])

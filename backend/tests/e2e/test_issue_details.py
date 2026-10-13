@@ -340,6 +340,126 @@ def test_activity_has_readable_values(
     ]
 
 
+def _changes(client: httpx.Client, issue_id: str) -> list[tuple[Any, ...]]:
+    """(field, from_value, to_value) of each ``updated`` activity row, in order."""
+    rows = client.get(f"/issues/{issue_id}/activity").json()
+    return [
+        (r["field"], r["from_value"], r["to_value"])
+        for r in rows
+        if r["action"] == "updated"
+    ]
+
+
+def test_relation_changes_are_logged_on_both_issues(
+    owner: RegisteredUser, ws: dict[str, Any]
+) -> None:
+    team_id = ws["team"]["id"]
+    a, b, c, d, e = (create_issue(owner.client, team_id, t) for t in "ABCDE")
+    created = {}
+    for other, kind in (
+        (b, "blocked_by"),
+        (c, "blocks"),
+        (d, "related"),
+        (e, "duplicate"),
+    ):
+        response = owner.client.post(
+            f"/issues/{a['id']}/relations",
+            json={"related_issue_id": other["id"], "type": kind},
+        )
+        assert response.status_code == 201, response.text
+        created[kind] = response.json()
+    response = owner.client.delete(f"/issue-relations/{created['related']['id']}")
+    assert response.status_code == 204
+
+    assert _changes(owner.client, a["id"]) == [
+        ("relation_blocked_by", None, b["identifier"]),
+        ("relation_blocks", None, c["identifier"]),
+        ("relation_related", None, d["identifier"]),
+        ("relation_duplicate_of", None, e["identifier"]),
+        ("relation_related", d["identifier"], None),
+    ]
+    assert _changes(owner.client, b["id"]) == [
+        ("relation_blocks", None, a["identifier"])
+    ]
+    assert _changes(owner.client, c["id"]) == [
+        ("relation_blocked_by", None, a["identifier"])
+    ]
+    assert _changes(owner.client, d["id"]) == [
+        ("relation_related", None, a["identifier"]),
+        ("relation_related", a["identifier"], None),
+    ]
+    assert _changes(owner.client, e["id"]) == [
+        ("relation_duplicated_by", None, a["identifier"])
+    ]
+
+
+def test_sub_issue_changes_are_logged_on_parent_and_child(
+    owner: RegisteredUser, ws: dict[str, Any]
+) -> None:
+    team_id = ws["team"]["id"]
+    parent = create_issue(owner.client, team_id, "Parent")
+    other = create_issue(owner.client, team_id, "Other parent")
+    child = create_issue(owner.client, team_id, "Child A", parent_id=parent["id"])
+
+    child_rows = owner.client.get(f"/issues/{child['id']}/activity").json()
+    assert [r["action"] for r in child_rows] == ["created", "updated"]
+    assert _changes(owner.client, child["id"]) == [
+        ("parent", None, parent["identifier"])
+    ]
+    assert _changes(owner.client, parent["id"]) == [
+        ("sub_issue", None, child["identifier"])
+    ]
+
+    # Moving the child to another parent logs on both parents.
+    response = owner.client.patch(
+        f"/issues/{child['id']}", json={"parent_id": other["id"]}
+    )
+    assert response.status_code == 200, response.text
+    assert _changes(owner.client, parent["id"])[-1] == (
+        "sub_issue",
+        child["identifier"],
+        None,
+    )
+    assert _changes(owner.client, other["id"]) == [
+        ("sub_issue", None, child["identifier"])
+    ]
+
+    # Deleting the parent logs on the child; deleting a child logs on the parent.
+    second = create_issue(owner.client, team_id, "Child B", parent_id=other["id"])
+    assert owner.client.delete(f"/issues/{second['id']}").status_code == 204
+    assert _changes(owner.client, other["id"])[-1] == (
+        "sub_issue",
+        second["identifier"],
+        None,
+    )
+    assert owner.client.delete(f"/issues/{other['id']}").status_code == 204
+    assert _changes(owner.client, child["id"])[-1] == (
+        "parent",
+        other["identifier"],
+        None,
+    )
+
+
+def test_bulk_delete_logs_on_the_issues_that_stay(
+    owner: RegisteredUser, ws: dict[str, Any]
+) -> None:
+    team_id = ws["team"]["id"]
+    parent = create_issue(owner.client, team_id, "Parent")
+    child = create_issue(owner.client, team_id, "Child", parent_id=parent["id"])
+    grandchild = create_issue(owner.client, team_id, "Leaf", parent_id=child["id"])
+
+    response = owner.client.post(
+        "/issues/bulk-delete", json={"issue_ids": [parent["id"], child["id"]]}
+    )
+
+    assert response.status_code == 204
+    assert _changes(owner.client, grandchild["id"])[-1] == (
+        "parent",
+        child["identifier"],
+        None,
+    )
+
+
 # --- Subscribers ----------------------------------------------------------------
 
 

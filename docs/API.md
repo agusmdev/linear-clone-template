@@ -198,7 +198,8 @@ with `sort_order` = the mean of the neighbours' values (top: first - 1, bottom: 
 - `number` = the team's next number (atomic per team); `identifier = "<team key>-<number>"`.
 - `sort_order` default: after the team's last issue (max + 1).
 - assignee must be a workspace member; labels, project, parent in the workspace; cycle in the team. Else 400 `invalid_reference`.
-- The creator and the assignee are subscribed. Activity: one `created` row.
+- The creator and the assignee are subscribed. Activity: one `created` row; with
+  `parent_id`, also a `parent` row on the new issue and a `sub_issue` row on the parent.
 - The state type sets `started_at` (started), `completed_at` (completed) or `canceled_at` (canceled).
 
 **UpdateIssue** (PATCH; any subset) `{title, description, state_id, priority, assignee_id, label_ids, project_id, cycle_id, parent_id, estimate, due_date, sort_order, archived}`
@@ -208,6 +209,8 @@ with `sort_order` = the mean of the neighbours' values (top: first - 1, bottom: 
   clear `completed_at`; backlog/unstarted → clear all three.
 - A parent cannot be the issue itself or one of its sub-issues (400 `invalid_reference`).
 - One `IssueActivity` row per changed field (see Activity). `sort_order` changes are not logged. Unchanged values write nothing.
+- A `parent_id` change also writes a `sub_issue` row on the old and on the new parent.
+- DELETE (one or bulk): sub-issues that stay get a `parent` row (to `null`), a parent that stays gets a `sub_issue` row (to `null`).
 - A new assignee is subscribed.
 
 **GET /issues query** (`workspace_id` required):
@@ -276,17 +279,22 @@ the same type already between the two issues (either direction) → 400 `duplica
 `IssueActivity = {id, issue_id, actor_id, actor: UserSummary | null, action, field, from_value, to_value, created_at}`
 - `action`: `created`, `updated`, `commented`, `archived`, `unarchived`.
 - For `updated`, `field` is one of `title`, `description`, `state`, `priority`,
-  `assignee`, `labels`, `project`, `cycle`, `parent`, `estimate`, `due_date`.
+  `assignee`, `labels`, `project`, `cycle`, `parent`, `estimate`, `due_date`,
+  `sub_issue`, `relation_blocks`, `relation_blocked_by`, `relation_related`,
+  `relation_duplicate_of`, `relation_duplicated_by`.
   Values are display text: state name, assignee name (or email), label names
   joined with `", "`, project name, cycle name (or `Cycle <n>`), parent
   identifier, priority number as text. `description` rows have null values.
   `null` = empty.
+- `sub_issue` and `relation_*` values are the other issue's identifier
+  (`to_value` = added, `from_value` = removed). Adding or removing a relation
+  writes one row on each of the two issues, as seen from that issue.
 
 | Status | Method | Path | Body | Response |
 |---|---|---|---|---|
 | IMPLEMENTED | GET | `/issues/{issue_id}/activity` | – | `IssueActivity[]` (oldest first). The client merges it with comments for the timeline |
 
-(The rows are already written by the IMPLEMENTED create/update endpoints.)
+(The rows are already written by the IMPLEMENTED create/update/delete and relation endpoints.)
 
 ### Subscribers (ISS-11)
 

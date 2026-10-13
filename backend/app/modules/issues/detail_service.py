@@ -9,6 +9,7 @@ missing issue.
 import uuid
 from collections.abc import Sequence
 from datetime import UTC, datetime
+from typing import Any
 
 from app.modules.issues.detail_repository import (
     CommentRepository,
@@ -31,6 +32,7 @@ from app.modules.issues.models import (
     Comment,
     Issue,
     IssueActivity,
+    IssueActivityAction,
     IssueRelation,
     IssueRelationType,
     IssueSubscriber,
@@ -96,6 +98,44 @@ class CommentService(BaseService[Comment]):
         await self.repo.delete(comment.id)
 
 
+# Activity field of a relation, as seen from (source, target) of the stored row.
+_RELATION_FIELDS: dict[IssueRelationType, tuple[str, str]] = {
+    IssueRelationType.blocks: ("relation_blocks", "relation_blocked_by"),
+    IssueRelationType.related: ("relation_related", "relation_related"),
+    IssueRelationType.duplicate: ("relation_duplicate_of", "relation_duplicated_by"),
+}
+
+
+def relation_activities(
+    source: Issue,
+    target: Issue,
+    relation_type: IssueRelationType,
+    *,
+    actor_id: uuid.UUID,
+    added: bool,
+) -> list[dict[str, Any]]:
+    """One activity row on each issue of a relation that was added or removed.
+
+    The value is the other issue's identifier: ``to_value`` when added,
+    ``from_value`` when removed.
+    """
+    source_field, target_field = _RELATION_FIELDS[relation_type]
+    key = "to_value" if added else "from_value"
+    return [
+        {
+            "issue_id": issue.id,
+            "actor_id": actor_id,
+            "action": IssueActivityAction.updated,
+            "field": field,
+            key: other.identifier,
+        }
+        for issue, field, other in (
+            (source, source_field, target),
+            (target, target_field, source),
+        )
+    ]
+
+
 class IssueRelationService(BaseService[IssueRelation]):
     def __init__(
         self, repo: IssueRelationRepository, issue_service: IssueService
@@ -141,24 +181,31 @@ class IssueRelationService(BaseService[IssueRelation]):
         if other.id == issue.id:
             raise InvalidReferenceError(detail="An issue cannot relate to itself")
 
-        source, target = issue.id, other.id
+        source, target = issue, other
         if data.type == IssueRelationCreateType.blocked_by:
-            source, target = other.id, issue.id
+            source, target = other, issue
             relation_type = IssueRelationType.blocks
         else:
             relation_type = IssueRelationType(data.type.value)
 
         # Checked both ways: "B blocks A" next to "A blocks B" makes no sense.
-        if await self.repo.exists_between(source, target, relation_type):
+        if await self.repo.exists_between(source.id, target.id, relation_type):
             raise DuplicateError(detail="These issues already have this relation")
-        relation = await self.repo.create_relation(source, target, relation_type)
+        relation = await self.repo.create_relation(
+            source.id,
+            target.id,
+            relation_type,
+            activities=relation_activities(
+                source, target, relation_type, actor_id=user_id, added=True
+            ),
+        )
         self._log_entity(relation.id)
         return self.to_response(relation, issue.id)
 
     async def delete_relation(
         self, relation_id: uuid.UUID, *, user_id: uuid.UUID
     ) -> None:
-        relation = await self.repo.get(relation_id, raise_error=False)
+        relation = await self.repo.get_full(relation_id)
         detail = f"Relation {relation_id} not found"
         if relation is None:
             raise NotFoundError(detail=detail)
@@ -166,7 +213,16 @@ class IssueRelationService(BaseService[IssueRelation]):
             await self.issue_service.get_for_member(relation.issue_id, user_id=user_id)
         except NotFoundError as err:
             raise NotFoundError(detail=detail) from err
-        await self.repo.delete(relation.id)
+        await self.repo.delete_relation(
+            relation.id,
+            activities=relation_activities(
+                relation.issue,
+                relation.related_issue,
+                relation.type,
+                actor_id=user_id,
+                added=False,
+            ),
+        )
         self._log_entity(relation.id)
 
 

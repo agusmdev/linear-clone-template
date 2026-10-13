@@ -90,11 +90,27 @@ class IssueRepository(SQLAlchemyRepository[Issue]):
     async def _add_activities(
         self, issue_id: uuid.UUID, activities: list[dict[str, Any]]
     ) -> None:
+        """Insert activity rows on ``issue_id``, or on the row's own ``issue_id``
+        (e.g. the parent of a new sub-issue)."""
         if activities:
             await self._session.execute(
                 insert(IssueActivity),
-                [{**activity, "issue_id": issue_id} for activity in activities],
+                [{"issue_id": issue_id, **activity} for activity in activities],
             )
+
+    @SQLAlchemyRepository.translate_commit_errors
+    async def add_activities(self, activities: list[dict[str, Any]]) -> None:
+        """Insert activity rows that each name their ``issue_id``: one commit."""
+        if activities:
+            await self._session.execute(insert(IssueActivity), activities)
+            await self._session.commit()
+
+    async def children_of(self, issue_ids: list[uuid.UUID]) -> list[Issue]:
+        """The sub-issues of these issues, with their embedded relationships."""
+        if not issue_ids:
+            return []
+        query = self.select_full().where(Issue.parent_id.in_(issue_ids))
+        return list((await self._session.execute(query)).scalars())
 
     @SQLAlchemyRepository.translate_commit_errors
     async def create_issue(
@@ -180,7 +196,15 @@ class IssueRepository(SQLAlchemyRepository[Issue]):
         return [found[issue_id] for issue_id in issue_ids if issue_id in found]
 
     @SQLAlchemyRepository.translate_commit_errors
-    async def delete_many(self, issue_ids: list[uuid.UUID]) -> None:
+    async def delete_many(
+        self,
+        issue_ids: list[uuid.UUID],
+        *,
+        activities: list[dict[str, Any]] | None = None,
+    ) -> None:
+        """Delete the issues and log ``activities`` (on other issues): one commit."""
+        if activities:
+            await self._session.execute(insert(IssueActivity), activities)
         await self._session.execute(delete(Issue).where(Issue.id.in_(issue_ids)))
         await self._session.commit()
 
