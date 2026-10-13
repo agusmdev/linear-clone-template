@@ -96,6 +96,57 @@ def test_register_rejects_a_password_shorter_than_8(
     assert_error(login(api, email, password), 401, "invalid_credentials")
 
 
+@pytest.mark.parametrize("display_name", ["", "   ", "\t\n"])
+def test_register_rejects_a_blank_display_name(
+    api: httpx.Client, display_name: str
+) -> None:
+    email = unique_email()
+
+    response = api.post(
+        "/auth/register",
+        json={
+            "email": email,
+            "raw_password": DEFAULT_PASSWORD,
+            "display_name": display_name,
+        },
+    )
+
+    body = assert_error(response, 422, "validation_error")
+    assert [issue["loc"] for issue in body["detail"]] == [["body", "display_name"]]
+    # No account was created.
+    assert_error(login(api, email, DEFAULT_PASSWORD), 401, "authentication_error")
+
+
+def test_register_trims_the_display_name(
+    api: httpx.Client, make_client: Callable[..., httpx.Client]
+) -> None:
+    response = api.post(
+        "/auth/register",
+        json={
+            "email": unique_email(),
+            "raw_password": DEFAULT_PASSWORD,
+            "display_name": "  Ada Lovelace  ",
+        },
+    )
+
+    assert response.status_code == 201
+    me = make_client(response.json()["id"]).get("/users/me")
+    assert me.json()["display_name"] == "Ada Lovelace"
+
+
+def test_register_without_a_display_name_stores_an_empty_name(
+    api: httpx.Client, make_client: Callable[..., httpx.Client]
+) -> None:
+    response = api.post(
+        "/auth/register",
+        json={"email": unique_email(), "raw_password": DEFAULT_PASSWORD},
+    )
+
+    assert response.status_code == 201
+    me = make_client(response.json()["id"]).get("/users/me")
+    assert me.json()["display_name"] == ""
+
+
 def test_email_is_stored_lowercase_and_matches_in_any_case(
     api: httpx.Client, make_client: Callable[..., httpx.Client]
 ) -> None:

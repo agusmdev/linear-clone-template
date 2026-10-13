@@ -61,7 +61,9 @@ IssueRef      = { id, identifier, title, state: StateSummary }
 | IMPLEMENTED | PATCH | `/users/me` | `{display_name?, email?}` | `User` (WS-7) |
 
 The user's display name is `display_name` on `/users/me` and `name` in every
-embedded `UserSummary`.
+embedded `UserSummary`. On register and `PATCH /users/me` the server trims it;
+a sent name that is blank after the trim (`""`, `"   "`) is a 422
+`validation_error`. An omitted name on register is stored as `""`.
 
 ---
 

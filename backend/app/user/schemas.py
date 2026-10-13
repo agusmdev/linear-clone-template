@@ -4,7 +4,14 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import AfterValidator, BaseModel, EmailStr, Field, computed_field
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    EmailStr,
+    Field,
+    StringConstraints,
+    computed_field,
+)
 
 from app.core.optional_model import partial_model
 from app.database.mixins import OrmBaseModel
@@ -26,6 +33,12 @@ def normalize_email(email: str) -> str:
 # A valid email address, stored and compared lowercase (see normalize_email).
 NormalizedEmail = Annotated[EmailStr, AfterValidator(normalize_email)]
 
+# A name the user types: surrounding spaces are removed, and a blank name is a
+# 422. Without this, "   " is stored and shows as an invisible name (the UI
+# falls back to the email only for an empty name). Same rule as the frontend
+# forms (zod ``trim().min(1)``).
+DisplayName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
 
 class UserBase(BaseModel):
     email: NormalizedEmail
@@ -36,6 +49,8 @@ class UserCreate(UserBase): ...
 
 
 class UserRegister(UserBase):
+    # Optional: an omitted name stays "" (the UI shows the email instead).
+    display_name: DisplayName = ""
     raw_password: str = Field(exclude=True, min_length=PASSWORD_MIN_LENGTH)
 
     @computed_field
@@ -44,7 +59,8 @@ class UserRegister(UserBase):
 
 
 @partial_model
-class UserUpdate(UserBase): ...
+class UserUpdate(UserBase):
+    display_name: DisplayName
 
 
 class UserResponse(UserBase, OrmBaseModel):

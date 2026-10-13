@@ -56,6 +56,30 @@ def test_update_changes_only_the_sent_fields(
     assert me["email"] == user.email
 
 
+@pytest.mark.parametrize("display_name", ["", "   "])
+def test_update_rejects_a_blank_display_name(
+    register_user: Callable[..., RegisteredUser], display_name: str
+) -> None:
+    user = register_user(display_name="Before")
+
+    response = user.client.patch("/users/me", json={"display_name": display_name})
+
+    body = assert_error(response, 422, "validation_error")
+    assert [issue["loc"] for issue in body["detail"]] == [["body", "display_name"]]
+    assert user.client.get("/users/me").json()["display_name"] == "Before"
+
+
+def test_update_trims_the_display_name(
+    register_user: Callable[..., RegisteredUser],
+) -> None:
+    user = register_user(display_name="Before")
+
+    response = user.client.patch("/users/me", json={"display_name": "  After  "})
+
+    assert response.status_code == 200
+    assert response.json()["display_name"] == "After"
+
+
 def test_updated_email_is_the_new_login(
     api: httpx.Client, register_user: Callable[..., RegisteredUser]
 ) -> None:
