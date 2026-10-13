@@ -8,6 +8,7 @@ import { UserAvatar } from '@/components/UserAvatar'
 import { Kbd } from '@/components/Kbd'
 import { useAuth } from '@/contexts/AuthContext'
 import { useWorkspaces } from '@/hooks/useWorkspace'
+import { getLastWorkspaceId } from '@/lib/last-workspace'
 import { cn } from '@/lib/utils'
 
 export const Route = createFileRoute('/')({
@@ -74,7 +75,7 @@ const features = [
 
 /**
  * "/" is the landing page for visitors. A signed-in user goes on to the app:
- * the first workspace's My issues, or onboarding when they have no workspace.
+ * the My issues of the workspace opened last (else the first one), or onboarding when they have no workspace.
  * (The token is in localStorage: the server renders the landing page, the
  * browser redirects after hydration.)
  */
@@ -91,8 +92,9 @@ function OpenApp() {
   useEffect(() => {
     // Wait for fresh data: the list may have just changed (workspace left or deleted).
     if (!workspaces.data || workspaces.isFetching) return
-    const [first] = workspaces.data
-    if (first) navigate({ to: `/${first.url_key}/my-issues` as '/', replace: true })
+    const lastId = getLastWorkspaceId()
+    const target = workspaces.data.find(w => w.id === lastId) ?? workspaces.data[0]
+    if (target) navigate({ to: `/${target.url_key}/my-issues` as '/', replace: true })
     else navigate({ to: '/onboarding', replace: true })
   }, [workspaces.data, workspaces.isFetching, navigate])
 
