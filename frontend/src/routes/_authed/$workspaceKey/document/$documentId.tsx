@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { FileText, FolderInput, Link2, MoreHorizontal, SmilePlus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -24,6 +24,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useCurrentWorkspace } from '@/contexts/WorkspaceContext'
 import { formatRelativeTime } from '@/features/documents/relative-time'
 import { useDeleteDocument, useDocument, useUpdateDocument } from '@/hooks/useDocuments'
+import { useIssueHref } from '@/hooks/useIssueHref'
 import { useProjects } from '@/hooks/useProjects'
 import { toastApiError } from '@/lib/error-handler'
 import type { Document } from '@/types/document'
@@ -87,6 +88,7 @@ function DocumentEditor({ document }: { document: Document }) {
   const { workspace, path } = useCurrentWorkspace()
   const projectsQuery = useProjects(workspace.id)
   const navigate = useNavigate()
+  const renderIssueHref = useIssueHref()
   const update = useUpdateDocument(document.id)
   const remove = useDeleteDocument(document.id)
   // After a delete, the autosave on unmount must not PATCH a missing document.
@@ -97,6 +99,16 @@ function DocumentEditor({ document }: { document: Document }) {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [projectPickerOpen, setProjectPickerOpen] = useState(false)
   const openPickerAfterMenu = useRef(false)
+  const titleRef = useRef<HTMLTextAreaElement>(null)
+
+  // A new document ("Untitled", no content) opens with its title selected, so
+  // typing replaces "Untitled" at once.
+  const [openedNew] = useState(() => document.title === 'Untitled' && !document.content)
+  useEffect(() => {
+    if (!openedNew) return
+    titleRef.current?.focus()
+    titleRef.current?.select()
+  }, [openedNew])
 
   const titleSave = useDebouncedAutosave(title, (next, { keepalive }) => {
     if (deletedRef.current) return
@@ -253,6 +265,7 @@ function DocumentEditor({ document }: { document: Document }) {
         />
         {/* A textarea so a long title wraps; it stays one line (no line breaks). */}
         <textarea
+          ref={titleRef}
           rows={1}
           value={title}
           onChange={event => setTitle(event.target.value.replace(/\s*[\r\n]+\s*/g, ' '))}
@@ -279,7 +292,7 @@ function DocumentEditor({ document }: { document: Document }) {
           placeholder="Write something, or press '/' for commands…"
           ariaLabel="Document content"
           className="mt-4 min-h-64 flex-1"
-          renderIssueHref={identifier => path(`/issue/${identifier}`)}
+          renderIssueHref={renderIssueHref}
           onIssueClick={(identifier, event) => {
             event.preventDefault()
             void navigate({ to: path(`/issue/${identifier}`) as '/' })
