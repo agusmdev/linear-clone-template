@@ -389,6 +389,15 @@ def test_workspace_and_label_names_are_trimmed_and_never_blank(
     assert renamed.json()["name"] == "Acme Corp"
     assert label.status_code == 201, label.text
     assert label.json()["name"] == "Backend"
+    # Names are one line: a pasted line break becomes one space.
+    one_line = auth_client.patch(url, json={"name": "Acme\nCorp"})
+    assert one_line.status_code == 200, one_line.text
+    assert one_line.json()["name"] == "Acme Corp"
+    label_one_line = auth_client.post(
+        f"{url}/labels", json={"name": "Tech\n debt", "color": "#eb5757"}
+    )
+    assert label_one_line.status_code == 201, label_one_line.text
+    assert label_one_line.json()["name"] == "Tech debt"
     # A padded name is the same name: no near-duplicate " Bug " next to "Bug".
     assert_error(
         auth_client.post(f"{url}/labels", json={"name": " bug ", "color": "#eb5757"}),

@@ -33,12 +33,13 @@ teams_router = APIRouter(
 )
 async def list_teams(
     workspace_id: uuid.UUID,
+    joined: bool = Query(False, description="Only the teams the user is a member of"),
     user_id: uuid.UUID = Depends(require_current_user_id),
     team_service: TeamService = Depends(get_team_service),
 ) -> list[TeamResponse]:
     log_action("list")
     log_entity("workspace", workspace_id)
-    result = await team_service.list_teams(workspace_id, user_id=user_id)
+    result = await team_service.list_teams(workspace_id, user_id=user_id, joined=joined)
     return [TeamResponse.model_validate(t) for t in result]
 
 

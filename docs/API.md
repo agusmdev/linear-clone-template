@@ -82,6 +82,8 @@ a sent name that is blank after the trim (`""`, `"   "`) is a 422
 
 Anyone else gets the 404 `not_found` of a missing row (never 403).
 Colors (`color` of teams, states, labels) are hex `#rrggbb`.
+Names (workspace, team, state, label, display name) are one line: line breaks
+become one space, then the ends are trimmed; a blank name is a 422.
 
 ### Workspaces
 
@@ -124,7 +126,7 @@ POST `/workspaces` (WS-1), in one transaction:
 
 | Status | Method | Path | Body | Response |
 |---|---|---|---|---|
-| IMPLEMENTED | GET | `/workspaces/{workspace_id}/teams` | – | `Team[]` (by name) |
+| IMPLEMENTED | GET | `/workspaces/{workspace_id}/teams?joined=` | – | `Team[]` (by name); `joined=true`: only the teams the user is a member of (sidebar "Your teams") |
 | IMPLEMENTED | POST | `/workspaces/{workspace_id}/teams` | `{name, key, description?, color?, icon?}` | 201 `Team`; creator joins; default states as above |
 | IMPLEMENTED | GET | `/teams/{team_id}` | – | `Team` |
 | IMPLEMENTED | PATCH | `/teams/{team_id}` | `{name?, key?, description?, color?, icon?}` | `Team` (a new key changes every identifier) |

@@ -90,10 +90,13 @@ class TeamService(BaseService[Team]):
         return team
 
     async def list_teams(
-        self, workspace_id: uuid.UUID, *, user_id: uuid.UUID
+        self, workspace_id: uuid.UUID, *, user_id: uuid.UUID, joined: bool = False
     ) -> list[Team]:
+        """Every team of the workspace, or with ``joined`` only the user's teams."""
         await self.workspace_service.require_member(workspace_id, user_id)
-        return await self.repo.list_for_workspace(workspace_id)
+        return await self.repo.list_for_workspace(
+            workspace_id, member_id=user_id if joined else None
+        )
 
     async def get_by_key(self, workspace_id: uuid.UUID, key: str) -> Team | None:
         """The team with ``key`` in the workspace (no member check: callers do it)."""

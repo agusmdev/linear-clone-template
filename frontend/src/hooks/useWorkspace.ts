@@ -39,6 +39,15 @@ export function useTeams(workspaceId: string | undefined) {
   })
 }
 
+/** The teams of the workspace the signed-in user is a member of (sidebar "Your teams"). */
+export function useMyTeams(workspaceId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.teams.joined(workspaceId ?? ''),
+    queryFn: () => api.get<Team[]>(API.WORKSPACES.MY_TEAMS(workspaceId ?? '')),
+    enabled: !!workspaceId,
+  })
+}
+
 export function useMembers(workspaceId: string | undefined) {
   return useQuery({
     queryKey: queryKeys.workspaces.members(workspaceId ?? ''),

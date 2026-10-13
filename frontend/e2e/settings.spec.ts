@@ -6,6 +6,7 @@
 import { randomUUID } from 'node:crypto'
 import {
   type Page,
+  addFavorite,
   authHeaders,
   createIssue,
   createLabel,
@@ -448,6 +449,46 @@ test.describe('teams', () => {
     await expect(row.getByText('Joined')).toBeVisible()
   })
 
+  test('the app sidebar lists only the teams the user joined', async ({
+    authedPage: page,
+    api,
+    user,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const [team] = await listTeams(api, user, workspace.id)
+    const teamLink = page
+      .getByRole('navigation', { name: 'Main' })
+      .locator(`a[href="/${workspace.url_key}/team/${team.key}/issues"]`)
+    await page.goto(`/${workspace.url_key}/settings/teams`)
+    const row = page.getByRole('listitem', { name: team.name })
+
+    await row.getByRole('button', { name: `Leave ${team.name}` }).click()
+    await expect(row.getByRole('button', { name: `Join ${team.name}` })).toBeVisible()
+    await page.getByRole('link', { name: 'Back to app' }).click()
+    await expect(page).toHaveURL(`/${workspace.url_key}/my-issues`)
+    await expect(teamLink).toHaveCount(0)
+
+    await page.goto(`/${workspace.url_key}/settings/teams`)
+    await row.getByRole('button', { name: `Join ${team.name}` }).click()
+    await expect(row.getByRole('button', { name: `Leave ${team.name}` })).toBeVisible()
+    await page.getByRole('link', { name: 'Back to app' }).click()
+    await expect(teamLink).toBeVisible()
+  })
+
+  test('the team names stay readable at phone width', async ({ authedPage: page, api, user }) => {
+    const workspace = await createWorkspace(api, user)
+    const [team] = await listTeams(api, user, workspace.id)
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto(`/${workspace.url_key}/settings/teams`)
+
+    const row = page.getByRole('listitem', { name: team.name })
+    await expect(row.getByRole('button', { name: `Leave ${team.name}` })).toBeVisible()
+    // The name is not cut off (it was squeezed to its first letter).
+    const name = row.getByText(team.name, { exact: true })
+    await expect(name).toBeVisible()
+    expect(await name.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+  })
+
   test('a taken team key is reported in the dialog', async ({ authedPage: page, api, user }) => {
     const workspace = await createWorkspace(api, user)
     await page.goto(`/${workspace.url_key}/settings/teams`)
@@ -484,6 +525,46 @@ test.describe('team settings', () => {
       description: 'Core services',
     })
     expect((await getIssue(api, user, issue.id)).identifier).toBe(`PLT-${issue.number}`)
+  })
+
+  test('a new team key and a deleted team update the sidebar favorites', async ({
+    authedPage: page,
+    api,
+    user,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const [team] = await listTeams(api, user, workspace.id)
+    const design = await createTeam(api, user, workspace.id, { name: 'Design', key: 'DES' })
+    const issue = await createIssue(api, user, { team_id: team.id, title: 'Starred' })
+    const designIssue = await createIssue(api, user, { team_id: design.id, title: 'Mockups' })
+    for (const [entity_type, entity_id] of [
+      ['issue', issue.id],
+      ['issue', designIssue.id],
+      ['team', design.id],
+    ] as const) {
+      await addFavorite(api, user, { workspace_id: workspace.id, entity_type, entity_id })
+    }
+    const favorites = page.getByRole('navigation', { name: 'Main' }).getByTestId('sidebar-favorite')
+
+    // The favorites are loaded with the settings page; a new key must refresh them.
+    await page.goto(`/${workspace.url_key}/settings/team/${team.key}`)
+    await page.getByLabel('Team key').fill('NEW')
+    await page.getByRole('button', { name: 'Save changes' }).click()
+    await expect(page).toHaveURL(`/${workspace.url_key}/settings/team/NEW`)
+    await page.getByRole('link', { name: 'Back to app' }).click()
+    await expect(favorites.first()).toHaveText(`NEW-${issue.number} Starred`)
+    await favorites.first().click()
+    await expect(page).toHaveURL(`/${workspace.url_key}/issue/NEW-${issue.number}`)
+    await expect(page.locator('main').getByText('Activity', { exact: true })).toBeVisible()
+    await expect(page.getByText('Issue not found')).toHaveCount(0)
+
+    // Deleting a team drops its favorite and the favorites of its issues.
+    await page.goto(`/${workspace.url_key}/settings/team/DES`)
+    await page.getByRole('button', { name: 'Delete team' }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Delete team' }).click()
+    await expect(page).toHaveURL(`/${workspace.url_key}/settings/teams`)
+    await page.getByRole('link', { name: 'Back to app' }).click()
+    await expect(favorites).toHaveCount(1)
   })
 
   test('adds and removes team members', async ({ authedPage: page, api, user }) => {
@@ -690,6 +771,25 @@ test.describe('account', () => {
 
     await page.getByRole('button', { name: 'Log out' }).click()
     await expect(page).toHaveURL('/login')
+  })
+
+  test('a new display name shows in the team members at once', async ({
+    authedPage: page,
+    api,
+    user,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const [team] = await listTeams(api, user, workspace.id)
+    await page.goto(`/${workspace.url_key}/settings/team/${team.key}`)
+    const members = page.getByRole('list', { name: 'Team members' })
+    await expect(members).toContainText(user.email)
+
+    await settingsNav(page).getByRole('link', { name: 'Profile & preferences' }).click()
+    await page.getByLabel('Full name').fill('Ada Lovelace')
+    await page.getByRole('button', { name: 'Save changes' }).click()
+    await expect(page.getByText('Profile updated')).toBeVisible()
+    await settingsNav(page).getByRole('link', { name: team.name }).click()
+    await expect(members.getByRole('listitem', { name: 'Ada Lovelace' })).toBeVisible()
   })
 
   test('small primary and destructive buttons keep white text in the light theme', async ({

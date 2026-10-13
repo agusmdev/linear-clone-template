@@ -25,6 +25,7 @@ import {
   useLabels,
   useMe,
   useMembers,
+  useMyTeams,
   useTeams,
   useWorkspaceByKey,
   useWorkspaces,
@@ -50,6 +51,7 @@ function WorkspaceLayout() {
   const workspace = workspaceQuery.data
   const workspacesQuery = useWorkspaces()
   const teamsQuery = useTeams(workspace?.id)
+  const myTeamsQuery = useMyTeams(workspace?.id)
   const membersQuery = useMembers(workspace?.id)
   const labelsQuery = useLabels(workspace?.id)
   const meQuery = useMe()
@@ -108,6 +110,11 @@ function WorkspaceLayout() {
   }
 
   const base = `/${value.workspace.url_key}`
+  // "Your teams" = the teams the user joined, as Linear: joining a team adds it
+  // to the sidebar, leaving removes it. The full team list stays the source of
+  // the team data, so a deleted or renamed team updates at once.
+  const myTeamIds = new Set((myTeamsQuery.data ?? []).map(team => team.id))
+  const sidebarTeams = value.teams.filter(team => myTeamIds.has(team.id))
   const favorites = favoritesQuery.data ?? []
   const favoriteLinks: SidebarLink[] = favorites.map(favorite => ({
     label: favorite.name,
@@ -183,7 +190,7 @@ function WorkspaceLayout() {
       viewsTo={`${base}/views`}
       favorites={favoriteLinks}
       onFavoriteMove={moveFavorite}
-      teams={value.teams.map(team => ({
+      teams={sidebarTeams.map(team => ({
         id: team.id,
         name: team.name,
         key: team.key,

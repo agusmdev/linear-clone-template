@@ -19,12 +19,20 @@ from app.repositories.sql_repository import SQLAlchemyRepository
 class TeamRepository(SQLAlchemyRepository[Team]):
     model = Team
 
-    async def list_for_workspace(self, workspace_id: uuid.UUID) -> list[Team]:
+    async def list_for_workspace(
+        self, workspace_id: uuid.UUID, *, member_id: uuid.UUID | None = None
+    ) -> list[Team]:
+        """The workspace's teams by name; with ``member_id`` only the user's teams."""
         query = (
             select(Team)
             .where(Team.workspace_id == workspace_id)
             .order_by(Team.name, Team.id)
         )
+        if member_id is not None:
+            query = query.join(
+                TeamMember,
+                (TeamMember.team_id == Team.id) & (TeamMember.user_id == member_id),
+            )
         return list((await self._session.execute(query)).scalars().all())
 
     async def get_by_key(self, workspace_id: uuid.UUID, key: str) -> Team | None:

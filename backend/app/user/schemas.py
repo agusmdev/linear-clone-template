@@ -7,12 +7,14 @@ from typing import Annotated
 from pydantic import (
     AfterValidator,
     BaseModel,
+    BeforeValidator,
     EmailStr,
     Field,
     StringConstraints,
     computed_field,
 )
 
+from app.core.names import single_line
 from app.core.optional_model import partial_model
 from app.database.mixins import OrmBaseModel
 from app.user.models import _ph
@@ -36,8 +38,12 @@ NormalizedEmail = Annotated[EmailStr, AfterValidator(normalize_email)]
 # A name the user types: surrounding spaces are removed, and a blank name is a
 # 422. Without this, "   " is stored and shows as an invisible name (the UI
 # falls back to the email only for an empty name). Same rule as the frontend
-# forms (zod ``trim().min(1)``).
-DisplayName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+# forms (zod ``trim().min(1)``). Line breaks become one space (see single_line).
+DisplayName = Annotated[
+    str,
+    BeforeValidator(single_line),
+    StringConstraints(strip_whitespace=True, min_length=1),
+]
 
 
 class UserBase(BaseModel):
