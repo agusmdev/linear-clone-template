@@ -1,8 +1,10 @@
 import { useMemo } from 'react'
 import { createFileRoute, Outlet, useNavigate } from '@tanstack/react-router'
-import { LogOut } from 'lucide-react'
+import { LogOut, SquarePen } from 'lucide-react'
 import { AppShell } from '@/components/AppShell'
 import { EmptyState } from '@/components/EmptyState'
+import { IconButton } from '@/components/IconButton'
+import { CreateIssueHost } from '@/components/issues/CreateIssueHost'
 import { Sidebar } from '@/components/Sidebar'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { UserAvatar } from '@/components/UserAvatar'
@@ -18,6 +20,7 @@ import {
   useWorkspaceByKey,
   useWorkspaces,
 } from '@/hooks/useWorkspace'
+import { openCreateIssue } from '@/lib/issue-events'
 
 /**
  * Layout of every workspace page: `/$workspaceKey/...`.
@@ -94,6 +97,14 @@ function WorkspaceLayout() {
           </DropdownMenuItem>
         </WorkspaceSwitcher>
       }
+      actions={
+        <IconButton
+          label="New issue"
+          shortcut="C"
+          icon={<SquarePen />}
+          onClick={() => openCreateIssue()}
+        />
+      }
       inboxTo={`${base}/inbox`}
       myIssuesTo={`${base}/my-issues`}
       projectsTo={`${base}/projects`}
@@ -125,6 +136,7 @@ function WorkspaceLayout() {
       <AppShell sidebar={sidebar}>
         <Outlet />
       </AppShell>
+      <CreateIssueHost />
     </WorkspaceContext.Provider>
   )
 }

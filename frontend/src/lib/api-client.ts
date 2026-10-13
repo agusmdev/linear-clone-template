@@ -145,6 +145,13 @@ class ApiClient {
     return this.request<T>(endpoint, { method: 'POST', body: JSON.stringify(data) })
   }
 
+  /** POST for endpoints that answer 204 No Content (no JSON body to read). */
+  postNoContent(endpoint: string, data: unknown): Promise<void> {
+    return this.execute(endpoint, { method: 'POST', body: JSON.stringify(data) }).then(
+      () => undefined
+    )
+  }
+
   put<T>(endpoint: string, data: unknown) {
     return this.request<T>(endpoint, { method: 'PUT', body: JSON.stringify(data) })
   }

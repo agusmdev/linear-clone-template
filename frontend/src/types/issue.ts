@@ -124,6 +124,16 @@ export interface IssuesParams {
   /** A user id or "me". */
   subscriber_id?: string
   label_id?: string
+  /** Any of these: user ids, "me", "none". */
+  assignee_id__in?: string[]
+  /** Any of these: user ids, "me". */
+  creator_id__in?: string[]
+  /** Issues with any of these labels. */
+  label_id__in?: string[]
+  /** Any of these project ids; "none" = no project. */
+  project_id__in?: string[]
+  /** Any of these cycle ids; "none" = no cycle. */
+  cycle_id__in?: string[]
   project_id?: string
   cycle_id?: string
   parent_id?: string
@@ -135,13 +145,37 @@ export interface IssuesParams {
   order_by?: IssueOrderBy[]
 }
 
-/** Planned: POST /issues/bulk-update. */
+/** POST /issues/bulk-update: the same changes for every issue, all or nothing. */
 export interface BulkUpdateIssuesData {
   issue_ids: string[]
   update: Pick<
     UpdateIssueData,
     'state_id' | 'priority' | 'assignee_id' | 'label_ids' | 'project_id' | 'cycle_id' | 'archived'
-  >
+  > & {
+    /** Labels to add (the others stay). */
+    label_ids_add?: string[]
+    /** Labels to remove (the others stay). */
+    label_ids_remove?: string[]
+  }
+}
+
+export interface BulkUpdateIssuesResponse {
+  items: Issue[]
+}
+
+/** POST /issues/bulk-delete. */
+export interface BulkDeleteIssuesData {
+  issue_ids: string[]
+}
+
+/** Detail of the `linear:create-issue` window event: defaults of the create-issue modal. */
+export interface CreateIssueEventDetail {
+  teamId?: string
+  stateId?: string
+  projectId?: string
+  cycleId?: string
+  parentId?: string
+  assigneeId?: string
 }
 
 export type IssueRelationType = 'blocks' | 'related' | 'duplicate'
