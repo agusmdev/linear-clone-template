@@ -5,6 +5,7 @@
  */
 import {
   addWorkspaceMember,
+  createComment,
   createIssue,
   createWorkspace,
   expect,
@@ -122,6 +123,33 @@ test.describe('inbox', () => {
     await page.getByRole('button', { name: 'Show all notifications' }).click()
     await expect(rows(page)).toHaveCount(3)
     await expect(rows(page).getByRole('img', { name: 'Unread' })).toHaveCount(0)
+  })
+
+  test('a comment notification shows the comment in the row and the preview', async ({
+    api,
+    user: owner,
+    loginAs,
+  }) => {
+    const { workspace, member, memberUser, team } = await setUp(api, owner)
+    // The member is subscribed as the assignee.
+    const issue = await createIssue(api, owner, {
+      team_id: team.id,
+      title: 'Review the API',
+      assignee_id: memberUser.id,
+    })
+    await createComment(api, owner, issue.id, '<p>Please check the <strong>auth</strong> part</p>')
+
+    const page = await loginAs(member)
+    await page.goto(`/${workspace.url_key}/inbox`)
+    await expect(rows(page)).toHaveCount(2)
+    await expect(rows(page).nth(0)).toContainText('commented: "Please check the auth part"')
+
+    await rows(page).nth(0).getByRole('button').first().click()
+    const comment = page
+      .getByRole('region', { name: 'Notification preview' })
+      .getByRole('blockquote', { name: 'Comment' })
+    await expect(comment).toContainText('Please check the auth part')
+    await expect(comment.locator('strong')).toHaveText('auth')
   })
 
   test('archives with undo, deletes, and opens the issue page', async ({

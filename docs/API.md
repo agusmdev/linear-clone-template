@@ -379,10 +379,12 @@ Assign issues with `PATCH /issues/{id} {cycle_id}`; cycle issues with `GET /issu
 
 ### Notifications / inbox (UX-3)
 
-`Notification = {id, user_id, workspace_id, issue_id, actor_id, type, read_at, archived_at, created_at, issue: IssueRef|null, state: WorkflowStateSummary|null, actor: UserSummary|null}`
+`Notification = {id, user_id, workspace_id, issue_id, actor_id, type, read_at, archived_at, created_at, issue: IssueRef|null, state: WorkflowStateSummary|null, comment: {id, body}|null, actor: UserSummary|null}`
 (`type`: assigned | commented | status_changed | mentioned. `state`: for
 `status_changed`, the state the issue moved to then (the issue's current state
-is `issue.state`); null for the other types or once that state is deleted.)
+is `issue.state`); null for the other types or once that state is deleted.
+`comment`: for `commented`, the new comment (`body` = HTML); null for the other
+types. Deleting the comment deletes its notifications.)
 
 Created by the issue features: `assigned` to the new assignee (not when you
 assign yourself); `commented` and `status_changed` to every subscriber except
@@ -393,7 +395,7 @@ the actor.
 | IMPLEMENTED | GET | `/notifications?workspace_id=..&unread=&include_archived=&type=&issue_id=` | – | `Page<Notification>` (newest first, mine only; archived left out unless `include_archived=true`; `unread=true` only unread, `false` only read) |
 | IMPLEMENTED | GET | `/notifications/unread-count?workspace_id=..` | – | `{count}` (unread and not archived) |
 | IMPLEMENTED | PATCH | `/notifications/{notification_id}` | `{read?, archived?}` | `Notification` (`true` sets `read_at`/`archived_at` to now, `false` clears it) |
-| IMPLEMENTED | POST | `/notifications/mark-all-read` | `{workspace_id}` | `{updated}` |
+| IMPLEMENTED | POST | `/notifications/mark-all-read` | `{workspace_id}` | `{updated}` (marks my unread, not archived notifications) |
 | IMPLEMENTED | DELETE | `/notifications/{notification_id}` | – | 204 |
 
 Another user's notification is a 404 (`not_found`), like a missing one. A

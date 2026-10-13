@@ -41,6 +41,7 @@ NOTIFICATION_FIELDS = {
     "created_at",
     "issue",
     "state",
+    "comment",
     "actor",
 }
 
@@ -103,8 +104,10 @@ def test_assigning_someone_notifies_them(
         "title": "Fix login",
         "state": issue["state"],
     }
-    # Only ``status_changed`` carries the state it moved to.
+    # Only ``status_changed`` carries the state it moved to, only
+    # ``commented`` the comment.
     assert notification["state"] is None
+    assert notification["comment"] is None
     assert notification["actor"] == {
         "id": owner.id,
         "name": "Owner",
@@ -122,6 +125,34 @@ def test_creating_an_issue_with_an_assignee_notifies_them(
     create_issue(owner.client, ws["team"]["id"], assignee_id=member.id)
     [notification] = list_notifications(member.client, ws_id)
     assert notification["type"] == "assigned"
+
+
+def test_comment_notification_carries_the_comment(
+    owner: RegisteredUser, member: RegisteredUser, ws: dict[str, Any]
+) -> None:
+    ws_id = ws["workspace"]["id"]
+    # The member is subscribed as the assignee.
+    issue = create_issue(owner.client, ws["team"]["id"], assignee_id=member.id)
+    created = owner.client.post(
+        f"/issues/{issue['id']}/comments", json={"body": "<p>Looks <b>good</b></p>"}
+    )
+    assert created.status_code == 201, created.text
+    comment = created.json()
+
+    commented = list_notifications(member.client, ws_id, type="commented")
+    assert [n["comment"] for n in commented] == [
+        {"id": comment["id"], "body": "<p>Looks <b>good</b></p>"}
+    ]
+    # An edit shows in the inbox; deleting the comment removes its notification.
+    edited = owner.client.patch(
+        f"/comments/{comment['id']}", json={"body": "<p>Edited</p>"}
+    )
+    assert edited.status_code == 200, edited.text
+    [notification] = list_notifications(member.client, ws_id, type="commented")
+    assert notification["comment"]["body"] == "<p>Edited</p>"
+    deleted = owner.client.delete(f"/comments/{comment['id']}")
+    assert deleted.status_code == 204, deleted.text
+    assert list_notifications(member.client, ws_id, type="commented") == []
 
 
 def test_assigning_yourself_notifies_nobody(
@@ -294,6 +325,12 @@ def test_mark_all_read(
     join_workspace(db, other_ws["id"], member.id)
     create_issue(owner.client, other_team["id"], assignee_id=member.id)
 
+    # An archived notification is not in the inbox: it stays unread.
+    create_issue(owner.client, ws["team"]["id"], "Archived", assignee_id=member.id)
+    archived = list_notifications(member.client, ws_id)[0]
+    assert archived["issue"]["title"] == "Archived"
+    member.client.patch(f"/notifications/{archived['id']}", json={"archived": True})
+
     assert _count(member, ws_id) == 3
     response = member.client.post(
         "/notifications/mark-all-read", json={"workspace_id": ws_id}
@@ -302,6 +339,10 @@ def test_mark_all_read(
     assert response.json() == {"updated": 3}
     assert _count(member, ws_id) == 0
     assert all(n["read_at"] for n in list_notifications(member.client, ws_id))
+    [still_unread] = list_notifications(
+        member.client, ws_id, include_archived="true", unread="true"
+    )
+    assert still_unread["id"] == archived["id"]
 
     assert _count(member, other_ws["id"]) == 1
     again = member.client.post(

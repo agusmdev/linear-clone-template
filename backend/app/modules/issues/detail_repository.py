@@ -103,6 +103,7 @@ class CommentRepository(SQLAlchemyRepository[Comment]):
                         "issue_id": issue_id,
                         "actor_id": user_id,
                         "type": NotificationType.commented,
+                        "comment_id": comment_id,
                     }
                     for recipient in recipients
                 ],

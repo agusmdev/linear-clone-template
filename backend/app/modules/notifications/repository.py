@@ -16,6 +16,7 @@ LOAD_OPTIONS = (
     selectinload(Notification.issue).selectinload(Issue.team),
     selectinload(Notification.issue).selectinload(Issue.state),
     selectinload(Notification.state),
+    selectinload(Notification.comment),
     selectinload(Notification.actor),
 )
 
@@ -66,6 +67,8 @@ class NotificationRepository(SQLAlchemyRepository[Notification]):
                 Notification.workspace_id == workspace_id,
                 Notification.user_id == user_id,
                 Notification.read_at.is_(None),
+                # Like the unread count: archived notifications are not in the inbox.
+                Notification.archived_at.is_(None),
             )
             .values(read_at=now, updated_at=now)
             .returning(Notification.id)

@@ -18,7 +18,14 @@ export interface Notification {
   issue: IssueRef | null
   /** `status_changed`: the state the issue moved to (null for other types or once deleted). */
   state: WorkflowStateSummary | null
+  /** `commented`: the new comment (`body` is HTML); null for the other types. */
+  comment: NotificationComment | null
   actor: UserSummary | null
+}
+
+export interface NotificationComment {
+  id: string
+  body: string
 }
 
 export interface UpdateNotificationData {

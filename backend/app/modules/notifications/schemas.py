@@ -21,6 +21,13 @@ class NotificationIssueRef(OrmBaseModel):
     state: WorkflowStateSummary
 
 
+class NotificationComment(OrmBaseModel):
+    """The comment of a ``commented`` notification: ``{id, body}`` (HTML)."""
+
+    id: uuid.UUID
+    body: str
+
+
 class NotificationResponse(OrmBaseModel):
     id: uuid.UUID
     user_id: uuid.UUID
@@ -35,6 +42,8 @@ class NotificationResponse(OrmBaseModel):
     # ``status_changed``: the state the issue moved to (null for the other
     # types, or once that state is deleted).
     state: WorkflowStateSummary | None
+    # ``commented``: the comment (null for the other types).
+    comment: NotificationComment | None
     actor: UserSummary | None
 
 
