@@ -58,7 +58,9 @@ function SubIssueRow({ issue, to }: { issue: Issue; to: string }) {
         className="flex h-9 items-center gap-2.5 border-b border-border-subtle px-2 text-ui last:border-b-0 hover:bg-surface-hover"
       >
         <PriorityIcon priority={issue.priority} />
-        <span className="w-14 shrink-0 text-mini text-text-tertiary">{issue.identifier}</span>
+        <span className="min-w-14 shrink-0 text-mini whitespace-nowrap text-text-tertiary">
+          {issue.identifier}
+        </span>
         <StatusIcon type={issue.state.type} color={issue.state.color} label={issue.state.name} />
         <span className="min-w-0 flex-1 truncate text-foreground">{issue.title}</span>
         {assignee ? <UserAvatar name={assignee} size="xs" /> : null}

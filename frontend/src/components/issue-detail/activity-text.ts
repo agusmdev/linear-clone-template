@@ -94,7 +94,7 @@ export function describeActivity(activity: IssueActivity): ActivityPart[] {
       return [t('marked this as a duplicate of '), v(to)]
     case 'relation_duplicated_by':
       if (!to) return [t('removed duplicate relation with '), v(from ?? '')]
-      return [v(to), t(' was marked as a duplicate of this')]
+      return [t('marked '), v(to), t(' as a duplicate of this issue')]
     case 'estimate':
       if (!to) return [t('removed the estimate')]
       return [t('set the estimate to '), v(points(to))]

@@ -151,7 +151,7 @@ export function RelationsSection({
                       to={issuePath(relation.issue.identifier) as '/'}
                       className="flex min-w-0 flex-1 items-center gap-2.5"
                     >
-                      <span className="w-14 shrink-0 text-mini text-text-tertiary">
+                      <span className="min-w-14 shrink-0 text-mini whitespace-nowrap text-text-tertiary">
                         {relation.issue.identifier}
                       </span>
                       <span className="truncate text-foreground">{relation.issue.title}</span>
