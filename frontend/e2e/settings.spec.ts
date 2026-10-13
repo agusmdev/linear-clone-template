@@ -6,6 +6,7 @@
 import { randomUUID } from 'node:crypto'
 import {
   type Page,
+  authHeaders,
   createIssue,
   createLabel,
   createTeam,
@@ -96,6 +97,25 @@ test.describe('onboarding and home', () => {
     await page.getByRole('button', { name: 'Create workspace' }).click()
     await expect(page.getByText('This URL is already taken')).toBeVisible()
     await expect(page).toHaveURL('/onboarding')
+  })
+
+  test('onboarding refuses a URL that is an app route', async ({ authedPage: page, api, user }) => {
+    // A workspace lives at /<url_key>: "login" would open the login page instead.
+    await page.goto('/onboarding')
+    await page.getByLabel('Workspace name').fill('Dup')
+    for (const reserved of ['login', 'register', 'onboarding', 'items', 'oauth', 'api']) {
+      await page.getByLabel('Workspace URL').fill(reserved)
+      await page.getByRole('button', { name: 'Create workspace' }).click()
+      await expect(page.getByText('This URL is reserved')).toBeVisible()
+      await expect(page).toHaveURL('/onboarding')
+    }
+    // The backend refuses it too, not only the form.
+    const response = await api.post('/workspaces', {
+      headers: authHeaders(user),
+      data: { name: 'Dup', url_key: 'oauth' },
+    })
+    expect(response.status()).toBe(422)
+    expect(await listWorkspaces(api, user)).toEqual([])
   })
 
   test('"/" and the workspace root open My issues of the first workspace', async ({
@@ -190,6 +210,19 @@ test.describe('workspace settings', () => {
     await expect(page.getByLabel('Workspace name')).toHaveValue('New Name')
     const [updated] = await listWorkspaces(api, user)
     expect(updated).toMatchObject({ name: 'New Name', url_key: newKey })
+  })
+
+  test('settings refuse a URL that is an app route', async ({ authedPage: page, api, user }) => {
+    const workspace = await createWorkspace(api, user)
+    await page.goto(`/${workspace.url_key}/settings`)
+
+    await page.getByLabel('Workspace URL').fill('login')
+    await page.getByRole('button', { name: 'Save changes' }).click()
+
+    await expect(page.getByText('This URL is reserved')).toBeVisible()
+    await expect(page).toHaveURL(`/${workspace.url_key}/settings`)
+    const [unchanged] = await listWorkspaces(api, user)
+    expect(unchanged.url_key).toBe(workspace.url_key)
   })
 
   test('an admin deletes the workspace after typing its name', async ({

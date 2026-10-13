@@ -152,6 +152,21 @@ def test_create_workspace_validates_the_payload(
     assert [issue["loc"] for issue in body["detail"]] == [["body", field]]
 
 
+@pytest.mark.parametrize(
+    "url_key", ["login", "register", "onboarding", "items", "oauth", "api"]
+)
+def test_create_workspace_with_a_reserved_url_key_is_refused(
+    auth_client: httpx.Client, url_key: str
+) -> None:
+    # A workspace lives at /<url_key>: a key that is an app route would clash.
+    response = auth_client.post("/workspaces", json={"name": "Dup", "url_key": url_key})
+
+    body = assert_error(response, 422, "validation_error")
+    assert [issue["loc"] for issue in body["detail"]] == [["body", "url_key"]]
+    assert "This URL is reserved" in body["detail"][0]["msg"]
+    assert auth_client.get("/workspaces").json() == []
+
+
 def test_list_workspaces_returns_only_mine(
     register_user: Callable[..., RegisteredUser],
 ) -> None:
