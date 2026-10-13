@@ -117,7 +117,7 @@ export function CreateIssueDialog({
       title: '',
       description: '',
       state_id: defaults.stateId ?? null,
-      priority: 0,
+      priority: defaults.priority ?? 0,
       assignee_id: defaults.assigneeId ?? null,
       label_ids: [],
       project_id: defaults.projectId ?? null,
