@@ -53,6 +53,8 @@ export function useUpdateProject(projectId: string) {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects.all })
+      // A favorite shows the project's name, icon and color (built by the server).
+      queryClient.invalidateQueries({ queryKey: queryKeys.favorites.all })
     },
   })
 }
@@ -61,10 +63,13 @@ export function useDeleteProject() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (projectId: string) => api.delete(API.PROJECTS.DETAIL(projectId)),
-    onSuccess: (_data, projectId) => {
-      queryClient.removeQueries({ queryKey: queryKeys.projects.detail(projectId) })
-      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all })
+    onSuccess: () => {
+      // Lists only: removing or invalidating the detail query makes the still open
+      // project page refetch the deleted project (404) before it navigates away.
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.lists() })
       queryClient.invalidateQueries({ queryKey: queryKeys.issues.all })
+      // The favorites list leaves out the deleted project.
+      queryClient.invalidateQueries({ queryKey: queryKeys.favorites.all })
     },
   })
 }

@@ -57,6 +57,7 @@ export const queryKeys = {
   },
   projects: {
     all: ['projects'] as const,
+    lists: () => ['projects', 'list'] as const,
     list: (workspaceId: string, params?: ProjectsParams) =>
       ['projects', 'list', workspaceId, params] as const,
     detail: (id: string) => ['projects', 'detail', id] as const,
