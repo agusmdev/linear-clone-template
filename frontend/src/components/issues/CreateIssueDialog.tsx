@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useForm, useWatch, type PathValue } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -151,11 +151,18 @@ export function CreateIssueDialog({
     if (createMore) {
       form.reset({ ...data, title: '', description: '' })
       setEditorKey(k => k + 1)
-      form.setFocus('title')
     } else {
       onOpenChange(false)
     }
   })
+
+  // After a "Create more" submit (editorKey > 0), give focus back to the title
+  // once the submit button is enabled again and the editor has remounted. A
+  // click on the button moves focus off the title (the button is disabled while
+  // pending), so a focus call inside the submit handler loses to that render.
+  useEffect(() => {
+    if (editorKey > 0 && !pending) form.setFocus('title')
+  }, [editorKey, pending, form])
 
   const teamOptions: PropertyOption[] = teams.map(t => ({
     value: t.id,

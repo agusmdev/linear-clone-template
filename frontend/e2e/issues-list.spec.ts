@@ -107,12 +107,23 @@ test.describe('issues list', () => {
     await expect(page.getByText('Created ENG-2')).toBeVisible()
     await expect(dialog).toBeVisible()
     await expect(dialog.getByLabel('Issue title')).toHaveValue('')
-    await dialog.getByLabel('Issue title').fill('Third issue')
-    await dialog.getByLabel('Issue title').press('ControlOrMeta+Enter')
+    // After a click on the button, focus goes back to the title: the next
+    // title can be typed at once, without a click.
+    await expect(dialog.getByLabel('Issue title')).toBeFocused()
+    await page.keyboard.type('Third issue')
+    await page.keyboard.press('ControlOrMeta+Enter')
     await expect(page.getByText('Created ENG-3')).toBeVisible()
+    await expect(dialog.getByLabel('Issue title')).toHaveValue('')
+    await expect(dialog.getByLabel('Issue title')).toBeFocused()
+    // Cmd+Enter from the title also keeps focus on the title.
+    await page.keyboard.type('Fourth issue')
+    await page.keyboard.press('ControlOrMeta+Enter')
+    await expect(page.getByText('Created ENG-4')).toBeVisible()
+    await expect(dialog.getByLabel('Issue title')).toBeFocused()
     await dialog.getByRole('button', { name: 'Close' }).click()
     await expect(row(page, 'Third issue')).toBeVisible()
-    await expect.poll(async () => (await listIssues(api, user, workspace.id)).total).toBe(3)
+    await expect(row(page, 'Fourth issue')).toBeVisible()
+    await expect.poll(async () => (await listIssues(api, user, workspace.id)).total).toBe(4)
 
     // A missing title shows the form error.
     await page.getByRole('button', { name: 'New issue' }).first().click()
