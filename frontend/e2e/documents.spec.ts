@@ -6,6 +6,7 @@
 import {
   createDocument,
   createIssue,
+  createProject,
   createWorkspace,
   expect,
   fetchDocument,
@@ -369,5 +370,46 @@ test.describe('document editor', () => {
     await expect(page.getByText('Document not found')).toBeVisible()
     await page.getByRole('link', { name: 'Back to documents' }).click()
     await expect(page).toHaveURL(`/${workspace.url_key}/documents`)
+  })
+})
+
+test.describe('document header on a phone', () => {
+  test('the breadcrumbs truncate and never run under the project chip at 390px', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    const workspace = await createWorkspace(api, user)
+    const project = await createProject(api, user, {
+      workspace_id: workspace.id,
+      name: 'Doc Project Beta',
+    })
+    const doc = await createDocument(api, user, {
+      workspace_id: workspace.id,
+      project_id: project.id,
+      title: 'My Spec Doc',
+      icon: '🚀',
+    })
+    await page.goto(`/${workspace.url_key}/document/${doc.id}`)
+
+    const breadcrumb = page.getByRole('navigation', { name: 'Breadcrumb' })
+    await expect(breadcrumb.getByRole('link', { name: 'Doc Project Beta' })).toBeAttached()
+    const chip = page.getByRole('button', { name: 'Project', exact: true })
+    await expect(chip).toBeVisible()
+    // On a phone the chip is icon-only: the breadcrumb already names the project.
+    await expect(chip.getByText('Doc Project Beta')).toBeHidden()
+
+    const navBox = await breadcrumb.boundingBox()
+    const chipBox = await chip.boundingBox()
+    if (!navBox || !chipBox) throw new Error('header is not laid out')
+    const navRight = navBox.x + navBox.width
+    expect(navRight).toBeLessThanOrEqual(chipBox.x)
+    // Every crumb and the title end inside the nav, so no text runs under the chip.
+    for (const part of await breadcrumb.locator('a, h1').all()) {
+      const box = await part.boundingBox()
+      if (!box) throw new Error('breadcrumb part is not laid out')
+      expect(box.x + box.width).toBeLessThanOrEqual(navRight + 0.5)
+    }
   })
 })

@@ -58,7 +58,9 @@ export function MoveToProjectPicker({
       trigger={
         <Button variant="ghost" size="sm" aria-label="Project">
           <Box className="size-3.5" />
-          <span className="max-w-40 truncate">{current?.name ?? 'Add to project'}</span>
+          <span className="hidden max-w-40 truncate md:inline">
+            {current?.name ?? 'Add to project'}
+          </span>
         </Button>
       }
     />
