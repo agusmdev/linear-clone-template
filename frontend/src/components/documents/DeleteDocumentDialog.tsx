@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +26,12 @@ export function DeleteDocumentDialog({
   pending,
   onConfirm,
 }: DeleteDocumentDialogProps) {
+  // A double click confirms twice before `pending` disables the button.
+  const confirmed = useRef(false)
+  useEffect(() => {
+    if (!pending) confirmed.current = false
+  }, [pending, open])
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -41,6 +48,8 @@ export function DeleteDocumentDialog({
             disabled={pending}
             onClick={event => {
               event.preventDefault()
+              if (confirmed.current) return
+              confirmed.current = true
               onConfirm()
             }}
           >

@@ -9,6 +9,7 @@ import {
   createIssue,
   createProject,
   createWorkspace,
+  errorToast,
   expect,
   fetchDocument,
   getProject,
@@ -498,6 +499,32 @@ test.describe('document editor', () => {
     await expect(page).toHaveURL(`/${workspace.url_key}/documents`)
     await expect(page.getByText('No documents', { exact: true })).toBeVisible()
     expect((await fetchDocument(api, user, doc.id)).status()).toBe(404)
+  })
+
+  test('a double click on Delete deletes the document once, without an error', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const doc = await createDocument(api, user, { workspace_id: workspace.id, title: 'Twice' })
+    const deletes: string[] = []
+    page.on('request', request => {
+      if (request.method() === 'DELETE') deletes.push(request.url())
+    })
+    await page.goto(`/${workspace.url_key}/document/${doc.id}`)
+
+    await page.getByRole('button', { name: 'Document actions' }).click()
+    await page.getByRole('menuitem', { name: 'Delete document' }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).dblclick()
+
+    await expect(page).toHaveURL(`/${workspace.url_key}/documents`)
+    await expect(page.getByText('Document deleted')).toBeVisible()
+    // A second DELETE (and its 404 toast) would land after the first one.
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByText('Document deleted')).toHaveCount(1)
+    await expect(errorToast(page)).toHaveCount(0)
+    expect(deletes).toEqual([expect.stringContaining(`/documents/${doc.id}`)])
   })
 
   test('the sidebar favorite follows a rename, an icon change and a delete at once', async ({
