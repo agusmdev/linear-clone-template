@@ -211,8 +211,8 @@ function ProjectOverview({ project }: { project: Project }) {
       onError: error => toastApiError(error, 'Could not update project'),
     })
 
-  const autosave = useDebouncedAutosave(description, next =>
-    updateProject.mutateAsync({ description: next || null })
+  const autosave = useDebouncedAutosave(description, (next, { keepalive }) =>
+    updateProject.mutateAsync({ description: next || null, keepalive })
   )
 
   const saveName = () => {

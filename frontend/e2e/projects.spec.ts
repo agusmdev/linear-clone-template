@@ -442,3 +442,31 @@ test('the sidebar favorite follows a project rename and goes away on delete', as
   await expect(favorites).toHaveCount(0)
   expect(notFound).toEqual([])
 })
+
+test('saves a project description typed just before a reload (keepalive flush on pagehide)', async ({
+  authedPage: page,
+  api,
+  user,
+}) => {
+  const workspace = await createWorkspace(api, user)
+  const project = await createProject(api, user, {
+    workspace_id: workspace.id,
+    name: 'Quick reload',
+    description: '<p>Start</p>',
+  })
+  await page.goto(`/${workspace.url_key}/project/${project.id}`)
+
+  const description = page.getByRole('textbox', { name: 'Project description' })
+  await expect(description).toContainText('Start')
+  await description.click()
+  await page.keyboard.press('End')
+  await page.keyboard.type(' QUICKRELOAD')
+  // Reload inside the 800 ms debounce: no React unmount runs.
+  await page.reload()
+
+  await expect
+    .poll(async () => (await getProject(api, user, project.id))?.description)
+    .toBe('<p>Start QUICKRELOAD</p>')
+  await page.reload()
+  await expect(description).toHaveText('Start QUICKRELOAD')
+})

@@ -33,13 +33,16 @@ export function useCreateProject() {
 }
 
 /** PATCH with an optimistic update of the detail query (rolled back on error). */
+/** `keepalive`: set when the page is being reloaded or closed, so the save is not cancelled. */
+export type UpdateProjectVariables = UpdateProjectData & { keepalive?: boolean }
+
 export function useUpdateProject(projectId: string) {
   const queryClient = useQueryClient()
   const detailKey = queryKeys.projects.detail(projectId)
   return useMutation({
-    mutationFn: (data: UpdateProjectData) =>
-      api.patch<Project>(API.PROJECTS.DETAIL(projectId), data),
-    onMutate: async data => {
+    mutationFn: ({ keepalive, ...data }: UpdateProjectVariables) =>
+      api.patch<Project>(API.PROJECTS.DETAIL(projectId), data, { keepalive }),
+    onMutate: async ({ keepalive: _keepalive, ...data }) => {
       await queryClient.cancelQueries({ queryKey: detailKey })
       const previous = queryClient.getQueryData<Project>(detailKey)
       if (previous) queryClient.setQueryData<Project>(detailKey, { ...previous, ...data })
