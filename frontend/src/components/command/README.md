@@ -16,7 +16,7 @@ useShortcut(keys, handler, { enabled, scope, allowInInputs, preventDefault })
 | `handler` | `(e: KeyboardEvent) => void` | Latest handler is always used (no need to memoize) |
 | `enabled` | `boolean` (default `true`) | Unregisters when false |
 | `scope` | `string` (default `"global"`) | Fires only while the scope is active |
-| `allowInInputs` | `boolean` (default `false`) | By default shortcuts are ignored in input/textarea/select/contenteditable |
+| `allowInInputs` | `boolean` (default `false`) | By default shortcuts are ignored in input/textarea/select/contenteditable and inside a dialog, popover or menu |
 | `preventDefault` | `boolean` (default `true`) | Calls `preventDefault()` when it fires |
 
 - Sequences: each step must come within 1 s (`SEQUENCE_TIMEOUT_MS`).
@@ -80,6 +80,6 @@ Props: `open`, `onOpenChange`, `groups: ShortcutHelpGroup[]` (`{ heading, shortc
 ## Helpers
 
 - `<Kbd keys="mod+k" />`: key caps (`⌘ K` on Mac, `Ctrl K` elsewhere; `G then I` for sequences).
-- `formatShortcut`, `parseShortcut`, `parseCombo`, `matchesCombo`, `isTypingTarget`, `isMacPlatform`.
+- `formatShortcut`, `parseShortcut`, `parseCombo`, `matchesCombo`, `isTypingTarget`, `isInsideOverlay`, `isMacPlatform`.
 
 Colors use CSS variables with Linear dark fallbacks, e.g. `var(--color-border,#2a2b2e)`.

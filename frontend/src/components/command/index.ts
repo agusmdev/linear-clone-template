@@ -2,6 +2,7 @@ export { CommandPalette, type CommandPaletteProps } from './CommandPalette'
 export { Kbd, type KbdProps } from './Kbd'
 export {
   formatShortcut,
+  isInsideOverlay,
   isMacPlatform,
   isTypingTarget,
   matchesCombo,

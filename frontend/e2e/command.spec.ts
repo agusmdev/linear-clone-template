@@ -152,6 +152,33 @@ test.describe('command palette', () => {
     await expect(palette(page).getByRole('option')).toHaveCount(0)
   })
 
+  test('results of an earlier query are never selected for the new text', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const [team] = await listTeams(api, user, workspace.id)
+    const issue = await createIssue(api, user, { team_id: team.id, title: 'Zebra crossing bug' })
+
+    await page.goto(`/${workspace.url_key}/views`)
+    await expect(page.getByRole('heading', { level: 1, name: 'Views' })).toBeVisible()
+    await page.keyboard.press('ControlOrMeta+k')
+    await palette(page).getByRole('combobox').fill('zebra')
+    await expect(
+      palette(page).getByRole('option', { name: `${issue.identifier} Zebra crossing bug` })
+    ).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(palette(page)).toBeHidden()
+
+    // Reopen and type a command, then Enter at once (before the search debounce):
+    // the "zebra" results must not be shown, selected and opened.
+    await page.keyboard.press('ControlOrMeta+k')
+    await palette(page).getByRole('combobox').fill('create new document')
+    await page.keyboard.press('Enter')
+    await expect(page).toHaveURL(new RegExp(`/${workspace.url_key}/document/[0-9a-f-]{36}$`))
+  })
+
   test('create new document makes a document and opens it', async ({
     api,
     user,
@@ -252,6 +279,45 @@ test.describe('global shortcuts', () => {
       await page.keyboard.press(key)
       await expect(page).toHaveURL(`${base}/${target}`)
     }
+  })
+  test('page shortcuts do not fire inside an open dialog', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const base = `/${workspace.url_key}`
+    await page.goto(`${base}/views`)
+    await expect(page.getByRole('heading', { level: 1, name: 'Views' })).toBeVisible()
+
+    await page.keyboard.press('c')
+    const modal = page.getByRole('dialog', { name: 'New issue' })
+    await expect(modal).toBeVisible()
+    await modal.getByRole('textbox', { name: 'Issue title' }).fill('Draft in progress')
+    // After a pick, focus is back on the chip (not a text field) but still in the modal.
+    await modal.getByRole('button', { name: /^Priority:/ }).click()
+    await page.getByRole('option', { name: 'High' }).click()
+    const priority = modal.getByRole('button', { name: 'Priority: High' })
+    await expect(priority).toBeFocused()
+
+    // C must not reset the form, G S must not navigate under it, ? must not open help.
+    await page.keyboard.press('c')
+    await page.keyboard.press('g')
+    await page.keyboard.press('s')
+    await page.keyboard.press('?')
+    await expect(page.getByRole('dialog', { name: 'Keyboard shortcuts' })).toBeHidden()
+    await expect(page).toHaveURL(`${base}/views`)
+    await expect(modal.getByRole('textbox', { name: 'Issue title' })).toHaveValue(
+      'Draft in progress'
+    )
+    await expect(priority).toBeVisible()
+
+    // Closed, the shortcuts work again.
+    await page.keyboard.press('Escape')
+    await expect(modal).toBeHidden()
+    await page.keyboard.press('g')
+    await page.keyboard.press('s')
+    await expect(page).toHaveURL(`${base}/settings`)
   })
 })
 
