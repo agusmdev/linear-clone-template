@@ -172,6 +172,60 @@ test.describe('issues list', () => {
     await expect(row(page, 'Started work')).toBeVisible()
   })
 
+  test('the light theme keeps light state colors visible on white (Todo #e2e2e2)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { team, states, key } = await seedWorkspace(api, user)
+    expect(states.Todo.color).toBe('#e2e2e2')
+    await createIssue(api, user, { team_id: team.id, title: 'Todo work' })
+
+    /** Contrast ratio against white of every Todo status icon in the page (WCAG formula). */
+    const todoIconContrasts = (page: Page) =>
+      page.locator('svg[data-status-type="unstarted"]').evaluateAll(icons =>
+        icons.map(icon => {
+          // A canvas resolves any CSS color (oklch, relative colors) to sRGB.
+          const ctx = document.createElement('canvas').getContext('2d')!
+          ctx.fillStyle = getComputedStyle(icon).color
+          ctx.fillRect(0, 0, 1, 1)
+          const [r, g, b] = Array.from(ctx.getImageData(0, 0, 1, 1).data).map(v => {
+            const c = v / 255
+            return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+          })
+          const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+          return 1.05 / (luminance + 0.05)
+        })
+      )
+
+    const page = await loginAs(user)
+    await page.goto(`/${key}/team/ENG/issues`)
+    await expect(page.getByRole('group', { name: 'Todo' })).toContainText('Todo work')
+
+    // Dark theme (default): the stored color is drawn as-is (light on a dark surface).
+    const dark = await todoIconContrasts(page)
+    expect(dark.length).toBeGreaterThan(0)
+    for (const ratio of dark) expect(ratio).toBeLessThan(1.5)
+
+    await page.evaluate(() => localStorage.setItem('theme', 'light'))
+    await page.reload()
+    await expect(page.locator('html')).toHaveClass(/light/)
+    await expect(page.getByRole('group', { name: 'Todo' })).toContainText('Todo work')
+
+    // Light theme: group header, row and status chip icons reach 3:1 (WCAG non-text).
+    const light = await todoIconContrasts(page)
+    expect(light.length).toBe(dark.length)
+    for (const ratio of light) expect(ratio).toBeGreaterThanOrEqual(3)
+
+    // The create-issue modal's status button too.
+    await page.getByRole('button', { name: 'New issue' }).first().click()
+    const dialog = page.getByRole('dialog', { name: 'New issue' })
+    await expect(dialog.getByRole('button', { name: 'Status: Todo' })).toBeVisible()
+    const withModal = await todoIconContrasts(page)
+    expect(withModal.length).toBeGreaterThan(light.length)
+    for (const ratio of withModal) expect(ratio).toBeGreaterThanOrEqual(3)
+  })
+
   test('filters, search and display options live in the URL (ISS-5)', async ({
     api,
     user,

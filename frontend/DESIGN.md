@@ -34,6 +34,7 @@ The theme class is on `<html>`: `dark` (default) or `light`. Tailwind variants: 
 | `bg-primary` / `text-primary` | Accent indigo | `#5e6ad2` | `#5e6ad2` |
 | `text-destructive` | Errors, delete | `#eb5757` | `#d93f3f` |
 | `status-backlog/unstarted/started/review/completed/canceled` | Default workflow state colors | see css | see css |
+| `--status-icon-max-l` | oklch lightness cap of every `StatusIcon` color (stored state hex colors too), so light colors such as Todo `#e2e2e2` stay visible on white | `1` (no cap) | `0.66` |
 | `priority-urgent`, `priority-icon`, `priority-icon-empty` | PriorityIcon | see css | see css |
 
 Shadow: `shadow-popover` (menus, dialogs). Radius: `--radius` = 6px (`rounded-md`); `rounded-lg` = 8px; `rounded-xl` = 12px.
@@ -134,7 +135,7 @@ A link is active (`aria-current="page"`, `bg-surface-active`) when the URL start
 | Prop | Type | Default |
 |---|---|---|
 | `type` | `'backlog' \| 'unstarted' \| 'started' \| 'completed' \| 'canceled'` (`StatusType` = `WorkflowStateType` from `@/types/team`) | — |
-| `color?` | CSS color | theme color of the type |
+| `color?` | CSS color (in the light theme its lightness is capped by `--status-icon-max-l`) | theme color of the type |
 | `progress?` | `0..1`, fill of `started` (e.g. 0.75 for "In Review") | `0.5` |
 | `size?` | px | `14` |
 | `label?` | accessible name; without it the icon is decorative | — |
