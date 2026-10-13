@@ -57,6 +57,8 @@ export function RelationsSection({
   const [open, setOpenState] = React.useState(false)
   // The relation type picked in the first step; null = the type list is shown.
   const [pending, setPending] = React.useState<RelationKind | null>(null)
+  // The type list has no search box: it takes the focus itself, so arrows and Enter work.
+  const kindsRef = React.useRef<HTMLDivElement>(null)
   const setOpen = (next: boolean) => {
     setOpenState(next)
     if (!next) {
@@ -84,7 +86,14 @@ export function RelationsSection({
           <PopoverTrigger asChild>
             <IconButton label="Add relation" icon={<Plus />} size="sm" className="ml-auto" />
           </PopoverTrigger>
-          <PopoverContent align="end" className={pending ? 'w-80 p-0' : 'w-48 p-0'}>
+          <PopoverContent
+            align="end"
+            className={pending ? 'w-80 p-0' : 'w-48 p-0'}
+            onOpenAutoFocus={event => {
+              event.preventDefault()
+              kindsRef.current?.focus()
+            }}
+          >
             {pending ? (
               <IssueSearchList
                 label={pendingLabel}
@@ -98,7 +107,13 @@ export function RelationsSection({
                 }}
               />
             ) : (
-              <Command label="Add relation" loop>
+              <Command
+                ref={kindsRef}
+                label="Add relation"
+                loop
+                tabIndex={-1}
+                className="outline-none"
+              >
                 <CommandList>
                   <CommandGroup>
                     {KINDS.map(kind => (
@@ -146,7 +161,7 @@ export function RelationsSection({
                       icon={<X />}
                       size="sm"
                       tooltip={false}
-                      className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                      className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100"
                       onClick={() => onRemove(relation)}
                     />
                   </li>
