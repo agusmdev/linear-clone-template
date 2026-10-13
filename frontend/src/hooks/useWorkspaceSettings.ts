@@ -1,4 +1,11 @@
-import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  type Query,
+  type QueryClient,
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import { useCurrentWorkspace } from '@/contexts/WorkspaceContext'
 import { api } from '@/lib/api-client'
 import { API } from '@/lib/api-endpoints'
@@ -34,6 +41,25 @@ export function useMyMembership() {
   return { membership, isAdmin: membership?.role === 'admin' }
 }
 
+/** True when the query key names the resource id anywhere (also inside params). */
+function mentions(id: string) {
+  return (query: Query) => JSON.stringify(query.queryKey).includes(id)
+}
+
+/**
+ * After the user deleted or left a workspace: drop it from the workspace list
+ * at once, then refresh only that list. Do not invalidate the queries of the
+ * workspace itself (its members, teams, states...): they are still mounted
+ * until the page navigates away, so a refetch would get a 404. They go
+ * inactive after the navigation and the cache garbage-collects them.
+ */
+function forgetWorkspace(queryClient: QueryClient, workspaceId: string) {
+  queryClient.setQueryData<Workspace[]>(queryKeys.workspaces.list(), workspaces =>
+    workspaces?.filter(workspace => workspace.id !== workspaceId)
+  )
+  return queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.list() })
+}
+
 // --- Workspace -----------------------------------------------------------------
 
 export function useCreateWorkspace() {
@@ -57,7 +83,7 @@ export function useDeleteWorkspace(workspaceId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: () => api.delete(API.WORKSPACES.DETAIL(workspaceId)),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.all }),
+    onSuccess: () => forgetWorkspace(queryClient, workspaceId),
   })
 }
 
@@ -84,9 +110,11 @@ export function useUpdateMember(workspaceId: string) {
 /** Remove a member (admins), or leave the workspace (your own member id). */
 export function useRemoveMember(workspaceId: string) {
   const queryClient = useQueryClient()
+  const { membership } = useMyMembership()
   return useMutation({
     mutationFn: (memberId: string) => api.delete(API.WORKSPACES.MEMBER(workspaceId, memberId)),
-    onSuccess: () => {
+    onSuccess: (_, memberId) => {
+      if (memberId === membership?.id) return forgetWorkspace(queryClient, workspaceId)
       queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.teams.all })
     },
@@ -115,13 +143,21 @@ export function useUpdateTeam(teamId: string) {
   })
 }
 
-export function useDeleteTeam(teamId: string) {
+export function useDeleteTeam(workspaceId: string, teamId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: () => api.delete(API.TEAMS.DETAIL(teamId)),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.teams.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.issues.all })
+      // Drop the team from the list at once: the pages that show it unmount.
+      queryClient.setQueryData<Team[]>(queryKeys.teams.list(workspaceId), teams =>
+        teams?.filter(team => team.id !== teamId)
+      )
+      // Refresh the rest, but never the queries of the deleted team (its
+      // members, states...): they are still mounted and a refetch gets a 404.
+      // The cache garbage-collects them once they are inactive.
+      const notOfDeletedTeam = (query: Query) => !mentions(teamId)(query)
+      queryClient.invalidateQueries({ queryKey: queryKeys.teams.all, predicate: notOfDeletedTeam })
+      queryClient.invalidateQueries({ queryKey: queryKeys.issues.all, predicate: notOfDeletedTeam })
     },
   })
 }

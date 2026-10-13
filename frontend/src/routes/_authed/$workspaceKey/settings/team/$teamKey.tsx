@@ -112,7 +112,7 @@ function TeamSettingsContent({ team }: { team: Team }) {
   const { isAdmin } = useMyMembership()
   const navigate = useNavigate()
   const membersQuery = useTeamMembers(team.id)
-  const deleteTeam = useDeleteTeam(team.id)
+  const deleteTeam = useDeleteTeam(team.workspace_id, team.id)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const members = membersQuery.data ?? []
