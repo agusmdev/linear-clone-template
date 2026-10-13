@@ -325,6 +325,48 @@ def test_state_payloads_are_validated(auth_client: httpx.Client) -> None:
     )
 
 
+def test_state_names_are_unique_in_a_team(auth_client: httpx.Client) -> None:
+    workspace = create_workspace(auth_client)
+    team = workspace_team(auth_client, workspace["id"])
+    states = team_states(auth_client, team["id"])
+
+    for name in ("Todo", "in progress", " Done "):
+        assert_error(
+            auth_client.post(
+                f"/teams/{team['id']}/states",
+                json={"name": name, "type": "started", "color": "#26b5ce"},
+            ),
+            400,
+            "duplicate_item",
+        )
+    assert_error(
+        auth_client.patch(
+            f"/workflow-states/{states['Todo']['id']}", json={"name": "Backlog"}
+        ),
+        400,
+        "duplicate_item",
+    )
+    assert len(team_states(auth_client, team["id"])) == len(states)
+
+    # Same name, other case: a rename of the state itself is allowed.
+    renamed = auth_client.patch(
+        f"/workflow-states/{states['Todo']['id']}", json={"name": "TODO"}
+    )
+    assert renamed.status_code == 200, renamed.text
+    # Another team can use the same name.
+    other = create_team(auth_client, workspace["id"], "Design", "DES")
+    response = auth_client.post(
+        f"/teams/{other['id']}/states",
+        json={"name": "QA", "type": "started", "color": "#26b5ce"},
+    )
+    assert response.status_code == 201, response.text
+    response = auth_client.post(
+        f"/teams/{team['id']}/states",
+        json={"name": "QA", "type": "started", "color": "#26b5ce"},
+    )
+    assert response.status_code == 201, response.text
+
+
 def test_delete_an_unused_state(auth_client: httpx.Client) -> None:
     workspace = create_workspace(auth_client)
     team = workspace_team(auth_client, workspace["id"])

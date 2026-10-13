@@ -113,6 +113,14 @@ class WorkflowStateRepository(SQLAlchemyRepository[WorkflowState]):
         last = (await self._session.execute(query)).scalar_one_or_none()
         return 0.0 if last is None else float(last) + 1
 
+    async def get_by_name(self, team_id: uuid.UUID, name: str) -> WorkflowState | None:
+        """The state named ``name`` (any case, outer spaces ignored) in the team."""
+        query = select(WorkflowState).where(
+            WorkflowState.team_id == team_id,
+            func.lower(func.trim(WorkflowState.name)) == name.strip().lower(),
+        )
+        return (await self._session.execute(query)).scalars().first()
+
     async def count_issues(self, state_id: uuid.UUID) -> int:
         query = select(func.count()).where(Issue.state_id == state_id)
         return int((await self._session.execute(query)).scalar_one())

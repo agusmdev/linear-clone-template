@@ -283,7 +283,7 @@ test.describe('labels', () => {
     await page.getByLabel('Label name').fill('design')
     await page.getByRole('button', { name: 'Create label' }).click()
     await expect(page.getByText('A label with this name already exists')).toBeVisible()
-    await page.getByRole('button', { name: 'Cancel' }).click()
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click()
 
     const row = page.getByRole('listitem', { name: 'Design' })
     await row.getByRole('button', { name: 'Actions for Design' }).click()
@@ -507,6 +507,42 @@ test.describe('team settings', () => {
 
     await expect(started.getByRole('listitem', { name: 'Testing' })).toHaveCount(0)
     expect((await getIssue(api, user, issue.id)).state.name).toBe('Done')
+  })
+
+  test('refuses a duplicate status name with an inline error', async ({
+    authedPage: page,
+    api,
+    user,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const [team] = await listTeams(api, user, workspace.id)
+    await page.goto(`/${workspace.url_key}/settings/team/${team.key}`)
+    const started = page.getByRole('list', { name: 'Started statuses', exact: true })
+    await expect(started.getByRole('listitem')).toHaveCount(2)
+
+    // Add: a name that another status already has (any case).
+    await page.getByRole('button', { name: 'Add status to Started' }).click()
+    await page.getByLabel('Status name').fill('in progress')
+    await page.getByRole('button', { name: 'Add status', exact: true }).click()
+    await expect(
+      page.getByRole('alert').filter({ hasText: 'A status with this name already exists' })
+    ).toBeVisible()
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await expect(started.getByRole('listitem')).toHaveText(['In Progress', 'In Review'])
+
+    // Rename: to the name of another status.
+    await started.getByRole('button', { name: 'Actions for In Review' }).click()
+    await page.getByRole('menuitem', { name: 'Edit' }).click()
+    await page.getByLabel('Status name').fill('Done')
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(
+      page.getByRole('alert').filter({ hasText: 'A status with this name already exists' })
+    ).toBeVisible()
+
+    const names = (await listStates(api, user, team.id)).map(s => s.name)
+    expect(names.filter(n => n.toLowerCase() === 'in progress')).toHaveLength(1)
+    expect(names.filter(n => n === 'Done')).toHaveLength(1)
+    expect(names).toContain('In Review')
   })
 
   test('shows workflow changes made through the API', async ({ authedPage: page, api, user }) => {
