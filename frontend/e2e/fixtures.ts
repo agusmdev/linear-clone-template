@@ -38,6 +38,12 @@ import {
 import { AUTH_TOKEN_KEY } from '../src/lib/auth'
 import type { AuthSessionResponse } from '../src/types/auth'
 import type { CreateFavoriteData, Favorite, UpdateFavoriteData } from '../src/types/favorite'
+import type {
+  CompleteCycleData,
+  CompleteCycleResult,
+  CreateCycleData,
+  Cycle,
+} from '../src/types/cycle'
 import type { CreateDocumentData, Document, DocumentSummary } from '../src/types/document'
 import type { CreateIssueData, Issue, UpdateIssueData } from '../src/types/issue'
 import type { CreateItemData, Item, ItemsResponse } from '../src/types/item'
@@ -340,6 +346,60 @@ export async function deleteFavorite(
 ): Promise<void> {
   const response = await api.delete(`/favorites/${favoriteId}`, { headers: authHeaders(user) })
   await expectOk(response, 'DELETE /favorites/{id}')
+}
+
+// --- Cycles (CYC-1) ---------------------------------------------------------
+
+export async function createCycle(
+  api: APIRequestContext,
+  user: TestUser,
+  teamId: string,
+  data: CreateCycleData
+): Promise<Cycle> {
+  const response = await api.post(`/teams/${teamId}/cycles`, { data, headers: authHeaders(user) })
+  await expectOk(response, 'POST /teams/{id}/cycles')
+  return (await response.json()) as Cycle
+}
+
+export async function listCycles(
+  api: APIRequestContext,
+  user: TestUser,
+  teamId: string
+): Promise<Cycle[]> {
+  const response = await api.get(`/teams/${teamId}/cycles`, { headers: authHeaders(user) })
+  await expectOk(response, 'GET /teams/{id}/cycles')
+  return (await response.json()) as Cycle[]
+}
+
+/** GET /cycles/{id}; returns the raw response so a spec can check a 404 after a delete. */
+export function getCycleResponse(
+  api: APIRequestContext,
+  user: TestUser,
+  cycleId: string
+): Promise<APIResponse> {
+  return api.get(`/cycles/${cycleId}`, { headers: authHeaders(user) })
+}
+
+export async function completeCycle(
+  api: APIRequestContext,
+  user: TestUser,
+  cycleId: string,
+  data: CompleteCycleData = {}
+): Promise<CompleteCycleResult> {
+  const response = await api.post(`/cycles/${cycleId}/complete`, {
+    data,
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'POST /cycles/{id}/complete')
+  return (await response.json()) as CompleteCycleResult
+}
+
+/** Today (UTC, like the backend) plus `offset` days, as YYYY-MM-DD. */
+export function isoDay(offset = 0): string {
+  const now = new Date()
+  const day = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+  day.setUTCDate(day.getUTCDate() + offset)
+  return day.toISOString().slice(0, 10)
 }
 
 export async function createDocument(

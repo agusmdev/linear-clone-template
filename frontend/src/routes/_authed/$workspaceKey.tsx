@@ -130,7 +130,7 @@ function WorkspaceLayout() {
             onClick={() => navigate({ to: `${base}/search` as '/' })}
           />
           <IconButton
-            label="New issue"
+            label="Compose issue"
             shortcut="C"
             icon={<SquarePen />}
             onClick={() => openCreateIssue()}
