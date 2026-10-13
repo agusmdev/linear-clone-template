@@ -139,6 +139,7 @@ export function CreateIssueDialog({
   // The picked parent, kept when a later parent search no longer returns it.
   const [pickedParent, setPickedParent] = useState<Issue | undefined>()
   const [confirmClose, setConfirmClose] = useState(false)
+  const saveDraftRef = useRef<HTMLButtonElement>(null)
 
   const form = useForm<CreateIssueFormData>({
     resolver: zodResolver(createIssueSchema),
@@ -549,7 +550,21 @@ export function CreateIssueDialog({
         </DialogContent>
       </Dialog>
       <AlertDialog open={confirmClose} onOpenChange={setConfirmClose}>
-        <AlertDialogContent>
+        <AlertDialogContent
+          // The prompt has no AlertDialogCancel to focus: without this, focus stays in
+          // the title behind it (Enter does nothing, typing edits the hidden title and
+          // Cmd+Enter creates the issue under the prompt).
+          onOpenAutoFocus={event => {
+            event.preventDefault()
+            saveDraftRef.current?.focus()
+          }}
+          // Back to the modal (Esc on the prompt): keep typing in the title.
+          onCloseAutoFocus={event => {
+            if (!open) return
+            event.preventDefault()
+            form.setFocus('title')
+          }}
+        >
           <AlertDialogHeader>
             <AlertDialogTitle>Save issue as draft?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -560,7 +575,9 @@ export function CreateIssueDialog({
             <Button variant="outline" onClick={() => closeWithDraft(false)}>
               Discard
             </Button>
-            <Button onClick={() => closeWithDraft(true)}>Save draft</Button>
+            <Button ref={saveDraftRef} onClick={() => closeWithDraft(true)}>
+              Save draft
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
