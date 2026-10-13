@@ -24,6 +24,7 @@ import { Switch } from '@/components/ui/switch'
 import {
   createIssueFormToPayload,
   createIssueSchema,
+  singleLineTitle,
   type CreateIssueFormData,
 } from '@/features/issues/issue-schemas'
 import type { NamedRef } from '@/hooks/useIssueRefs'
@@ -250,6 +251,8 @@ export function CreateIssueDialog({
                         placeholder="Issue title"
                         // eslint-disable-next-line jsx-a11y/no-autofocus
                         autoFocus
+                        // Titles are one line: a pasted line break becomes a space.
+                        onChange={event => field.onChange(singleLineTitle(event.target.value))}
                         onKeyDown={event => {
                           if (event.key === 'Enter' && !event.metaKey && !event.ctrlKey)
                             event.preventDefault()

@@ -1,9 +1,11 @@
 """Issue schemas - request and response models."""
 
+import re
 import uuid
 from datetime import date, datetime
+from typing import Any
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.core.optional_model import partial_model
 from app.database.mixins import OrmBaseModel
@@ -14,6 +16,20 @@ from app.user.schemas import UserSummary
 TITLE_MAX = 500
 DESCRIPTION_MAX = 200_000
 LABELS_MAX = 50
+
+# A line break (and the spaces around it) inside a title.
+_TITLE_LINE_BREAK = re.compile(r"\s*[\r\n\v\f\x85\u2028\u2029]+\s*")
+
+
+def single_line_title(value: Any) -> Any:
+    """Titles are one line: line breaks become one space, then the ends are trimmed.
+
+    A pasted multi-line text is kept as one line, like in Linear. A title of only
+    line breaks becomes '' and fails ``min_length``.
+    """
+    if not isinstance(value, str):
+        return value
+    return _TITLE_LINE_BREAK.sub(" ", value).strip()
 
 
 class IssueCreate(BaseModel):
@@ -36,6 +52,11 @@ class IssueCreate(BaseModel):
     # Manual order (list and board). Default: after the team's last issue.
     sort_order: float | None = Field(None, allow_inf_nan=False)
 
+    @field_validator("title", mode="before")
+    @classmethod
+    def title_is_one_line(cls, value: Any) -> Any:
+        return single_line_title(value)
+
 
 class IssueUpdateFields(BaseModel):
     title: str = Field(..., min_length=1, max_length=TITLE_MAX)
@@ -53,6 +74,11 @@ class IssueUpdateFields(BaseModel):
     sort_order: float = Field(..., allow_inf_nan=False)
     # true archives the issue (sets archived_at), false restores it.
     archived: bool
+
+    @field_validator("title", mode="before")
+    @classmethod
+    def title_is_one_line(cls, value: Any) -> Any:
+        return single_line_title(value)
 
 
 @partial_model
