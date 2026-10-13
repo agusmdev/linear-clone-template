@@ -99,6 +99,10 @@ export function RichTextEditor({
         'aria-multiline': 'true',
         'aria-label': ariaLabel,
       },
+      // Mod+Enter belongs to the host (submit in dialogs and comments). Without
+      // this, TipTap's HardBreak shortcut adds a `<br>` before the host submits.
+      // Shift+Enter still adds a hard break.
+      handleKeyDown: (_view, event) => event.key === 'Enter' && (event.metaKey || event.ctrlKey),
       handleClick: (view, _pos, event) => {
         if (!(event.target instanceof Element)) return false
         const anchor = event.target.closest('a')

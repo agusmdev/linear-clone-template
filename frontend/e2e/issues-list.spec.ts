@@ -210,6 +210,57 @@ test.describe('issues list', () => {
     expect(button.y + button.height).toBeLessThanOrEqual(viewport.height)
   })
 
+  test('the description slash menu and Cmd+Enter keep the modal draft intact (ISS-1)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { workspace, key } = await seedWorkspace(api, user)
+    const page = await loginAs(user)
+    await page.goto(`/${key}`)
+    await expect(page.getByRole('button', { name: 'Compose issue' })).toBeVisible()
+    await page.goto(`/${key}/team/ENG/issues`)
+    await expect(page.getByText('No issues yet')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Compose issue' }).click()
+    const dialog = page.getByRole('dialog', { name: 'New issue' })
+    await expect(dialog).toBeVisible()
+    await dialog.getByLabel('Issue title').fill('Important title')
+    const description = dialog.getByRole('textbox', { name: 'Issue description' })
+    await description.click()
+    await page.keyboard.type('Long description I wrote. /')
+    const slashMenu = page.getByRole('listbox', { name: 'Insert block' })
+    await expect(slashMenu).toBeVisible()
+
+    // Escape closes only the slash menu: the modal and its draft stay.
+    await page.keyboard.press('Escape')
+    await expect(slashMenu).toBeHidden()
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByLabel('Issue title')).toHaveValue('Important title')
+    await expect(description).toContainText('Long description I wrote. /')
+
+    // A second Escape (no menu open) still closes the modal.
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+
+    // Cmd+Enter from the description submits without adding a hard break.
+    await page.locator('body').click()
+    await page.keyboard.press('c')
+    await expect(dialog).toBeVisible()
+    await dialog.getByLabel('Issue title').fill('Cmd enter from description')
+    await description.click()
+    await page.keyboard.press('ControlOrMeta+a')
+    await page.keyboard.press('Delete')
+    await page.keyboard.type('desc text')
+    await page.keyboard.press('ControlOrMeta+Enter')
+    await expect(dialog).toBeHidden()
+    await expect(row(page, 'Cmd enter from description')).toBeVisible()
+
+    const issues = (await listIssues(api, user, workspace.id)).items
+    const created = issues.find(issue => issue.title === 'Cmd enter from description')
+    expect(created?.description).toBe('<p>desc text</p>')
+  })
+
   test('groups by status, changes properties inline and switches tabs (ISS-3, ISS-13)', async ({
     api,
     user,
