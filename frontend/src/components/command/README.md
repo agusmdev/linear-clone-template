@@ -53,8 +53,8 @@ useShortcut('mod+k', () => setOpen((o) => !o), { allowInInputs: true })
 | `open`, `onOpenChange` | controlled | Selecting an item closes the palette unless the item has `keepOpen` |
 | `groups` | `CommandGroupData[]` | `{ heading, items: CommandItemData[] }`. Filtered by label + `keywords` |
 | `onSearchChange` | `(query) => void` | Every input change (also `""` on page change). The text resets on close without a call |
-| `searchGroups` | `CommandGroupData[]` | Async results; root page only |
-| `loading` | `boolean` | Shows "Searching…" |
+| `searchGroups` | `CommandGroupData[]` | Async results; root page only. Never filtered again, but counted as normal items: the first result is selected (Enter opens it) and the empty message hides |
+| `loading` | `boolean` | Shows "Searching…" and hides the empty message on the root page |
 | `placeholder`, `emptyMessage`, `className` | `string` | |
 
 `CommandItemData`: `{ id, label, icon?, shortcut?, keywords?, onSelect?, children?, childrenPlaceholder?, keepOpen? }`. `id` must be unique across all visible groups. An item with `children` opens a nested page; Backspace on an empty input or Escape goes back.
