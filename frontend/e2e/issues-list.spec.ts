@@ -11,6 +11,7 @@ import {
   createIssue,
   createProject,
   createWorkspace,
+  deleteIssue,
   expect,
   getIssue,
   getMe,
@@ -439,6 +440,47 @@ test.describe('issues list', () => {
     await expect(dialog).toBeHidden()
     const [issue] = (await listIssues(api, user, workspace.id)).items
     expect(issue).toMatchObject({ title: 'Drafted with a project', project_id: null })
+  })
+
+  test('a draft whose parent issue was deleted since still creates the issue (ISS-1)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { workspace, team, key } = await seedWorkspace(api, user)
+    const parent = await createIssue(api, user, { team_id: team.id, title: 'Short lived parent' })
+    const page = await loginAs(user)
+    await page.goto(`/${key}/team/ENG/issues`)
+    await expect(row(page, 'Short lived parent')).toBeVisible()
+
+    const dialog = page.getByRole('dialog', { name: 'New issue' })
+    await page.locator('body').click()
+    await page.keyboard.press('c')
+    await dialog.getByLabel('Issue title').fill('Drafted with a parent')
+    await dialog.getByRole('button', { name: /^Parent issue:/ }).click()
+    await page.getByRole('option', { name: /Short lived parent/ }).click()
+    await expect(dialog.getByRole('button', { name: 'Parent issue: ENG-1' })).toBeVisible()
+    await dialog.getByRole('button', { name: 'Close' }).click()
+    await page
+      .getByRole('alertdialog', { name: 'Save issue as draft?' })
+      .getByRole('button', { name: 'Save draft' })
+      .click()
+    await expect(dialog).toBeHidden()
+
+    await deleteIssue(api, user, parent.id)
+    await page.reload()
+    await expect(page.getByText('No issues yet')).toBeVisible()
+    await page.locator('body').click()
+    await page.keyboard.press('c')
+    await expect(dialog.getByLabel('Issue title')).toHaveValue('Drafted with a parent')
+    await expect(dialog.getByRole('button', { name: 'Parent issue: none' })).toBeVisible()
+
+    // The create sends what the chip shows (no parent), not the deleted id.
+    await page.keyboard.press('ControlOrMeta+Enter')
+    await expect(page.getByText('Created ENG-2')).toBeVisible()
+    await expect(dialog).toBeHidden()
+    const [issue] = (await listIssues(api, user, workspace.id)).items
+    expect(issue).toMatchObject({ title: 'Drafted with a parent', parent_id: null })
   })
 
   test('a new issue from the Backlog tab starts in the backlog (ISS-1, ISS-13)', async ({

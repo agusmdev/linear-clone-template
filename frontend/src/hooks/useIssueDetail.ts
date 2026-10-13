@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api } from '@/lib/api-client'
+import { api, ApiError } from '@/lib/api-client'
 import { API, buildIssuesListUrl } from '@/lib/api-endpoints'
 import { queryKeys } from '@/lib/query-keys'
 import { invalidateIssueCaches } from '@/hooks/useIssues'
@@ -31,6 +31,9 @@ export function useIssue(issueId: string | null) {
     queryKey: queryKeys.issues.detail(issueId ?? ''),
     queryFn: () => api.get<Issue>(API.ISSUES.DETAIL(issueId ?? '')),
     enabled: !!issueId,
+    // A deleted issue stays deleted: a 404 is final (no retry delay).
+    retry: (failureCount, error) =>
+      !(error instanceof ApiError && error.status === 404) && failureCount < 1,
   })
 }
 

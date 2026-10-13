@@ -81,6 +81,8 @@ export interface CreateIssueDialogProps {
   parentCandidates: Issue[]
   /** The parent issue from `defaults.parentId`, when it is loaded. */
   defaultParent?: Issue
+  /** `defaults.parentId` or the draft's parent when that issue no longer exists. */
+  missingParentId?: string
   /** Search text of the parent picker (to load matching candidates). */
   onParentSearchChange?: (search: string) => void
   /** Called when the team changes (to load its parent candidates). */
@@ -126,6 +128,7 @@ export function CreateIssueDialog({
   meId,
   parentCandidates,
   defaultParent,
+  missingParentId,
   onParentSearchChange,
   onTeamChange,
   onCreate,
@@ -191,8 +194,8 @@ export function CreateIssueDialog({
     let created = false
     try {
       // Send what the chips show: the server default state (Todo) can differ from
-      // the status chip, and a restored draft can hold a state, project or cycle
-      // deleted since (the chip shows none; the id would fail the create).
+      // the status chip, and a restored draft can hold a state, project, cycle or
+      // parent deleted since (the chip shows none; the id would fail the create).
       await onCreate(
         createIssueFormToPayload({
           ...data,
@@ -200,6 +203,7 @@ export function CreateIssueDialog({
           project_id: project?.id ?? null,
           cycle_id: cycle?.id ?? null,
           assignee_id: assignee?.user_id ?? null,
+          parent_id: data.parent_id === missingParentId ? null : data.parent_id,
         })
       )
       created = true

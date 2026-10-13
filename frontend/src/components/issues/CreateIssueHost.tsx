@@ -8,6 +8,7 @@ import { useCycleRefs, useProjectRefs } from '@/hooks/useIssueRefs'
 import { useCreateIssue, useIssuesPage, useWorkspaceStates } from '@/hooks/useIssues'
 import { clearIssueDraft, readIssueDraft, saveIssueDraft } from '@/features/issues/issue-draft'
 import type { CreateIssueFormData } from '@/features/issues/issue-schemas'
+import { ApiError } from '@/lib/api-client'
 import { toastApiError } from '@/lib/error-handler'
 import { CREATE_ISSUE_EVENT } from '@/lib/issue-events'
 import type { CreateIssueData, CreateIssueEventDetail } from '@/types/issue'
@@ -86,9 +87,13 @@ export function CreateIssueHost() {
     },
     open && !!activeTeamId
   )
-  const defaultParent = useIssue(
-    open ? (draft?.parent_id ?? session?.detail.parentId ?? null) : null
-  )
+  const defaultParentId = draft?.parent_id ?? session?.detail.parentId ?? null
+  const defaultParent = useIssue(open ? defaultParentId : null)
+  // A draft's parent deleted since: the create must leave it out (the chip shows none).
+  const missingParentId =
+    defaultParent.error instanceof ApiError && defaultParent.error.status === 404
+      ? (defaultParentId ?? undefined)
+      : undefined
   const create = useCreateIssue()
 
   const onCreate = async (data: CreateIssueData) => {
@@ -128,6 +133,7 @@ export function CreateIssueHost() {
       meId={ws.me.id}
       parentCandidates={parents.data?.items ?? []}
       defaultParent={defaultParent.data}
+      missingParentId={missingParentId}
       onParentSearchChange={setParentSearch}
       onTeamChange={setTeamId}
       onCreate={onCreate}
