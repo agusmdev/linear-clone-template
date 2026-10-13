@@ -1,6 +1,11 @@
 import { z } from 'zod'
 import type { CreateIssueData, IssuePriority } from '@/types/issue'
 
+/** Titles are one line: line breaks (and the spaces around them) become one space. */
+export function singleLineTitle(value: string): string {
+  return value.replace(/\s*[\r\n\v\f\u0085\u2028\u2029]+\s*/g, ' ')
+}
+
 export const createIssueSchema = z.object({
   team_id: z.string().min(1, 'Pick a team'),
   title: z
@@ -30,7 +35,7 @@ export type CreateIssueFormData = z.infer<typeof createIssueSchema>
 export function createIssueFormToPayload(data: CreateIssueFormData): CreateIssueData {
   const payload: CreateIssueData = {
     team_id: data.team_id,
-    title: data.title.trim(),
+    title: singleLineTitle(data.title).trim(),
     priority: data.priority as IssuePriority,
     label_ids: data.label_ids,
   }

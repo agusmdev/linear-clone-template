@@ -212,11 +212,30 @@ def test_create_in_a_state_sets_its_timestamp(
     ) == stamps
 
 
+def test_issue_title_is_saved_on_one_line(
+    owner: RegisteredUser, ws: dict[str, Any]
+) -> None:
+    # A pasted multi-line title is stored as one line, on create and on update.
+    issue = create_issue(owner.client, ws["team"]["id"], title="multi\nline title")
+    assert issue["title"] == "multi line title"
+
+    response = owner.client.patch(
+        f"/issues/{issue['id']}", json={"title": " first \r\n\n  second\u2028third "}
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["title"] == "first second third"
+    assert owner.client.get(f"/issues/{issue['id']}").json()["title"] == (
+        "first second third"
+    )
+
+
 @pytest.mark.parametrize(
     ("payload", "field"),
     [
         ({}, "title"),
         ({"title": ""}, "title"),
+        ({"title": "\n\r\n"}, "title"),
         ({"title": "x" * 501}, "title"),
         ({"title": "ok", "priority": 5}, "priority"),
         ({"title": "ok", "priority": -1}, "priority"),

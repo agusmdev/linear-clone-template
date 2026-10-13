@@ -261,6 +261,30 @@ test.describe('issues list', () => {
     expect(created?.description).toBe('<p>desc text</p>')
   })
 
+  test('keeps a pasted multi-line title on one line (ISS-1)', async ({ api, user, loginAs }) => {
+    const { workspace, key } = await seedWorkspace(api, user)
+    const page = await loginAs(user)
+    await page.goto(`/${key}/team/ENG/issues`)
+    await expect(page.getByText('No issues yet')).toBeVisible()
+
+    await page.locator('body').click()
+    await page.keyboard.press('c')
+    const dialog = page.getByRole('dialog', { name: 'New issue' })
+    const title = dialog.getByLabel('Issue title')
+    // fill() sets the value with one input event, like a paste.
+    await title.fill('multi\nline title')
+    await expect(title).toHaveValue('multi line title')
+    // Line breaks with spaces around them become one space.
+    await title.fill('first \r\n\n  second')
+    await expect(title).toHaveValue('first second')
+    await title.press('ControlOrMeta+Enter')
+    await expect(dialog).toBeHidden()
+    await expect(row(page, 'first second')).toBeVisible()
+
+    const [issue] = (await listIssues(api, user, workspace.id)).items
+    expect(issue.title).toBe('first second')
+  })
+
   test('groups by status, changes properties inline and switches tabs (ISS-3, ISS-13)', async ({
     api,
     user,
