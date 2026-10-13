@@ -227,13 +227,14 @@ export function IssuePropertiesPanel({
                 issue.labels.map(label => (
                   <span
                     key={label.id}
-                    className="inline-flex h-5 items-center gap-1.5 rounded-full border border-border px-2 text-mini"
+                    title={label.name}
+                    className="inline-flex h-5 max-w-full min-w-0 items-center gap-1.5 rounded-full border border-border px-2 text-mini"
                   >
                     <span
-                      className="size-2 rounded-full"
+                      className="size-2 shrink-0 rounded-full"
                       style={{ backgroundColor: label.color }}
                     />
-                    {label.name}
+                    <span className="truncate">{label.name}</span>
                   </span>
                 ))
               )}
