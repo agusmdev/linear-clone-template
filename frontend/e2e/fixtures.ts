@@ -37,7 +37,13 @@ import {
 } from '@playwright/test'
 import { AUTH_TOKEN_KEY } from '../src/lib/auth'
 import type { AuthSessionResponse } from '../src/types/auth'
+import type { CreateIssueData, Issue, UpdateIssueData } from '../src/types/issue'
 import type { CreateItemData, Item, ItemsResponse } from '../src/types/item'
+import type { Label } from '../src/types/label'
+import type { Page as ApiPage } from '../src/types/page'
+import type { Team, WorkflowState } from '../src/types/team'
+import type { User } from '../src/types/user'
+import type { CreateWorkspaceData, Workspace, WorkspaceMember } from '../src/types/workspace'
 import { BACKEND_URL, FRONTEND_URL } from './support/stack'
 
 export { expect }
@@ -120,6 +126,157 @@ export async function listItems(api: APIRequestContext, owner: TestUser): Promis
   const response = await api.get('/items?size=100', { headers: authHeaders(owner) })
   await expectOk(response, 'GET /items')
   return ((await response.json()) as ItemsResponse).items
+}
+
+export async function getMe(api: APIRequestContext, user: TestUser): Promise<User> {
+  const response = await api.get('/users/me', { headers: authHeaders(user) })
+  await expectOk(response, 'GET /users/me')
+  return (await response.json()) as User
+}
+
+/** A unique URL key (lowercase letters, digits, dashes). */
+export function uniqueUrlKey(label = 'ws'): string {
+  return `${label}-${randomUUID().slice(0, 8)}`
+}
+
+/** POST /workspaces: the workspace comes with a first team, its 6 states and 3 labels. */
+export async function createWorkspace(
+  api: APIRequestContext,
+  owner: TestUser,
+  data: Partial<CreateWorkspaceData> = {}
+): Promise<Workspace> {
+  const payload: CreateWorkspaceData = { name: 'Acme', url_key: uniqueUrlKey(), ...data }
+  const response = await api.post('/workspaces', { data: payload, headers: authHeaders(owner) })
+  await expectOk(response, 'POST /workspaces')
+  return (await response.json()) as Workspace
+}
+
+export async function listWorkspaces(api: APIRequestContext, user: TestUser): Promise<Workspace[]> {
+  const response = await api.get('/workspaces', { headers: authHeaders(user) })
+  await expectOk(response, 'GET /workspaces')
+  return (await response.json()) as Workspace[]
+}
+
+export async function getWorkspaceByUrlKey(
+  api: APIRequestContext,
+  user: TestUser,
+  urlKey: string
+): Promise<Workspace> {
+  const response = await api.get(`/workspaces/${urlKey}`, { headers: authHeaders(user) })
+  await expectOk(response, 'GET /workspaces/{url_key}')
+  return (await response.json()) as Workspace
+}
+
+export async function listMembers(
+  api: APIRequestContext,
+  user: TestUser,
+  workspaceId: string
+): Promise<WorkspaceMember[]> {
+  const response = await api.get(`/workspaces/${workspaceId}/members`, {
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'GET /workspaces/{id}/members')
+  return (await response.json()) as WorkspaceMember[]
+}
+
+export async function listTeams(
+  api: APIRequestContext,
+  user: TestUser,
+  workspaceId: string
+): Promise<Team[]> {
+  const response = await api.get(`/workspaces/${workspaceId}/teams`, {
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'GET /workspaces/{id}/teams')
+  return (await response.json()) as Team[]
+}
+
+export async function listLabels(
+  api: APIRequestContext,
+  user: TestUser,
+  workspaceId: string
+): Promise<Label[]> {
+  const response = await api.get(`/workspaces/${workspaceId}/labels`, {
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'GET /workspaces/{id}/labels')
+  return (await response.json()) as Label[]
+}
+
+export async function listStates(
+  api: APIRequestContext,
+  user: TestUser,
+  teamId: string
+): Promise<WorkflowState[]> {
+  const response = await api.get(`/teams/${teamId}/states`, { headers: authHeaders(user) })
+  await expectOk(response, 'GET /teams/{id}/states')
+  return (await response.json()) as WorkflowState[]
+}
+
+export async function createIssue(
+  api: APIRequestContext,
+  user: TestUser,
+  data: CreateIssueData
+): Promise<Issue> {
+  const response = await api.post('/issues', { data, headers: authHeaders(user) })
+  await expectOk(response, 'POST /issues')
+  return (await response.json()) as Issue
+}
+
+/** GET /issues?workspace_id=…: the first page (up to 100 issues, archived left out). */
+export async function listIssues(
+  api: APIRequestContext,
+  user: TestUser,
+  workspaceId: string
+): Promise<ApiPage<Issue>> {
+  const response = await api.get(`/issues?workspace_id=${workspaceId}&size=100`, {
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'GET /issues')
+  return (await response.json()) as ApiPage<Issue>
+}
+
+export async function getIssue(
+  api: APIRequestContext,
+  user: TestUser,
+  issueId: string
+): Promise<Issue> {
+  const response = await api.get(`/issues/${issueId}`, { headers: authHeaders(user) })
+  await expectOk(response, 'GET /issues/{id}')
+  return (await response.json()) as Issue
+}
+
+export async function getIssueByIdentifier(
+  api: APIRequestContext,
+  user: TestUser,
+  workspaceId: string,
+  identifier: string
+): Promise<Issue> {
+  const response = await api.get(`/workspaces/${workspaceId}/issues/by-identifier/${identifier}`, {
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'GET /workspaces/{id}/issues/by-identifier/{identifier}')
+  return (await response.json()) as Issue
+}
+
+export async function updateIssue(
+  api: APIRequestContext,
+  user: TestUser,
+  issueId: string,
+  data: UpdateIssueData
+): Promise<Issue> {
+  const response = await api.patch(`/issues/${issueId}`, { data, headers: authHeaders(user) })
+  await expectOk(response, 'PATCH /issues/{id}')
+  return (await response.json()) as Issue
+}
+
+export async function deleteIssue(
+  api: APIRequestContext,
+  user: TestUser,
+  issueId: string
+): Promise<void> {
+  const response = await api.delete(`/issues/${issueId}`, { headers: authHeaders(user) })
+  await expectOk(response, 'DELETE /issues/{id}')
 }
 
 // ---------------------------------------------------------------------------

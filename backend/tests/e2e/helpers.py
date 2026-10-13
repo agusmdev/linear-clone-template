@@ -70,6 +70,75 @@ def create_item(
     return response.json()
 
 
+def unique_url_key(prefix: str = "ws") -> str:
+    """Return a workspace URL key no other test uses."""
+    return f"{prefix}-{uuid.uuid4().hex[:10]}"
+
+
+def create_workspace(
+    client: httpx.Client,
+    name: str = "Acme",
+    url_key: str | None = None,
+    **extra: Any,
+) -> dict[str, Any]:
+    """Create a workspace through POST /workspaces and return the response body."""
+    payload: dict[str, Any] = {
+        "name": name,
+        "url_key": url_key or unique_url_key(),
+        **extra,
+    }
+    response = client.post("/workspaces", json=payload)
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+def workspace_team(client: httpx.Client, workspace_id: str) -> dict[str, Any]:
+    """Return the first team of the workspace (the default team after creation)."""
+    response = client.get(f"/workspaces/{workspace_id}/teams")
+    assert response.status_code == 200, response.text
+    return response.json()[0]
+
+
+def team_states(client: httpx.Client, team_id: str) -> dict[str, dict[str, Any]]:
+    """Return the team's workflow states by name ("Todo", "Done", ...)."""
+    response = client.get(f"/teams/{team_id}/states")
+    assert response.status_code == 200, response.text
+    return {state["name"]: state for state in response.json()}
+
+
+def workspace_labels(
+    client: httpx.Client, workspace_id: str
+) -> dict[str, dict[str, Any]]:
+    """Return the workspace's labels by name ("Bug", "Feature", ...)."""
+    response = client.get(f"/workspaces/{workspace_id}/labels")
+    assert response.status_code == 200, response.text
+    return {label["name"]: label for label in response.json()}
+
+
+def create_issue(
+    client: httpx.Client, team_id: str, title: str = "Issue", **extra: Any
+) -> dict[str, Any]:
+    """Create an issue through POST /issues and return the response body."""
+    response = client.post(
+        "/issues", json={"team_id": team_id, "title": title, **extra}
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+def join_workspace(db: Database, workspace_id: str, user_id: str) -> None:
+    """Add a user to a workspace as a member.
+
+    Invites (POST /workspaces/{id}/members) are not implemented yet; when they
+    are, use the endpoint instead.
+    """
+    db.execute(
+        "INSERT INTO workspace_member (id, workspace_id, user_id, role, created_at, "
+        "updated_at) VALUES (gen_random_uuid(), %s, %s, 'member', now(), now())",
+        (workspace_id, user_id),
+    )
+
+
 def login(api: httpx.Client, email: str, password: str) -> httpx.Response:
     """Call POST /auth/login and return the raw response."""
     return api.post("/auth/login", json={"email": email, "password": password})

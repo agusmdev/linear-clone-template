@@ -1,4 +1,4 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { AppMark } from '@/components/Navigation'
 
 interface AuthFormShellProps {
   title: string
@@ -7,20 +7,18 @@ interface AuthFormShellProps {
   footer: React.ReactNode
 }
 
+/** Linear-style auth page: a narrow centered column, no card. */
 export function AuthFormShell({ title, description, children, footer }: AuthFormShellProps) {
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-      <div className="w-full max-w-md">
-        <Card className="border-border">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl text-foreground">{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {children}
-            {footer}
-          </CardContent>
-        </Card>
+    <div className="flex flex-1 items-center justify-center px-4 py-16">
+      <div className="flex w-full max-w-[340px] flex-col items-center">
+        <AppMark className="mb-6 size-10" />
+        <h1 className="text-center text-[20px] font-semibold tracking-tight text-foreground">
+          {title}
+        </h1>
+        <p className="mt-1.5 mb-8 text-center text-ui text-text-secondary">{description}</p>
+        <div className="w-full">{children}</div>
+        <div className="w-full">{footer}</div>
       </div>
     </div>
   )

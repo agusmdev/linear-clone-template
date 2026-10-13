@@ -1,0 +1,366 @@
+"""Issue service - business logic layer.
+
+Every method checks that the user is a member of the issue's workspace (a
+non-member gets the 404 of a missing issue). Writes validate that every
+referenced row (state, assignee, labels, project, cycle, parent) belongs to
+the same workspace or team, and log one IssueActivity row per changed field.
+"""
+
+import re
+import uuid
+from datetime import UTC, datetime
+from typing import Any
+
+from fastapi_pagination import Page, Params
+
+from app.modules.issues.filters import IssueFilter
+from app.modules.issues.models import Issue, IssueActivityAction
+from app.modules.issues.repository import IssueRepository
+from app.modules.issues.schemas import IssueCreate, IssueUpdate
+from app.modules.labels.models import Label
+from app.modules.labels.service import LabelService
+from app.modules.teams.models import Team, WorkflowState, WorkflowStateType
+from app.modules.teams.service import TeamService
+from app.modules.workspaces.exceptions import InvalidReferenceError
+from app.modules.workspaces.service import WorkspaceService
+from app.repositories.base_repository import QueryOptions
+from app.repositories.exceptions import NotFoundError
+from app.services.base_crud_service import BaseService
+from app.user.models import User
+
+_IDENTIFIER = re.compile(r"^([A-Za-z]{2,5})-(\d{1,9})$")
+
+# Fields copied to the issue as they are, with their activity value.
+_PLAIN_FIELDS = ("title", "priority", "estimate", "due_date")
+
+
+def _text(value: Any) -> str | None:
+    return None if value is None else str(value)
+
+
+def state_timestamps(
+    issue: Issue | None, new_type: WorkflowStateType, now: datetime
+) -> dict[str, datetime | None]:
+    """started_at / completed_at / canceled_at after a move to a state of ``new_type``."""
+    started_at = issue.started_at if issue else None
+    if new_type in (WorkflowStateType.backlog, WorkflowStateType.unstarted):
+        return {"started_at": None, "completed_at": None, "canceled_at": None}
+    if new_type == WorkflowStateType.started:
+        return {
+            "started_at": started_at or now,
+            "completed_at": None,
+            "canceled_at": None,
+        }
+    if new_type == WorkflowStateType.completed:
+        return {"started_at": started_at, "completed_at": now, "canceled_at": None}
+    return {"started_at": started_at, "completed_at": None, "canceled_at": now}
+
+
+class IssueService(BaseService[Issue]):
+    def __init__(
+        self,
+        repo: IssueRepository,
+        workspace_service: WorkspaceService,
+        team_service: TeamService,
+        label_service: LabelService,
+    ) -> None:
+        self.repo = repo
+        self.workspace_service = workspace_service
+        self.team_service = team_service
+        self.label_service = label_service
+
+    # --- reads -------------------------------------------------------------
+
+    async def get_for_member(self, issue_id: uuid.UUID, *, user_id: uuid.UUID) -> Issue:
+        issue = await self.repo.get_full(issue_id)
+        detail = f"Issue {issue_id} not found"
+        if issue is None:
+            raise NotFoundError(detail=detail)
+        try:
+            await self.workspace_service.require_member(issue.workspace_id, user_id)
+        except NotFoundError as err:
+            raise NotFoundError(detail=detail) from err
+        self._log_entity(issue.id)
+        return issue
+
+    async def get_by_identifier(
+        self, workspace_id: uuid.UUID, identifier: str, *, user_id: uuid.UUID
+    ) -> Issue:
+        await self.workspace_service.require_member(workspace_id, user_id)
+        detail = f"Issue {identifier} not found"
+        match = _IDENTIFIER.match(identifier)
+        if match is None:
+            raise NotFoundError(detail=detail)
+        team = await self.team_service.get_by_key(workspace_id, match.group(1))
+        if team is None:
+            raise NotFoundError(detail=detail)
+        issue = await self.repo.get_by_number(team.id, int(match.group(2)))
+        if issue is None:
+            raise NotFoundError(detail=detail)
+        self._log_entity(issue.id)
+        return issue
+
+    async def list_issues(
+        self,
+        workspace_id: uuid.UUID,
+        pagination_params: Params,
+        issue_filter: IssueFilter,
+        *,
+        user_id: uuid.UUID,
+    ) -> Page[Issue]:
+        await self.workspace_service.require_member(workspace_id, user_id)
+        issue_filter.resolve_me(user_id)
+        base_query = self.repo.select_full().where(Issue.workspace_id == workspace_id)
+        return await self.repo.get_all_paginated(
+            pagination_params, issue_filter, QueryOptions(base_query=base_query)
+        )
+
+    # --- validation helpers --------------------------------------------------
+
+    async def _state_of_team(self, state_id: uuid.UUID, team: Team) -> WorkflowState:
+        state = await self.team_service.get_state(state_id)
+        if state is None or state.team_id != team.id:
+            raise InvalidReferenceError(
+                detail=f"State {state_id} is not a state of team {team.key}"
+            )
+        return state
+
+    async def _check_assignee(
+        self, workspace_id: uuid.UUID, assignee_id: uuid.UUID | None
+    ) -> None:
+        if assignee_id is not None and not await self.workspace_service.are_members(
+            workspace_id, {assignee_id}
+        ):
+            raise InvalidReferenceError(
+                detail=f"User {assignee_id} is not a member of this workspace"
+            )
+
+    async def _labels(
+        self, workspace_id: uuid.UUID, label_ids: set[uuid.UUID]
+    ) -> list[Label]:
+        labels = await self.label_service.labels_of_workspace(workspace_id, label_ids)
+        if labels is None:
+            raise InvalidReferenceError(
+                detail="Every label must be a label of this workspace"
+            )
+        return labels
+
+    async def _project_name(
+        self, workspace_id: uuid.UUID, project_id: uuid.UUID | None
+    ) -> str | None:
+        if project_id is None:
+            return None
+        project = await self.repo.get_project(project_id)
+        if project is None or project.workspace_id != workspace_id:
+            raise InvalidReferenceError(
+                detail=f"Project {project_id} is not in this workspace"
+            )
+        return project.name
+
+    async def _cycle_name(
+        self, team_id: uuid.UUID, cycle_id: uuid.UUID | None
+    ) -> str | None:
+        if cycle_id is None:
+            return None
+        cycle = await self.repo.get_cycle(cycle_id)
+        if cycle is None or cycle.team_id != team_id:
+            raise InvalidReferenceError(
+                detail=f"Cycle {cycle_id} is not a cycle of the issue's team"
+            )
+        return cycle.name or f"Cycle {cycle.number}"
+
+    async def _parent_identifier(
+        self,
+        workspace_id: uuid.UUID,
+        parent_id: uuid.UUID | None,
+        issue_id: uuid.UUID | None = None,
+    ) -> str | None:
+        """Validate a parent; for an existing issue, refuse a cycle in the tree."""
+        if parent_id is None:
+            return None
+        parent = await self.repo.get_full(parent_id)
+        if parent is None or parent.workspace_id != workspace_id:
+            raise InvalidReferenceError(
+                detail=f"Parent issue {parent_id} is not in this workspace"
+            )
+        if issue_id is not None:
+            ancestor: uuid.UUID | None = parent_id
+            seen: set[uuid.UUID] = set()
+            while ancestor is not None and ancestor not in seen:
+                if ancestor == issue_id:
+                    raise InvalidReferenceError(
+                        detail="An issue cannot be its own parent or ancestor"
+                    )
+                seen.add(ancestor)
+                ancestor = await self.repo.parent_id_of(ancestor)
+        return parent.identifier
+
+    @staticmethod
+    def _user_label(user: User | None) -> str | None:
+        if user is None:
+            return None
+        return user.display_name or user.email
+
+    # --- writes ------------------------------------------------------------
+
+    async def create_issue(self, data: IssueCreate, *, user_id: uuid.UUID) -> Issue:
+        team = await self.team_service.get_for_member(data.team_id, user_id=user_id)
+        workspace_id = team.workspace_id
+        if data.state_id is not None:
+            state = await self._state_of_team(data.state_id, team)
+        else:
+            state = await self.team_service.default_state(team.id)
+        await self._check_assignee(workspace_id, data.assignee_id)
+        label_ids = set(data.label_ids)
+        await self._labels(workspace_id, label_ids)
+        await self._project_name(workspace_id, data.project_id)
+        await self._cycle_name(team.id, data.cycle_id)
+        await self._parent_identifier(workspace_id, data.parent_id)
+
+        now = datetime.now(tz=UTC)
+        values: dict[str, Any] = {
+            **data.model_dump(exclude={"label_ids", "state_id", "sort_order"}),
+            "workspace_id": workspace_id,
+            "state_id": state.id,
+            "creator_id": user_id,
+            "sort_order": (
+                data.sort_order
+                if data.sort_order is not None
+                else await self.repo.next_sort_order(team.id)
+            ),
+            **state_timestamps(None, state.type, now),
+        }
+        subscribers = {user_id} | ({data.assignee_id} if data.assignee_id else set())
+        issue = await self.repo.create_issue(
+            values,
+            label_ids=label_ids,
+            subscriber_ids=subscribers,
+            activities=[{"actor_id": user_id, "action": IssueActivityAction.created}],
+        )
+        self._log_entity(issue.id)
+        return issue
+
+    async def update_issue(
+        self, issue_id: uuid.UUID, data: IssueUpdate, *, user_id: uuid.UUID
+    ) -> Issue:
+        issue = await self.get_for_member(issue_id, user_id=user_id)
+        changes = data.model_dump(exclude_unset=True)
+        values: dict[str, Any] = {}
+        activities: list[dict[str, Any]] = []
+        subscribers: set[uuid.UUID] = set()
+        label_ids: set[uuid.UUID] | None = None
+        now = datetime.now(tz=UTC)
+
+        def log(field: str, old: Any, new: Any) -> None:
+            activities.append(
+                {
+                    "actor_id": user_id,
+                    "action": IssueActivityAction.updated,
+                    "field": field,
+                    "from_value": _text(old),
+                    "to_value": _text(new),
+                }
+            )
+
+        for field in _PLAIN_FIELDS:
+            if field in changes and changes[field] != getattr(issue, field):
+                values[field] = changes[field]
+                log(field, getattr(issue, field), changes[field])
+
+        if "description" in changes and changes["description"] != issue.description:
+            values["description"] = changes["description"]
+            # The HTML can be long: the activity only says that it changed.
+            log("description", None, None)
+
+        if "sort_order" in changes and changes["sort_order"] != issue.sort_order:
+            # Reordering is not shown in the history.
+            values["sort_order"] = changes["sort_order"]
+
+        if "state_id" in changes and changes["state_id"] != issue.state_id:
+            team = await self.team_service.get_for_member(
+                issue.team_id, user_id=user_id
+            )
+            state = await self._state_of_team(changes["state_id"], team)
+            values["state_id"] = state.id
+            values.update(state_timestamps(issue, state.type, now))
+            log("state", issue.state.name, state.name)
+
+        if "assignee_id" in changes and changes["assignee_id"] != issue.assignee_id:
+            new_assignee = changes["assignee_id"]
+            await self._check_assignee(issue.workspace_id, new_assignee)
+            values["assignee_id"] = new_assignee
+            new_user = None
+            if new_assignee is not None:
+                subscribers.add(new_assignee)
+                new_user = await self.repo.get_user(new_assignee)
+            log(
+                "assignee", self._user_label(issue.assignee), self._user_label(new_user)
+            )
+
+        if "label_ids" in changes:
+            new_ids = set(changes["label_ids"])
+            old_ids = {label.id for label in issue.labels}
+            if new_ids != old_ids:
+                new_labels = await self._labels(issue.workspace_id, new_ids)
+                label_ids = new_ids
+                log(
+                    "labels",
+                    ", ".join(label.name for label in issue.labels) or None,
+                    ", ".join(sorted(label.name for label in new_labels)) or None,
+                )
+
+        if "project_id" in changes and changes["project_id"] != issue.project_id:
+            new_name = await self._project_name(
+                issue.workspace_id, changes["project_id"]
+            )
+            old_name = await self._project_name(issue.workspace_id, issue.project_id)
+            values["project_id"] = changes["project_id"]
+            log("project", old_name, new_name)
+
+        if "cycle_id" in changes and changes["cycle_id"] != issue.cycle_id:
+            new_name = await self._cycle_name(issue.team_id, changes["cycle_id"])
+            old_name = await self._cycle_name(issue.team_id, issue.cycle_id)
+            values["cycle_id"] = changes["cycle_id"]
+            log("cycle", old_name, new_name)
+
+        if "parent_id" in changes and changes["parent_id"] != issue.parent_id:
+            new_parent = await self._parent_identifier(
+                issue.workspace_id, changes["parent_id"], issue.id
+            )
+            old_parent = await self._parent_identifier(
+                issue.workspace_id, issue.parent_id
+            )
+            values["parent_id"] = changes["parent_id"]
+            log("parent", old_parent, new_parent)
+
+        if "archived" in changes and changes["archived"] != (
+            issue.archived_at is not None
+        ):
+            archived = changes["archived"]
+            values["archived_at"] = now if archived else None
+            activities.append(
+                {
+                    "actor_id": user_id,
+                    "action": IssueActivityAction.archived
+                    if archived
+                    else IssueActivityAction.unarchived,
+                }
+            )
+
+        if not values and label_ids is None:
+            return issue
+        values["updated_at"] = now
+        updated = await self.repo.update_issue(
+            issue.id,
+            values,
+            label_ids=label_ids,
+            subscriber_ids=subscribers,
+            activities=activities,
+        )
+        self._log_entity(issue.id)
+        return updated
+
+    async def delete_issue(self, issue_id: uuid.UUID, *, user_id: uuid.UUID) -> None:
+        await self.get_for_member(issue_id, user_id=user_id)
+        await self.repo.delete(issue_id)
+        self._log_entity(issue_id)

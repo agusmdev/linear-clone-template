@@ -22,7 +22,9 @@ const TanStackRouterDevtoolsPanel = lazyDev(() =>
 import { Layout } from '@/components/Layout'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Toaster } from '@/components/ui/sonner'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { THEME_INIT_SCRIPT, ThemeProvider } from '@/contexts/ThemeContext'
 import { initWebVitals } from '@/lib/web-vitals'
 
 import appCss from '@/styles/app.css?url'
@@ -38,10 +40,20 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'Full-Stack Template',
+        title: 'Linear Clone',
+      },
+      {
+        name: 'theme-color',
+        content: '#08090a',
       },
     ],
     links: [
+      { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+      { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
+      {
+        rel: 'stylesheet',
+        href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap',
+      },
       {
         rel: 'stylesheet',
         href: appCss,
@@ -72,33 +84,41 @@ function RootDocument() {
   }, [])
 
   return (
-    <html lang="en">
+    // The theme class is set before paint by THEME_INIT_SCRIPT, so it can differ
+    // from the server's "dark": suppressHydrationWarning covers that attribute.
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
+        {/* Static string from our code: applies the stored theme before the first paint. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <HeadContent />
       </head>
       <body>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider queryClient={queryClient}>
-            <ErrorBoundary>
-              <Layout />
-            </ErrorBoundary>
-            <Toaster />
-            <React.Suspense>
-              <ReactQueryDevtools initialIsOpen={false} />
-              <TanStackDevtools
-                config={{
-                  position: 'bottom-right',
-                }}
-                plugins={[
-                  {
-                    name: 'Tanstack Router',
-                    render: <TanStackRouterDevtoolsPanel />,
-                  },
-                ]}
-              />
-            </React.Suspense>
-          </AuthProvider>
-        </QueryClientProvider>
+        <ThemeProvider>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider queryClient={queryClient}>
+              <TooltipProvider>
+                <ErrorBoundary>
+                  <Layout />
+                </ErrorBoundary>
+              </TooltipProvider>
+              <Toaster />
+              <React.Suspense>
+                <ReactQueryDevtools initialIsOpen={false} />
+                <TanStackDevtools
+                  config={{
+                    position: 'bottom-right',
+                  }}
+                  plugins={[
+                    {
+                      name: 'Tanstack Router',
+                      render: <TanStackRouterDevtoolsPanel />,
+                    },
+                  ]}
+                />
+              </React.Suspense>
+            </AuthProvider>
+          </QueryClientProvider>
+        </ThemeProvider>
         <Scripts />
       </body>
     </html>

@@ -46,6 +46,15 @@ tests/
 └── e2e/              # The only test folder: conftest.py (fixtures), helpers.py, test_<feature>.py
 ```
 
+### Linear-clone modules
+
+`workspaces`, `teams`, `labels`, `issues` have the full API; `projects`, `cycles`, `documents`, `notifications`, `favorites` have models only. The endpoint contract (implemented and planned) is [../docs/API.md](../docs/API.md).
+
+- Access rule: every workspace-scoped service calls `WorkspaceService.require_member(workspace_id, user_id)` (`app/modules/workspaces/service.py`); a non-member gets the 404 of a missing row. Bad cross-references (a state of another team, a label of another workspace, ...) raise `InvalidReferenceError` (400 `invalid_reference`, `app/modules/workspaces/exceptions.py`).
+- These modules use each other's services, so their `__init__.py` re-exports only models and schemas (else import cycles). Import services, dependencies and routers from their submodules.
+- Multi-row writes (workspace bootstrap, issue create/update) run in one repository method with one commit (`WorkspaceRepository.create_with_defaults`, `IssueRepository.create_issue` / `update_issue`).
+- Enum columns use `str_enum(EnumCls, "type_name")` from `app/database/enums.py` (stores the lowercase values).
+
 New cross-cutting HTTP middleware goes in `app/middlewares/` (create it when needed). Middleware tied to one feature stays in its package (for example `app/core/logging/middleware.py`).
 
 ## Architecture

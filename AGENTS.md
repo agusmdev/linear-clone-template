@@ -69,6 +69,8 @@ make pre-commit-install       # ruff, frontend eslint + prettier, no-mock guards
 |---|---|
 | `AGENTS.md` | This file: the entry point for agents |
 | `README.md` | Human getting-started guide, environment variables, make targets |
+| `FEATURES.md` | Product spec of the Linear clone (feature IDs such as `WS-3`, `ISS-7`) |
+| `docs/API.md` | API contract backend <-> frontend: every endpoint, IMPLEMENTED or PLANNED, with its shapes |
 | `.claude/skills/project-standards/` | The project standards (`SKILL.md` + `references/`). Mandatory reading |
 | `.env.example` | Template for the root `.env`. Docker Compose reads `.env` |
 | `.gitignore` | Ignores `.env` files (not `.env.example`), editor and OS files |
@@ -83,6 +85,7 @@ make pre-commit-install       # ruff, frontend eslint + prettier, no-mock guards
 | `backend/pyproject.toml`, `backend/uv.lock` | Python dependencies (exact pins), ruff and pytest config |
 | `backend/Dockerfile`, `backend/alembic.ini`, `backend/Makefile` | Image build, Alembic config, backend-only commands |
 | `frontend/` | React app |
+| `frontend/DESIGN.md` | Design system: tokens (dark/light theme) and the props of every Linear component |
 | `frontend/src/` | `routes/` (file-based pages; `_authed/` = sign-in required), `components/` (`ui/` = shadcn), `hooks/`, `lib/` (API client, endpoints, auth), `features/`, `contexts/`, `types/`, `styles/` |
 | `frontend/e2e/` | Playwright full-stack suite (`fixtures.ts`, `*.spec.ts`, `guards.spec.ts`, `support/`) |
 | `frontend/public/` | Static files (`favicon.ico`, `robots.txt`) |

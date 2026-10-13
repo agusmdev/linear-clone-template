@@ -37,12 +37,12 @@ src/
 │   ├── index.tsx, login.tsx, register.tsx
 │   └── oauth/           # callback.tsx (stores the session), error.tsx
 ├── components/          # Flat; dialogs end in *Dialog. ui/ = shadcn components only
-├── contexts/            # AuthContext (token state, login, logout)
+├── contexts/            # AuthContext (token state, login, logout), ThemeContext (dark/light)
 ├── features/<name>/     # Zod schemas and form actions per feature
 ├── hooks/               # Flat: useItems.ts, useDebounce.ts, useHydrated.ts, useAuthSubmit.ts
 ├── lib/                 # Generic infrastructure: api-client, api-endpoints, auth, config, error-handler, query-keys, utils
 ├── types/               # Shared TS types
-└── styles/app.css       # Tailwind + theme tokens (dark by default)
+└── styles/app.css       # Tailwind + Linear design tokens (dark default, light theme)
 e2e/                     # Playwright suite: fixtures.ts, *.spec.ts, guards.spec.ts, support/
 ```
 
@@ -80,6 +80,8 @@ Show errors with `toastApiError(error, 'Could not save item')` from `src/lib/err
 - `/login?redirect=` accepts only in-app paths.
 
 ## Forms and UI
+
+- **Design system: read [DESIGN.md](DESIGN.md) before you build a page.** It lists the tokens and the reusable components (`AppShell`, `Sidebar`, `PageHeader`, `StatusIcon`, `PriorityIcon`, `UserAvatar`, `PropertyPicker`, `IconButton`, ...).
 
 - Zod schema in `features/<feature>/<entity>-schemas.ts` (e.g. `features/items/item-schemas.ts`) + `useForm({ resolver: zodResolver(schema) })`.
 - Use `FormField`/`FormItem`/`FormLabel`/`FormControl` from `components/ui/form.tsx`: `FormControl` puts the id and aria attributes on its one child, so the label names the input (tests use `getByLabel`).

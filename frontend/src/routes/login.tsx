@@ -46,15 +46,12 @@ function Login() {
 
   return (
     <AuthFormShell
-      title="Sign in"
-      description="Enter your email and password to access your account"
+      title="Log in to Linear Clone"
+      description="Enter your email and password to continue"
       footer={
-        <div className="mt-4 text-center text-sm text-muted-foreground">
+        <div className="mt-6 text-center text-ui text-text-secondary">
           Don&apos;t have an account?{' '}
-          <Link
-            to="/register"
-            className="text-primary hover:text-primary/80 underline-offset-4 hover:underline"
-          >
+          <Link to="/register" className="text-foreground underline-offset-4 hover:underline">
             Create account
           </Link>
         </div>
@@ -67,11 +64,11 @@ function Login() {
           action="#"
           noValidate
           onSubmit={form.handleSubmit(onSubmit)}
-          className="space-y-4"
+          className="space-y-3"
         >
           <EmailField control={form.control} name="email" disabled={disabled} />
           <PasswordField control={form.control} name="password" disabled={disabled} />
-          <Button type="submit" className="w-full" disabled={disabled}>
+          <Button type="submit" size="lg" className="mt-2 w-full" disabled={disabled}>
             {isLoading ? 'Signing in...' : 'Sign in'}
           </Button>
         </form>

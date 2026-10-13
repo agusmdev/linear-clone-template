@@ -15,9 +15,16 @@ export function EmailField<T extends FieldValues>({ control, name, disabled }: A
       name={name}
       render={({ field }) => (
         <FormItem>
-          <FormLabel className="text-muted-foreground">Email</FormLabel>
+          <FormLabel className="text-text-secondary">Email</FormLabel>
           <FormControl>
-            <Input type="email" placeholder="john@example.com" {...field} disabled={disabled} />
+            <Input
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              className="h-10"
+              {...field}
+              disabled={disabled}
+            />
           </FormControl>
           <FormMessage />
         </FormItem>
@@ -28,6 +35,7 @@ export function EmailField<T extends FieldValues>({ control, name, disabled }: A
 
 interface PasswordFieldProps<T extends FieldValues> extends AuthFieldProps<T> {
   label?: string
+  autoComplete?: 'current-password' | 'new-password'
 }
 
 export function PasswordField<T extends FieldValues>({
@@ -35,6 +43,7 @@ export function PasswordField<T extends FieldValues>({
   name,
   disabled,
   label = 'Password',
+  autoComplete = 'current-password',
 }: PasswordFieldProps<T>) {
   return (
     <FormField
@@ -42,9 +51,41 @@ export function PasswordField<T extends FieldValues>({
       name={name}
       render={({ field }) => (
         <FormItem>
-          <FormLabel className="text-muted-foreground">{label}</FormLabel>
+          <FormLabel className="text-text-secondary">{label}</FormLabel>
           <FormControl>
-            <Input type="password" placeholder="••••••••" {...field} disabled={disabled} />
+            <Input
+              type="password"
+              autoComplete={autoComplete}
+              placeholder="••••••••"
+              className="h-10"
+              {...field}
+              disabled={disabled}
+            />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  )
+}
+
+export function NameField<T extends FieldValues>({ control, name, disabled }: AuthFieldProps<T>) {
+  return (
+    <FormField
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel className="text-text-secondary">Name</FormLabel>
+          <FormControl>
+            <Input
+              type="text"
+              autoComplete="name"
+              placeholder="Ada Lovelace"
+              className="h-10"
+              {...field}
+              disabled={disabled}
+            />
           </FormControl>
           <FormMessage />
         </FormItem>

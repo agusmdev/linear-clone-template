@@ -12,7 +12,14 @@ import {
   uniqueEmail,
 } from './fixtures'
 
-async function fillRegisterForm(page: Page, email: string, password: string, confirm = password) {
+async function fillRegisterForm(
+  page: Page,
+  email: string,
+  password: string,
+  confirm = password,
+  name = 'Ada Lovelace'
+) {
+  await page.getByLabel('Name').fill(name)
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password', { exact: true }).fill(password)
   await page.getByLabel('Confirm Password').fill(confirm)
@@ -34,7 +41,7 @@ const SESSION_EXPIRED = 'Your session has expired. Please sign in again.'
 test('the home page offers sign-in and registration to anonymous users', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-    /Full-Stack\s*Template\s*That Works/
+    'Plan and build products, together.'
   )
   await expect(loginLink(page)).toBeVisible()
   await expect(page.getByRole('link', { name: 'Sign Up', exact: true })).toBeVisible()
@@ -60,7 +67,11 @@ test.describe('register', () => {
     await expect(page).toHaveURL('/')
     await expect(logoutButton(page)).toBeVisible()
     // The account exists on the backend: the same credentials sign in.
-    expect(await loginUser(api, email, PASSWORD)).toMatch(/\S/)
+    const token = await loginUser(api, email, PASSWORD)
+    expect(token).toMatch(/\S/)
+    // The name from the form is the display name.
+    const me = await api.get('/users/me', { headers: authHeaders({ token }) })
+    expect((await me.json()).display_name).toBe('Ada Lovelace')
   })
 
   test('shows the backend error when the email is already registered', async ({ page, user }) => {
@@ -86,9 +97,10 @@ test.describe('register', () => {
       if (request.url().endsWith('/auth/register')) registerCalls.push(request.url())
     })
     await page.goto('/register')
-    await fillRegisterForm(page, 'not-an-email', 'short', 'different')
+    await fillRegisterForm(page, 'not-an-email', 'short', 'different', '   ')
     await page.getByRole('button', { name: 'Create account' }).click()
 
+    await expect(page.getByText('Name is required')).toBeVisible()
     await expect(page.getByText('Invalid email address')).toBeVisible()
     await expect(page.getByText('Password must be at least 8 characters')).toBeVisible()
     await expect(page.getByText("Passwords don't match")).toBeVisible()

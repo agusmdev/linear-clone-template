@@ -1,3 +1,4 @@
+import type { IssuesParams } from '@/types/issue'
 import type { ItemsParams } from '@/types/item'
 
 export const API = {
@@ -10,6 +11,27 @@ export const API = {
     LIST: '/items',
     CREATE: '/items',
     DETAIL: (id: string) => `/items/${id}`,
+  },
+  USERS: {
+    ME: '/users/me',
+  },
+  WORKSPACES: {
+    LIST: '/workspaces',
+    CREATE: '/workspaces',
+    BY_URL_KEY: (urlKey: string) => `/workspaces/${urlKey}`,
+    MEMBERS: (workspaceId: string) => `/workspaces/${workspaceId}/members`,
+    TEAMS: (workspaceId: string) => `/workspaces/${workspaceId}/teams`,
+    LABELS: (workspaceId: string) => `/workspaces/${workspaceId}/labels`,
+  },
+  TEAMS: {
+    STATES: (teamId: string) => `/teams/${teamId}/states`,
+  },
+  ISSUES: {
+    LIST: '/issues',
+    CREATE: '/issues',
+    DETAIL: (id: string) => `/issues/${id}`,
+    BY_IDENTIFIER: (workspaceId: string, identifier: string) =>
+      `/workspaces/${workspaceId}/issues/by-identifier/${identifier}`,
   },
 } as const
 
@@ -26,4 +48,18 @@ export function buildItemsListUrl(params?: ItemsParams): string {
   if (params?.name) queryParams.append('name__ilike', `%${escapeLikePattern(params.name)}%`)
   const queryString = queryParams.toString()
   return queryString ? `${API.ITEMS.LIST}?${queryString}` : API.ITEMS.LIST
+}
+
+/** Builds the GET /issues URL. Arrays are sent comma-separated; undefined keys are left out. */
+export function buildIssuesListUrl(params: IssuesParams): string {
+  const queryParams = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '') continue
+    if (Array.isArray(value)) {
+      if (value.length > 0) queryParams.append(key, value.join(','))
+    } else {
+      queryParams.append(key, String(value))
+    }
+  }
+  return `${API.ISSUES.LIST}?${queryParams.toString()}`
 }

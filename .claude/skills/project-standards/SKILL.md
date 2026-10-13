@@ -38,7 +38,10 @@ with `docker-compose.yml`).
 
 - **Module layout:** `app/modules/<name>/` has `__init__.py` (with `__all__`),
   `models.py`, `schemas.py`, `repository.py`, `service.py`, `filters.py`,
-  `dependencies.py`, `routers.py`.
+  `dependencies.py`, `routers.py`. Modules that use each other's services
+  (`workspaces`, `teams`, `labels`, `issues`) re-export only models and
+  schemas from `__init__.py` (else import cycles); import their services,
+  dependencies and routers from the submodules.
 - **Registration:** include the router in `app/routers.py`. Import the model
   module in `app/migrations/env.py` (explicit registry), or autogenerate does
   not see the table.

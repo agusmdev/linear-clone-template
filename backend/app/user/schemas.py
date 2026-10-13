@@ -54,3 +54,12 @@ class UserResponse(UserBase, OrmBaseModel):
     @computed_field
     def is_email_verified(self) -> bool:
         return self.email_verified_at is not None
+
+
+class UserSummary(OrmBaseModel):
+    """A user embedded in other responses (assignee, member, author)."""
+
+    id: uuid.UUID
+    # The User column is ``display_name``; embedded users expose it as ``name``.
+    name: str = Field(validation_alias="display_name")
+    email: str
