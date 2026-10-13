@@ -177,6 +177,31 @@ test.describe('login', () => {
     await expect(page).toHaveURL('/login')
   })
 
+  test('onboarding lists a workspace with a long URL by name on a phone', async ({
+    authedPage: page,
+    api,
+    user,
+  }) => {
+    const name = 'Northwind Logistics Worldwide'
+    const workspace = await createWorkspace(api, user, {
+      name,
+      url_key: `northwind-logistics-worldwide-${Date.now()}`,
+    })
+    await page.setViewportSize({ width: 390, height: 800 })
+    await page.goto('/onboarding')
+
+    const row = page.getByRole('link', { name: new RegExp(name) })
+    await expect(row).toBeVisible()
+    // The long URL key is cut short; the name keeps room to show.
+    const nameBox = await row.getByText(name, { exact: true }).boundingBox()
+    expect(nameBox).not.toBeNull()
+    expect(nameBox!.width).toBeGreaterThan(60)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+
+    await row.click()
+    await expect(page).toHaveURL(`/${workspace.url_key}/my-issues`)
+  })
+
   test('a user with a workspace goes to its My issues after sign-in', async ({
     page,
     api,
@@ -381,9 +406,7 @@ test.describe('session', () => {
     expect(await storedToken(page)).toBeNull()
   })
 
-  test('logout in one tab signs out the other tab on its next request', async ({
-    authedPage: page,
-  }) => {
+  test('logout in one tab signs out the other tab at once', async ({ authedPage: page }) => {
     const otherTab = await page.context().newPage()
     await otherTab.goto('/items')
     // Wait for the loaded list, so no list request is still running at logout.
@@ -394,17 +417,34 @@ test.describe('session', () => {
     await logoutButton(page).click()
     await expect(page).toHaveURL('/login')
 
-    // The other tab still shows the items page. Its next call goes out without a
-    // token: FastAPI's HTTPBearer answers 403 "Not authenticated" (401 in newer
-    // FastAPI versions). The app treats both as a dead session.
-    await otherTab.getByRole('button', { name: 'Create Item' }).click()
-    await otherTab.getByLabel('Name').fill('Never saved')
-    const responsePromise = otherTab.waitForResponse(r => r.url().endsWith('/items'))
-    await otherTab.getByRole('button', { name: 'Create', exact: true }).click()
-
-    expect([401, 403]).toContain((await responsePromise).status())
+    // The other tab hears the token go (a storage event) and leaves the page
+    // without waiting for its next request, and comes back here after sign-in.
     await expect(otherTab).toHaveURL('/login?redirect=%2Fitems')
     await expect(loginLink(otherTab)).toBeVisible()
-    await expect(sessionExpiredToast(otherTab)).toBeVisible()
+    expect(await storedToken(otherTab)).toBeNull()
+  })
+
+  test('signing in as another user in one tab moves the other tab to that user', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const mine = await createWorkspace(api, user, { name: 'First Tab Co' })
+    const other = await registerUser(api)
+    const theirs = await createWorkspace(api, other, { name: 'Other Tab Co' })
+    await page.goto(`/${mine.url_key}/my-issues`)
+    await expect(page.getByRole('button', { name: /First Tab Co/ })).toBeVisible()
+
+    const otherTab = await page.context().newPage()
+    await otherTab.goto('/login')
+    await fillLoginForm(otherTab, other.email, other.password)
+    await otherTab.getByRole('button', { name: 'Sign in' }).click()
+    await expect(otherTab).toHaveURL(`/${theirs.url_key}/my-issues`)
+
+    // The first tab now sends the new user's token (localStorage is shared): it
+    // must not keep showing the first user's workspace, where every call fails.
+    await expect(page).toHaveURL(`/${theirs.url_key}/my-issues`)
+    await expect(page.getByRole('button', { name: /Other Tab Co/ })).toBeVisible()
+    await expect(page.getByText('First Tab Co')).toHaveCount(0)
   })
 })

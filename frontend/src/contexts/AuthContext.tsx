@@ -7,7 +7,13 @@ import React, {
 } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import type { QueryClient } from '@tanstack/react-query'
-import { getAuthToken, setAuthToken, clearAuthToken, subscribeToAuthChanges } from '@/lib/auth'
+import {
+  getAuthToken,
+  setAuthToken,
+  clearAuthToken,
+  isAuthStorageEvent,
+  subscribeToAuthChanges,
+} from '@/lib/auth'
 import { api, revokeSession } from '@/lib/api-client'
 import { API } from '@/lib/api-endpoints'
 
@@ -49,6 +55,19 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
       queryClient.clear()
     })
   }, [queryClient])
+
+  // Another tab signed in as someone else: this tab shows the previous
+  // account's page (a workspace the new user may not belong to). Start over at
+  // home, which opens the new user's workspace. A sign-out in another tab needs
+  // nothing here: pages in routes/_authed/ go to /login by themselves.
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (!isAuthStorageEvent(event) || event.oldValue === null || event.newValue === null) return
+      if (event.oldValue !== event.newValue) void router.navigate({ to: '/', replace: true })
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [router])
 
   const login = useCallback((token: string) => {
     const previous = getAuthToken()
