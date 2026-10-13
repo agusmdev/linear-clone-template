@@ -44,7 +44,7 @@ const EMPTY_TEXT: Record<MyTab, string> = {
 
 function MyIssuesPage() {
   const ws = useCurrentWorkspace()
-  const [tab, setTab] = useSearchTab(TABS)
+  const [tab, setTab] = useSearchTab(TABS, next => HIDDEN_FILTERS[next])
   const params: IssuesParams = { workspace_id: ws.workspace.id, ...TAB_PARAMS[tab] }
 
   return (

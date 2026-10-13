@@ -393,4 +393,40 @@ test.describe('issues list', () => {
     await row(page, 'Written by me').getByText('Written by me').click()
     await expect(page).toHaveURL(`/${key}/issue/ENG-2`)
   })
+
+  test('my issues drops filters a tab hides when switching tabs (ISS-13)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { team, key } = await seedWorkspace(api, user)
+    const me = await getMe(api, user)
+    await createIssue(api, user, { team_id: team.id, title: 'Mine to do', assignee_id: me.id })
+    await createIssue(api, user, { team_id: team.id, title: 'Written by me' })
+
+    const page = await loginAs(user)
+    await page.goto(`/${key}/my-issues?tab=created`)
+    await expect(row(page, 'Mine to do')).toBeVisible()
+
+    // An assignee filter on the Created tab.
+    await page.getByRole('button', { name: 'Filter' }).click()
+    await page.getByRole('menuitem', { name: 'Assignee' }).click()
+    await page.getByRole('option', { name: 'No assignee' }).click()
+    await page.keyboard.press('Escape')
+    await expect(page).toHaveURL(/assignee=none/)
+    await expect(row(page, 'Written by me')).toBeVisible()
+    await expect(row(page, 'Mine to do')).toBeHidden()
+
+    // The Assigned tab hides the assignee filter: switching drops it.
+    await page.getByRole('tab', { name: 'Assigned' }).click()
+    await expect(page).toHaveURL(`/${key}/my-issues`)
+    await expect(row(page, 'Mine to do')).toBeVisible()
+    await expect(page.getByRole('group', { name: 'Assignee filter' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Clear filters' })).toHaveCount(0)
+
+    // A link that carries a hidden filter does not apply it either.
+    await page.goto(`/${key}/my-issues?assignee=none`)
+    await expect(row(page, 'Mine to do')).toBeVisible()
+    await expect(page.getByRole('group', { name: 'Assignee filter' })).toHaveCount(0)
+  })
 })

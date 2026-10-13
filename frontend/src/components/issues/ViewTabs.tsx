@@ -8,8 +8,15 @@ export interface ViewTab<V extends string> {
   icon?: ReactNode
 }
 
-/** The current tab from the `?tab=` search param (the first tab when missing or unknown). */
-export function useSearchTab<V extends string>(tabs: readonly ViewTab<V>[]): [V, (tab: V) => void] {
+/**
+ * The current tab from the `?tab=` search param (the first tab when missing or
+ * unknown). `dropOnSwitch(tab)` names the search keys to remove when switching
+ * to `tab` (e.g. filters that do not apply there).
+ */
+export function useSearchTab<V extends string>(
+  tabs: readonly ViewTab<V>[],
+  dropOnSwitch?: (tab: V) => readonly string[]
+): [V, (tab: V) => void] {
   const navigate = useNavigate()
   const raw = useRouterState({ select: s => (s.location.search as Record<string, unknown>).tab })
   const current = tabs.find(t => t.value === String(raw ?? ''))?.value ?? tabs[0].value
@@ -18,6 +25,7 @@ export function useSearchTab<V extends string>(tabs: readonly ViewTab<V>[]): [V,
       to: '.',
       search: ((prev: Record<string, unknown>) => ({
         ...prev,
+        ...Object.fromEntries((dropOnSwitch?.(tab) ?? []).map(key => [key, undefined])),
         tab: tab === tabs[0].value ? undefined : tab,
       })) as never,
     })

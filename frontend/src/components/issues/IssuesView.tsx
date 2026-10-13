@@ -83,7 +83,18 @@ export function IssuesView({
     () => ({ layout: defaultLayout, grouping: groupBy }),
     [defaultLayout, groupBy]
   )
-  const state = readViewState(search, defaults)
+  // Filters hidden on this page (its base params already set them) never
+  // apply, even when the URL carries them (a shared link, another tab).
+  const urlState = readViewState(search, defaults)
+  const state: IssueViewState = {
+    ...urlState,
+    filters: Object.fromEntries(
+      Object.entries(urlState.filters).map(([kind, values]) => [
+        kind,
+        hiddenFilters.includes(kind as FilterKind) ? [] : values,
+      ])
+    ) as IssueViewState['filters'],
+  }
   const defaultState = useMemo(() => readViewState({}, defaults), [defaults])
 
   const setViewState = (next: IssueViewState) => {
