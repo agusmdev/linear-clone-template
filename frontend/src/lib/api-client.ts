@@ -145,6 +145,13 @@ class ApiClient {
     return this.request<T>(endpoint, { method: 'POST', body: JSON.stringify(data) })
   }
 
+  /** POST for endpoints that answer 204 No Content (no JSON body to read). */
+  postNoContent(endpoint: string, data: unknown): Promise<void> {
+    return this.execute(endpoint, { method: 'POST', body: JSON.stringify(data) }).then(
+      () => undefined
+    )
+  }
+
   put<T>(endpoint: string, data: unknown) {
     return this.request<T>(endpoint, { method: 'PUT', body: JSON.stringify(data) })
   }
@@ -156,13 +163,6 @@ class ApiClient {
   delete(endpoint: string): Promise<void> {
     // execute() validates auth/errors; we discard the body (204 No Content returns nothing).
     return this.execute(endpoint, { method: 'DELETE' }).then(() => undefined)
-  }
-
-  /** POST to an endpoint that answers 204 No Content. */
-  postNoContent(endpoint: string, data: unknown): Promise<void> {
-    return this.execute(endpoint, { method: 'POST', body: JSON.stringify(data) }).then(
-      () => undefined
-    )
   }
 }
 

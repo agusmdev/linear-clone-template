@@ -23,6 +23,7 @@ export const queryKeys = {
     all: ['teams'] as const,
     list: (workspaceId: string) => ['teams', 'list', workspaceId] as const,
     states: (teamId: string) => ['teams', teamId, 'states'] as const,
+    members: (teamId: string) => ['teams', teamId, 'members'] as const,
   },
   labels: {
     all: ['labels'] as const,
@@ -34,6 +35,8 @@ export const queryKeys = {
     detail: (id: string) => ['issues', 'detail', id] as const,
     byIdentifier: (workspaceId: string, identifier: string) =>
       ['issues', 'by-identifier', workspaceId, identifier] as const,
+    /** Every page of a list, flattened (IssuesView). */
+    listAll: (params: IssuesParams) => ['issues', 'list-all', params] as const,
   },
   /** Sub-resources of one issue. They start with issues.detail(id): invalidating it refreshes them. */
   issueDetail: {

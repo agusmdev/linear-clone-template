@@ -67,6 +67,10 @@ test.describe('command palette', () => {
     await page.keyboard.press('Enter')
     await expect(palette(page)).toBeHidden()
     expect(await createEvents()).toBe(1)
+    // The event opens the create-issue modal (slice "issues-list"): close it.
+    await expect(page.getByRole('dialog', { name: 'New issue' })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog', { name: 'New issue' })).toBeHidden()
 
     // The window event opens the palette too.
     await page.evaluate(() => window.dispatchEvent(new CustomEvent('linear:command-palette')))
@@ -179,6 +183,10 @@ test.describe('global shortcuts', () => {
     const createEvents = await recordCreateIssueEvents(page)
     await page.keyboard.press('c')
     expect(await createEvents()).toBe(1)
+    // The event opens the create-issue modal (slice "issues-list"): close it.
+    await expect(page.getByRole('dialog', { name: 'New issue' })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog', { name: 'New issue' })).toBeHidden()
 
     await page.keyboard.press('?')
     const help = page.getByRole('dialog', { name: 'Keyboard shortcuts' })

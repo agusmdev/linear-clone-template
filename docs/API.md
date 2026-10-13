@@ -66,6 +66,20 @@ embedded `UserSummary`.
 
 ## 1. Workspaces, members, teams, states, labels
 
+### Who may change what (WS-3..WS-6)
+
+| Action | Allowed for |
+|---|---|
+| Rename / change URL key / delete the workspace; invite members, change roles, remove members | workspace admins |
+| Leave the workspace (DELETE your own member row) | any member (not the last admin) |
+| Create a team, join or leave a team, read teams/members/states | any workspace member |
+| Change a team (name, key, color, ...), add/remove its members, create/update/delete its workflow states | members of that team and workspace admins |
+| Delete a team | workspace admins |
+| Create / update / delete labels | any workspace member |
+
+Anyone else gets the 404 `not_found` of a missing row (never 403).
+Colors (`color` of teams, states, labels) are hex `#rrggbb`.
+
 ### Workspaces
 
 `Workspace = {id, name, url_key, created_by_id, created_at, updated_at}`
@@ -75,8 +89,8 @@ embedded `UserSummary`.
 | IMPLEMENTED | POST | `/workspaces` | `{name, url_key, team_name?, team_key?}` | 201 `Workspace` |
 | IMPLEMENTED | GET | `/workspaces` | – | `Workspace[]` (mine, by name) |
 | IMPLEMENTED | GET | `/workspaces/{url_key}` | – | `Workspace` (404 if not a member) |
-| PLANNED | PATCH | `/workspaces/{workspace_id}` | `{name?, url_key?}` (admin) | `Workspace` |
-| PLANNED | DELETE | `/workspaces/{workspace_id}` | – (admin) | 204 |
+| IMPLEMENTED | PATCH | `/workspaces/{workspace_id}` | `{name?, url_key?}` (admin) | `Workspace` |
+| IMPLEMENTED | DELETE | `/workspaces/{workspace_id}` | – (admin) | 204 (deletes everything in it) |
 
 POST `/workspaces` (WS-1), in one transaction:
 - `url_key`: 2-48 chars, `^[a-z0-9]+(-[a-z0-9]+)*$`, unique (else 400 `duplicate_item`).
@@ -96,9 +110,9 @@ POST `/workspaces` (WS-1), in one transaction:
 | Status | Method | Path | Body | Response |
 |---|---|---|---|---|
 | IMPLEMENTED | GET | `/workspaces/{workspace_id}/members` | – | `WorkspaceMember[]` (by join date) |
-| PLANNED | POST | `/workspaces/{workspace_id}/members` | `{email, role?}` (admin) | 201 `WorkspaceMember`. Existing user only, added at once, no email. Unknown email: 404 `user_not_found`. Already a member: 400 `duplicate_item` |
-| PLANNED | PATCH | `/workspaces/{workspace_id}/members/{member_id}` | `{role}` (admin) | `WorkspaceMember` |
-| PLANNED | DELETE | `/workspaces/{workspace_id}/members/{member_id}` | – (admin, or yourself = leave) | 204. The last admin cannot leave: 400 `last_admin` |
+| IMPLEMENTED | POST | `/workspaces/{workspace_id}/members` | `{email, role?}` (admin) | 201 `WorkspaceMember`. Existing user only, added at once, no email. Unknown email: 404 `user_not_found`. Already a member: 400 `duplicate_item` |
+| IMPLEMENTED | PATCH | `/workspaces/{workspace_id}/members/{member_id}` | `{role}` (admin) | `WorkspaceMember`. Demoting the last admin: 400 `last_admin` |
+| IMPLEMENTED | DELETE | `/workspaces/{workspace_id}/members/{member_id}` | – (admin, or yourself = leave) | 204; the user also leaves every team of the workspace. The last admin cannot leave or be removed: 400 `last_admin` |
 
 ### Teams (WS-4)
 
@@ -108,13 +122,13 @@ POST `/workspaces` (WS-1), in one transaction:
 | Status | Method | Path | Body | Response |
 |---|---|---|---|---|
 | IMPLEMENTED | GET | `/workspaces/{workspace_id}/teams` | – | `Team[]` (by name) |
-| PLANNED | POST | `/workspaces/{workspace_id}/teams` | `{name, key, description?, color?, icon?}` | 201 `Team`; creator joins; default states as above |
-| PLANNED | GET | `/teams/{team_id}` | – | `Team` |
-| PLANNED | PATCH | `/teams/{team_id}` | `{name?, key?, description?, color?, icon?}` | `Team` (a new key changes every identifier) |
-| PLANNED | DELETE | `/teams/{team_id}` | – (admin) | 204 (deletes its issues) |
-| PLANNED | GET | `/teams/{team_id}/members` | – | `TeamMember[]` |
-| PLANNED | POST | `/teams/{team_id}/members` | `{user_id?}` (default: me = join) | 201 `TeamMember` |
-| PLANNED | DELETE | `/teams/{team_id}/members/{user_id}` | – (`me` allowed = leave) | 204 |
+| IMPLEMENTED | POST | `/workspaces/{workspace_id}/teams` | `{name, key, description?, color?, icon?}` | 201 `Team`; creator joins; default states as above |
+| IMPLEMENTED | GET | `/teams/{team_id}` | – | `Team` |
+| IMPLEMENTED | PATCH | `/teams/{team_id}` | `{name?, key?, description?, color?, icon?}` | `Team` (a new key changes every identifier) |
+| IMPLEMENTED | DELETE | `/teams/{team_id}` | – (admin) | 204 (deletes its issues). The last team of a workspace: 400 `last_team` |
+| IMPLEMENTED | GET | `/teams/{team_id}/members` | – | `TeamMember[]` |
+| IMPLEMENTED | POST | `/teams/{team_id}/members` | `{user_id?}` (default: me = join) | 201 `TeamMember`. Already in the team: 400 `duplicate_item`; `user_id` not a workspace member: 400 `invalid_reference` |
+| IMPLEMENTED | DELETE | `/teams/{team_id}/members/{user_id}` | – (`me` allowed = leave) | 204 |
 
 ### Workflow states (WS-5)
 
@@ -123,9 +137,9 @@ POST `/workspaces` (WS-1), in one transaction:
 | Status | Method | Path | Body | Response |
 |---|---|---|---|---|
 | IMPLEMENTED | GET | `/teams/{team_id}/states` | – | `WorkflowState[]` (by `position`) |
-| PLANNED | POST | `/teams/{team_id}/states` | `{name, type, color, position?}` | 201 `WorkflowState` |
-| PLANNED | PATCH | `/workflow-states/{state_id}` | `{name?, color?, position?, type?}` | `WorkflowState` |
-| PLANNED | DELETE | `/workflow-states/{state_id}?move_to_state_id=` | – | 204. With issues and no `move_to_state_id`: 400 `referenced_item`. The last state of a team: 400 |
+| IMPLEMENTED | POST | `/teams/{team_id}/states` | `{name, type, color, position?}` | 201 `WorkflowState` |
+| IMPLEMENTED | PATCH | `/workflow-states/{state_id}` | `{name?, color?, position?, type?}` | `WorkflowState` |
+| IMPLEMENTED | DELETE | `/workflow-states/{state_id}?move_to_state_id=` | – | 204. With issues and no `move_to_state_id`: 400 `referenced_item`. The target must be another state of the same team, else 400 `invalid_reference`; moved issues get the started/completed/canceled timestamps of the new state type. The last state of a team: 400 `last_state` |
 
 ### Labels (WS-6)
 
@@ -134,9 +148,9 @@ POST `/workspaces` (WS-1), in one transaction:
 | Status | Method | Path | Body | Response |
 |---|---|---|---|---|
 | IMPLEMENTED | GET | `/workspaces/{workspace_id}/labels` | – | `Label[]` (by name) |
-| PLANNED | POST | `/workspaces/{workspace_id}/labels` | `{name, color}` | 201 `Label` (name unique per workspace) |
-| PLANNED | PATCH | `/labels/{label_id}` | `{name?, color?}` | `Label` |
-| PLANNED | DELETE | `/labels/{label_id}` | – | 204 (removed from issues) |
+| IMPLEMENTED | POST | `/workspaces/{workspace_id}/labels` | `{name, color}` | 201 `Label` (name unique per workspace, any case: else 400 `duplicate_item`) |
+| IMPLEMENTED | PATCH | `/labels/{label_id}` | `{name?, color?}` | `Label` |
+| IMPLEMENTED | DELETE | `/labels/{label_id}` | – | 204 (removed from issues) |
 
 ---
 
@@ -166,8 +180,17 @@ Issue = {
 | IMPLEMENTED | GET | `/workspaces/{workspace_id}/issues/by-identifier/{identifier}` | – | `Issue` (`ENG-12`, any case) |
 | IMPLEMENTED | PATCH | `/issues/{issue_id}` | `UpdateIssue` | `Issue` |
 | IMPLEMENTED | DELETE | `/issues/{issue_id}` | – | 204 (sub-issues lose their parent) |
-| PLANNED | POST | `/issues/bulk-update` | `{issue_ids, update: {state_id?, priority?, assignee_id?, label_ids?, project_id?, cycle_id?, archived?}}` | `{items: Issue[]}`; same rules and activity as PATCH, all or nothing |
-| PLANNED | POST | `/issues/bulk-delete` | `{issue_ids}` | 204 |
+| IMPLEMENTED | POST | `/issues/bulk-update` | `{issue_ids, update: {state_id?, priority?, assignee_id?, label_ids?, label_ids_add?, label_ids_remove?, project_id?, cycle_id?, archived?}}` | `{items: Issue[]}` (in `issue_ids` order); same rules and activity as PATCH, all or nothing |
+| IMPLEMENTED | POST | `/issues/bulk-delete` | `{issue_ids}` | 204 |
+
+**Bulk** (ISS-14): `issue_ids` 1-250 ids; one missing or hidden issue = 404 for the
+whole request. `label_ids` replaces the labels; `label_ids_add` / `label_ids_remove`
+add or remove labels and keep the others. `state_id`, `priority`, `label_ids`,
+`archived` cannot be `null` (422). A state must belong to the team of every issue
+(else 400 `invalid_reference`, nothing changes).
+
+**Board drag** (ISS-4): no extra endpoint. `PATCH /issues/{id} {state_id, sort_order}`
+with `sort_order` = the mean of the neighbours' values (top: first - 1, bottom: last + 1).
 
 **CreateIssue** `{team_id, title, description?, state_id?, priority?, assignee_id?, label_ids?, project_id?, cycle_id?, parent_id?, estimate?, due_date?, sort_order?}`
 - `title` 1-500 chars; `priority` 0-4 (default 0); `estimate` 0-1000; `label_ids` max 50.
@@ -199,6 +222,10 @@ Issue = {
 | `creator_id` | user id or `me` |
 | `subscriber_id` | user id or `me` (My issues → Subscribed) |
 | `label_id` | issues with this label |
+| `assignee_id__in` | comma-separated: user ids, `me`, `none` (any of them) |
+| `creator_id__in` | comma-separated: user ids, `me` |
+| `label_id__in` | issues with any of these labels |
+| `project_id__in`, `cycle_id__in` | comma-separated ids, `none` = no project / cycle |
 | `project_id`, `cycle_id`, `parent_id` | equality |
 | `parent_id__isnull` | `true` = top-level only, `false` = sub-issues only |
 | `include_archived` | default `false` |

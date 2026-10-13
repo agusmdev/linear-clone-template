@@ -30,8 +30,19 @@ export interface WorkspaceMember {
   user: UserSummary
 }
 
-/** Planned: POST /workspaces/{id}/members (see docs/API.md). */
+/** PATCH /workspaces/{id} (admins). */
+export interface UpdateWorkspaceData {
+  name?: string
+  url_key?: string
+}
+
+/** POST /workspaces/{id}/members (admins): an existing user, added at once. */
 export interface InviteMemberData {
   email: string
   role?: WorkspaceRole
+}
+
+/** PATCH /workspaces/{id}/members/{member_id} (admins). */
+export interface UpdateMemberData {
+  role: WorkspaceRole
 }

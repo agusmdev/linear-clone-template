@@ -3,7 +3,7 @@
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.core.optional_model import partial_model
 from app.database.mixins import OrmBaseModel
@@ -92,3 +92,44 @@ class IssueResponse(OrmBaseModel):
     assignee: UserSummary | None
     creator: UserSummary | None
     labels: list[LabelSummary]
+
+
+BULK_MAX = 250
+
+
+class IssueBulkChanges(BaseModel):
+    """The changes of POST /issues/bulk-update; every key is optional.
+
+    ``label_ids`` replaces the labels; ``label_ids_add`` / ``label_ids_remove``
+    add or remove labels and keep the others.
+    """
+
+    state_id: uuid.UUID | None = None
+    priority: int | None = Field(None, ge=0, le=4)
+    assignee_id: uuid.UUID | None = None
+    label_ids: list[uuid.UUID] | None = Field(None, max_length=LABELS_MAX)
+    label_ids_add: list[uuid.UUID] | None = Field(None, max_length=LABELS_MAX)
+    label_ids_remove: list[uuid.UUID] | None = Field(None, max_length=LABELS_MAX)
+    project_id: uuid.UUID | None = None
+    cycle_id: uuid.UUID | None = None
+    archived: bool | None = None
+
+    @model_validator(mode="after")
+    def _required_fields_not_null(self) -> "IssueBulkChanges":
+        for name in ("state_id", "priority", "label_ids", "archived"):
+            if name in self.model_fields_set and getattr(self, name) is None:
+                raise ValueError(f"{name} cannot be null")
+        return self
+
+
+class IssueBulkUpdate(BaseModel):
+    issue_ids: list[uuid.UUID] = Field(..., min_length=1, max_length=BULK_MAX)
+    update: IssueBulkChanges
+
+
+class IssueBulkDelete(BaseModel):
+    issue_ids: list[uuid.UUID] = Field(..., min_length=1, max_length=BULK_MAX)
+
+
+class IssueBulkResponse(BaseModel):
+    items: list[IssueResponse]

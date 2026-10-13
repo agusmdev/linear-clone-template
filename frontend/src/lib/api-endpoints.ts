@@ -26,9 +26,22 @@ export const API = {
     MEMBERS: (workspaceId: string) => `/workspaces/${workspaceId}/members`,
     TEAMS: (workspaceId: string) => `/workspaces/${workspaceId}/teams`,
     LABELS: (workspaceId: string) => `/workspaces/${workspaceId}/labels`,
+    DETAIL: (workspaceId: string) => `/workspaces/${workspaceId}`,
+    MEMBER: (workspaceId: string, memberId: string) =>
+      `/workspaces/${workspaceId}/members/${memberId}`,
   },
   TEAMS: {
     STATES: (teamId: string) => `/teams/${teamId}/states`,
+    DETAIL: (teamId: string) => `/teams/${teamId}`,
+    MEMBERS: (teamId: string) => `/teams/${teamId}/members`,
+    /** `userId` may be `me` (leave the team). */
+    MEMBER: (teamId: string, userId: string) => `/teams/${teamId}/members/${userId}`,
+  },
+  WORKFLOW_STATES: {
+    DETAIL: (stateId: string) => `/workflow-states/${stateId}`,
+  },
+  LABELS: {
+    DETAIL: (labelId: string) => `/labels/${labelId}`,
   },
   ISSUES: {
     LIST: '/issues',
@@ -36,6 +49,8 @@ export const API = {
     DETAIL: (id: string) => `/issues/${id}`,
     BY_IDENTIFIER: (workspaceId: string, identifier: string) =>
       `/workspaces/${workspaceId}/issues/by-identifier/${identifier}`,
+    BULK_UPDATE: '/issues/bulk-update',
+    BULK_DELETE: '/issues/bulk-delete',
   },
   ISSUE_DETAIL: {
     COMMENTS: (issueId: string) => `/issues/${issueId}/comments`,

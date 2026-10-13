@@ -13,29 +13,29 @@ left sidebar, Inter font, subtle borders, small type 13px).
 |---|---|---|
 | AUTH-1 | Register with name, email, password (no email verification; user is signed in at once) | todo |
 | AUTH-2 | Log in with email + password; log out | todo |
-| AUTH-3 | Protected app routes redirect to /login; after login go to the workspace | todo |
+| AUTH-3 | Protected app routes redirect to /login; after login go to the workspace | done |
 
 ## 1. Workspaces, teams, members (P0)
 
 | ID | Feature | Status |
 |---|---|---|
-| WS-1 | After first sign-in, onboarding asks for a workspace name + URL key; creates the workspace, a default team (e.g. "Engineering", key `ENG`) and default workflow states | todo |
-| WS-2 | A user can belong to many workspaces; workspace switcher in the sidebar | todo |
-| WS-3 | Invite members by email (existing users are added at once; no email sent) ; member list with roles (admin, member); remove member | todo |
-| WS-4 | Teams: create / rename / delete team, team key (2–5 uppercase letters), join/leave team, team members | todo |
-| WS-5 | Workflow states per team: Backlog, Todo, In Progress, In Review, Done, Canceled (types backlog/unstarted/started/completed/canceled); add/rename/recolor/reorder/delete states in team settings | todo |
-| WS-6 | Labels per workspace (name + color); create/edit/delete in settings | todo |
-| WS-7 | Profile settings: change display name; account page | todo |
+| WS-1 | After first sign-in, onboarding asks for a workspace name + URL key; creates the workspace, a default team (e.g. "Engineering", key `ENG`) and default workflow states | done |
+| WS-2 | A user can belong to many workspaces; workspace switcher in the sidebar | done |
+| WS-3 | Invite members by email (existing users are added at once; no email sent) ; member list with roles (admin, member); remove member | done |
+| WS-4 | Teams: create / rename / delete team, team key (2–5 uppercase letters), join/leave team, team members | done |
+| WS-5 | Workflow states per team: Backlog, Todo, In Progress, In Review, Done, Canceled (types backlog/unstarted/started/completed/canceled); add/rename/recolor/reorder/delete states in team settings | done |
+| WS-6 | Labels per workspace (name + color); create/edit/delete in settings | done |
+| WS-7 | Profile settings: change display name; account page | done |
 
 ## 2. Issues — the ticketing system (P0)
 
 | ID | Feature | Status |
 |---|---|---|
-| ISS-1 | Create issue (modal, `C` shortcut): title, description (rich text), team, status, priority (No priority/Urgent/High/Medium/Low), assignee, labels, project, cycle, estimate, due date, parent | todo |
+| ISS-1 | Create issue (modal, `C` shortcut): title, description (rich text), team, status, priority (No priority/Urgent/High/Medium/Low), assignee, labels, project, cycle, estimate, due date, parent | done |
 | ISS-2 | Issue identifier `TEAMKEY-<number>` auto-increments per team; open issue by identifier URL `/<ws>/issue/ENG-12` | done |
-| ISS-3 | Issue list view grouped by status, with priority icon, identifier, title, labels, assignee avatar, dates; inline property changes | todo |
-| ISS-4 | Board (kanban) view by status with drag and drop between columns and reorder inside a column | todo |
-| ISS-5 | Filters: status, priority, assignee, label, project, cycle, creator; text search; sort (manual, priority, created, updated, due date); grouping (status, assignee, priority, project, none); display options persisted per view in URL | todo |
+| ISS-3 | Issue list view grouped by status, with priority icon, identifier, title, labels, assignee avatar, dates; inline property changes | done |
+| ISS-4 | Board (kanban) view by status with drag and drop between columns and reorder inside a column | done |
+| ISS-5 | Filters: status, priority, assignee, label, project, cycle, creator; text search; sort (manual, priority, created, updated, due date); grouping (status, assignee, priority, project, none); display options persisted per view in URL | done |
 | ISS-6 | Issue detail page: editable title + rich-text description (autosave), properties sidebar (status, priority, assignee, labels, project, cycle, estimate, due date) | done |
 | ISS-7 | Sub-issues: create sub-issue, list with progress, parent breadcrumb | done |
 | ISS-8 | Relations: blocks / blocked by / related / duplicate of | done |
@@ -43,8 +43,8 @@ left sidebar, Inter font, subtle borders, small type 13px).
 | ISS-10 | Activity history: every property change is logged and shown in the issue timeline merged with comments | done |
 | ISS-11 | Subscribe/unsubscribe; creator and assignee are subscribed automatically | done |
 | ISS-12 | Delete issue (with confirm); archive | done |
-| ISS-13 | Views: "My issues" (assigned / created / subscribed tabs), team "All issues" / "Active" / "Backlog" tabs | todo |
-| ISS-14 | Bulk actions: multi-select rows (checkbox / shift-click), change status/priority/assignee, delete | todo |
+| ISS-13 | Views: "My issues" (assigned / created / subscribed tabs), team "All issues" / "Active" / "Backlog" tabs | done |
+| ISS-14 | Bulk actions: multi-select rows (checkbox / shift-click), change status/priority/assignee, delete | done |
 
 ## 3. Documents (P0)
 

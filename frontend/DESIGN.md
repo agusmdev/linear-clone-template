@@ -226,6 +226,18 @@ The one picker for status, priority, assignee, labels, project, cycle. A popover
 
 `shortcut` keys pick an option while the search box is empty (Linear's number keys). "No assignee" / "No project" are normal options with a special value (e.g. `'none'`): map it in the page.
 
+### Settings components (WS-1..WS-7)
+
+| Component | File | Use |
+|---|---|---|
+| `SettingsSidebar({ backTo, sections })` | `components/SettingsSidebar.tsx` | Replaces the app sidebar under `/<ws>/settings` ("Back to app" + grouped links; `exact` for index pages). Sections come from `settingsSections(base, teams)` in `features/workspaces/settings-nav.tsx` |
+| `SettingsPage({ title, description?, actions?, children })` | `components/SettingsPage.tsx` | Centered 680px column with a 24px title (an h2: the `PageHeader` holds the h1) |
+| `SettingsSection({ title?, description?, actions?, children })`, `SettingsCard`, `SettingsRow({ label, description?, children })` | `components/SettingsPage.tsx` | A titled group; a bordered box whose children get subtle dividers; a "label + control" row |
+| `ColorPicker({ value, onChange, label, trigger?, disabled? })` | `components/ColorPicker.tsx` | Palette popover (Linear's 10 colors, `COLOR_PALETTE`) + hex field. Default trigger: a swatch button named `"<label>: <hex>"` |
+| `ConfirmDialog({ open, onOpenChange, title, description?, confirmLabel, onConfirm, pending?, canConfirm?, destructive?, children? })` | `components/ConfirmDialog.tsx` | Confirmation for delete / remove / leave; `children` adds a field (type-to-confirm, a target select) |
+| `CreateTeamDialog({ open, onOpenChange, onSubmit, pending? })` | `components/CreateTeamDialog.tsx` | Team name, key (follows the name until edited), color |
+| `TeamBadge({ team, size? })` | `features/workspaces/settings-nav.tsx` | Square with the team key on the team color |
+
 ## 6. shadcn/ui primitives (`components/ui/`)
 
 Restyled to the tokens. Same API as shadcn (new-york):
@@ -240,3 +252,10 @@ Menus share `menuContentClass` / `menuItemClass` (exported from `ui/dropdown-men
 - Group header in a list: `h-9 bg-surface-hover/50 px-4 text-ui font-medium` + `StatusIcon` + count in `text-text-tertiary`.
 - Label chip: `<Badge><span className="size-2 rounded-full" style={{ backgroundColor: label.color }} />{label.name}</Badge>`.
 - Loading: `Skeleton` rows with the same height as the real rows.
+
+## 8. Issues (`components/issues/`)
+
+- `IssuesView` (`components/issues/IssuesView.tsx`): the shared issue list / board. Props: `params: IssuesParams` (the base query, e.g. `{ workspace_id, team_id }`), `defaultLayout?: 'list' | 'board'`, `groupBy?: 'status' | 'assignee' | 'priority' | 'project' | 'none'`, `emptyState?`, `createDefaults?` (defaults of the create modal from group "+" buttons), `hiddenFilters?`, `toolbarActions?`. It renders its own toolbar (filters, search, Display options) and keeps the view state in the URL (`?layout=board&group=priority&order=created&subs=hide&completed=hide&status=<ids>&priority=urgent,high&assignee=me,none&label=<ids>&q=text`). Must be used under `routes/_authed/$workspaceKey/`.
+- Keyboard in the list: `J`/`K` move, `Enter` opens, `X` selects, `S`/`P`/`A`/`L` open the status / priority / assignee / labels picker of the focused row, `Cmd+Backspace` deletes (with confirm). Right-click a row or card for the context menu.
+- Create issue from anywhere: `openCreateIssue({ teamId?, stateId?, projectId?, cycleId?, parentId?, assigneeId? })` from `@/lib/issue-events` (= `window.dispatchEvent(new CustomEvent('linear:create-issue', { detail }))`). The modal (`CreateIssueHost`) is mounted once in the workspace layout and also opens on the `C` key.
+- Property changes: `useIssueActions()` (`hooks/useIssueActions.ts`) = optimistic PATCH for one issue, `POST /issues/bulk-update` for many.
