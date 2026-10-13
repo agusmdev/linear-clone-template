@@ -7,6 +7,7 @@ export {
 } from './RichTextContent'
 export {
   useDebouncedAutosave,
+  type AutosaveContext,
   type AutosaveResult,
   type AutosaveStatus,
 } from './useDebouncedAutosave'

@@ -45,11 +45,17 @@ export function useCreateDocument() {
  * PATCH /documents/{id}. The detail cache gets the response directly (no
  * refetch), so the editor that is open is never reset while the user types.
  */
+export interface UpdateDocumentVariables {
+  data: UpdateDocumentData
+  /** Set when the page is being reloaded or closed, so the save is not cancelled. */
+  keepalive?: boolean
+}
+
 export function useUpdateDocument(documentId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: UpdateDocumentData) =>
-      api.patch<Document>(API.DOCUMENTS.DETAIL(documentId), data),
+    mutationFn: ({ data, keepalive }: UpdateDocumentVariables) =>
+      api.patch<Document>(API.DOCUMENTS.DETAIL(documentId), data, { keepalive }),
     onSuccess: document => {
       queryClient.setQueryData(queryKeys.documents.detail(documentId), document)
       queryClient.invalidateQueries({ queryKey: queryKeys.documents.lists() })

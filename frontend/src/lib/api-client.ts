@@ -28,6 +28,22 @@ export class ApiError extends Error {
   }
 }
 
+export interface RequestOptions {
+  /**
+   * Lets the request finish after the page is reloaded or closed. The browser
+   * caps a keepalive body at 64 KiB, so a larger body is sent without it.
+   */
+  keepalive?: boolean
+}
+
+/** Stays under the browser's 64 KiB limit for in-flight keepalive bodies. */
+const KEEPALIVE_MAX_BODY_BYTES = 60 * 1024
+
+function keepaliveInit(body: string, options?: RequestOptions): RequestInit {
+  if (!options?.keepalive) return {}
+  return { keepalive: new Blob([body]).size <= KEEPALIVE_MAX_BODY_BYTES }
+}
+
 const SESSION_EXPIRED_MESSAGE = 'Your session has expired. Please sign in again.'
 
 /**
@@ -156,8 +172,9 @@ class ApiClient {
     return this.request<T>(endpoint, { method: 'PUT', body: JSON.stringify(data) })
   }
 
-  patch<T>(endpoint: string, data: unknown) {
-    return this.request<T>(endpoint, { method: 'PATCH', body: JSON.stringify(data) })
+  patch<T>(endpoint: string, data: unknown, options?: RequestOptions) {
+    const body = JSON.stringify(data)
+    return this.request<T>(endpoint, { method: 'PATCH', body, ...keepaliveInit(body, options) })
   }
 
   delete(endpoint: string): Promise<void> {

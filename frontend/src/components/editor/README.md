@@ -73,6 +73,9 @@ Returns `{ status, error, flush }`.
 - `save` may return a promise; a rejection sets `status: 'error'` and `error`.
 - Only the newest save sets the status. `flush()` saves now (also retries after an error).
 - A pending change is saved when the component unmounts.
+- A pending change is also saved when the page is hidden, reloaded or closed (`pagehide`,
+  `visibilitychange`). Then `save` gets `{ keepalive: true }` as its second argument: pass it to
+  the request (`api.patch(url, data, { keepalive })`), or the browser cancels the request.
 
 ## Other exports
 
