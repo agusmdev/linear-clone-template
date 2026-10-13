@@ -4,8 +4,8 @@ export const meta = {
   phases: [{ title: 'QA' }, { title: 'Fix' }, { title: 'Merge' }, { title: 'Redeploy' }],
 }
 
-const ROOT = '/private/tmp/linear-clone-claudio'
-const SCRATCH = '/private/tmp/claude-501/-private-tmp-linear-clone-claudio/0fb9f5cc-a662-44b3-837f-a64312b92f77/scratchpad/qa'
+const ROOT = '/home/user/linear-clone-template'
+const SCRATCH = '/tmp/claude-0/-home-user-linear-clone-template/0c354a77-8d14-54f5-8ce1-601d571a9e8b/scratchpad/qa'
 
 const AREAS = [
   { key: 'auth', focus: 'Register (name/email/password, no email verification), login, logout, wrong password errors, duplicate email, redirect to onboarding, onboarding creates workspace + lands on My issues, second workspace creation + workspace switcher, protected routes redirect when logged out, session persistence on reload, landing page.' },
@@ -77,8 +77,8 @@ Return: merged?, validation pass counts, fixes, push result.`, { label: `merge:$
 const seen = new Set()
 const allFixed = []
 let dry = 0
-let round = 1
-const MAX_ROUNDS = 4
+let round = 2
+const MAX_ROUNDS = 6
 
 while (dry < 2 && round <= MAX_ROUNDS) {
   phase('QA')

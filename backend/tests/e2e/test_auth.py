@@ -114,7 +114,7 @@ def test_register_rejects_a_blank_display_name(
     body = assert_error(response, 422, "validation_error")
     assert [issue["loc"] for issue in body["detail"]] == [["body", "display_name"]]
     # No account was created.
-    assert_error(login(api, email, DEFAULT_PASSWORD), 401, "authentication_error")
+    assert_error(login(api, email, DEFAULT_PASSWORD), 401, "invalid_credentials")
 
 
 def test_register_trims_the_display_name(
