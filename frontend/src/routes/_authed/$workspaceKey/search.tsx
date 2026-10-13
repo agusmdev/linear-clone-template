@@ -284,7 +284,9 @@ function SearchPage() {
                             {row.icon}
                           </span>
                           {row.prefix ? (
-                            <span className="w-16 shrink-0 text-text-tertiary">{row.prefix}</span>
+                            <span className="min-w-16 shrink-0 whitespace-nowrap text-text-tertiary">
+                              {row.prefix}
+                            </span>
                           ) : null}
                           <span className="min-w-0 flex-1 truncate">
                             <Highlight text={row.title} query={query} />
