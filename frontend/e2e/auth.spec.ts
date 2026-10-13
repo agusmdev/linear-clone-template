@@ -279,7 +279,9 @@ test.describe('session', () => {
   })
 
   test('logout ends the session on the backend too', async ({ authedPage: page, user, api }) => {
-    await page.goto('/')
+    // Not "/": it redirects to onboarding, which can remove the button before the click.
+    await page.goto('/items')
+    await expect(page.getByText('No items yet')).toBeVisible()
     await logoutButton(page).click()
 
     await expect(page).toHaveURL('/login')
