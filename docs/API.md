@@ -199,7 +199,7 @@ with `sort_order` = the mean of the neighbours' values (top: first - 1, bottom: 
 - `title` 1-500 chars; `priority` 0-4 (default 0); `estimate` 0-1000; `label_ids` max 50.
 - `state_id` default: the team's first `unstarted` state (Todo). Must be a state of the team.
 - `number` = the team's next number (atomic per team); `identifier = "<team key>-<number>"`.
-- `sort_order` default: after the team's last issue (max + 1).
+- `sort_order` default: after the workspace's last issue (max + 1), so views that mix teams (My issues) never get ties.
 - assignee must be a workspace member; labels, project, parent in the workspace; cycle in the team. Else 400 `invalid_reference`.
 - The creator and the assignee are subscribed. Activity: one `created` row; with
   `parent_id`, also a `parent` row on the new issue and a `sub_issue` row on the parent.

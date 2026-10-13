@@ -505,6 +505,29 @@ test.describe('issues list', () => {
     await expect(row(page, 'Crash on save')).toBeVisible()
   })
 
+  test('the "+" of a priority group prefills the priority of the new issue (ISS-5)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { team, key } = await seedWorkspace(api, user)
+    await createIssue(api, user, { team_id: team.id, title: 'Existing medium', priority: 3 })
+
+    const page = await loginAs(user)
+    await page.goto(`/${key}/team/ENG/issues?group=priority`)
+    await expect(row(page, 'Existing medium')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Add to Medium' }).click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog.getByRole('button', { name: 'Priority: Medium' })).toBeVisible()
+    await dialog.getByPlaceholder('Issue title').fill('Prefilled medium')
+    await page.keyboard.press('ControlOrMeta+Enter')
+
+    await expect(page.getByRole('group', { name: 'Medium' })).toContainText('Prefilled medium')
+    const { items } = await listIssues(api, user, team.workspace_id)
+    expect(items.find(issue => issue.title === 'Prefilled medium')?.priority).toBe(3)
+  })
+
   test('drags a card to another status column on the board (ISS-4)', async ({
     api,
     user,

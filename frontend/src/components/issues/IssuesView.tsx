@@ -209,6 +209,7 @@ export function IssuesView({
         detail.stateId = target.id
       }
     }
+    if (state.grouping === 'priority') detail.priority = Number(groupId) as IssuePriority
     if (state.grouping === 'assignee' && groupId !== NONE) detail.assigneeId = groupId
     if (state.grouping === 'project' && groupId !== NONE) detail.projectId = groupId
     openCreateIssue(detail)

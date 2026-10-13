@@ -172,6 +172,7 @@ export interface BulkDeleteIssuesData {
 export interface CreateIssueEventDetail {
   teamId?: string
   stateId?: string
+  priority?: IssuePriority
   projectId?: string
   cycleId?: string
   parentId?: string
