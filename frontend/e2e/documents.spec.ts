@@ -11,6 +11,7 @@ import {
   createWorkspace,
   expect,
   fetchDocument,
+  getProject,
   listDocuments,
   inviteMember,
   listTeams,
@@ -144,6 +145,14 @@ test.describe('documents list', () => {
     const { items } = await listDocuments(api, user, workspace.id)
     expect(items.map(d => d.title)).toEqual(['Untitled'])
     expect(page.url()).toContain(items[0].id)
+
+    // The title is focused and selected: typing replaces "Untitled".
+    await expect(page.getByLabel('Document title')).toBeFocused()
+    await page.keyboard.type('Launch plan')
+    await expect(page.getByLabel('Document title')).toHaveValue('Launch plan')
+    await expect
+      .poll(async () => (await (await fetchDocument(api, user, items[0].id)).json()).title)
+      .toBe('Launch plan')
   })
 
   test('a team has its own Documents page that lists and creates team documents (DOC-2)', async ({
@@ -350,6 +359,28 @@ test.describe('document editor', () => {
     await expect(link).toHaveAttribute('href', `/${workspace.url_key}/issue/${issue.identifier}`)
   })
 
+  test('text that only looks like an identifier (no such team key) is not a link', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const [team] = await listTeams(api, user, workspace.id)
+    const issue = await createIssue(api, user, { team_id: team.id, title: 'Linked issue' })
+    const doc = await createDocument(api, user, {
+      workspace_id: workspace.id,
+      title: 'Encoding',
+      content: `<p>Save as UTF-8 per ISO-9001, see ${issue.identifier}</p>`,
+    })
+
+    await page.goto(`/${workspace.url_key}/document/${doc.id}`)
+
+    const content = page.getByLabel('Document content')
+    await expect(content.getByRole('link', { name: issue.identifier })).toBeVisible()
+    await expect(content).toContainText('Save as UTF-8 per ISO-9001')
+    await expect(content.getByRole('link')).toHaveCount(1)
+  })
+
   test('picks and removes an emoji icon', async ({ api, user, authedPage: page }) => {
     const workspace = await createWorkspace(api, user)
     const doc = await createDocument(api, user, { workspace_id: workspace.id, title: 'Icons' })
@@ -547,5 +578,57 @@ test.describe('document header on a phone', () => {
       if (!box) throw new Error('breadcrumb part is not laid out')
       expect(box.x + box.width).toBeLessThanOrEqual(navRight + 0.5)
     }
+  })
+})
+
+test.describe('document project', () => {
+  test('a renamed or deleted project leaves the document breadcrumb and list badge at once', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const project = await createProject(api, user, {
+      workspace_id: workspace.id,
+      name: 'Old name',
+    })
+    const doc = await createDocument(api, user, {
+      workspace_id: workspace.id,
+      title: 'Plan',
+      project_id: project.id,
+    })
+    const header = page.locator('header')
+    const rows = page.getByRole('list', { name: 'Documents' })
+
+    await page.goto(`/${workspace.url_key}/documents`)
+    await rows.getByRole('link', { name: /Plan/ }).click()
+    await header.getByRole('link', { name: 'Old name' }).click()
+
+    const name = page.getByLabel('Project name')
+    await name.fill('New name')
+    await name.press('Enter')
+    await expect.poll(async () => (await getProject(api, user, project.id))?.name).toBe('New name')
+
+    await page.getByRole('link', { name: 'Documents', exact: true }).first().click()
+    await expect(rows).toContainText('New name')
+    await expect(rows).not.toContainText('Old name')
+    await rows.getByRole('link', { name: /Plan/ }).click()
+    await expect(page.getByLabel('Document title')).toHaveValue('Plan')
+    await expect(header.getByRole('link', { name: 'New name' })).toBeVisible()
+    await expect(header.getByRole('link', { name: 'Old name' })).toHaveCount(0)
+
+    await header.getByRole('link', { name: 'New name' }).click()
+    await page.getByRole('button', { name: 'Project options' }).click()
+    await page.getByRole('menuitem', { name: /Delete/ }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Delete project' }).click()
+    await expect(page).toHaveURL(new RegExp(`/${workspace.url_key}/projects$`))
+
+    await page.getByRole('link', { name: 'Documents', exact: true }).first().click()
+    await expect(rows.getByRole('link', { name: /Plan/ })).toBeVisible()
+    await expect(rows).not.toContainText('New name')
+    await rows.getByRole('link', { name: /Plan/ }).click()
+    await expect(page.getByLabel('Document title')).toHaveValue('Plan')
+    await expect(header.getByRole('link', { name: 'New name' })).toHaveCount(0)
+    expect((await (await fetchDocument(api, user, doc.id)).json()).project_id).toBeNull()
   })
 })
