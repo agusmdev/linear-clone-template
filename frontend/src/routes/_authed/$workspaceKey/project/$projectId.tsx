@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { Box, FileText, ListTodo, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { DeleteProjectDialog } from '@/components/DeleteProjectDialog'
@@ -18,7 +18,7 @@ import {
   ProjectTeamsPicker,
 } from '@/components/ProjectPropertyPickers'
 import { RichTextEditor, useDebouncedAutosave } from '@/components/editor'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,16 +64,17 @@ function ProjectPage() {
   const { tab = 'overview' } = Route.useSearch()
   const routeNavigate = Route.useNavigate()
   const navigate = useNavigate()
-  const { path } = useCurrentWorkspace()
+  const { workspace, path } = useCurrentWorkspace()
   const projectQuery = useProject(projectId)
   const deleteProject = useDeleteProject()
   const [deleteOpen, setDeleteOpen] = useState(false)
   const newDocument = useNewDocument({ project_id: projectId })
-  const project = projectQuery.data
+  // A project of another workspace is not opened under this one.
+  const project = projectQuery.data?.workspace_id === workspace.id ? projectQuery.data : undefined
   // `C` creates an issue in this project, like "New issue".
   usePageIssueDefaults({ projectId: project?.id, teamId: project?.team_ids[0] })
 
-  if (projectQuery.isError) {
+  if (projectQuery.isError || (projectQuery.data && !project)) {
     return (
       <div className="flex min-h-full flex-col">
         <PageHeader
@@ -84,6 +85,14 @@ function ProjectPage() {
           icon={<Box />}
           title="Project not found"
           description="This project does not exist or was deleted."
+          action={
+            <Link
+              to={path('/projects') as '/'}
+              className={buttonVariants({ size: 'sm', variant: 'outline' })}
+            >
+              Back to projects
+            </Link>
+          }
         />
       </div>
     )
@@ -241,6 +250,7 @@ function ProjectOverview({ project }: { project: Project }) {
       <input
         aria-label="Project name"
         value={name}
+        maxLength={255}
         placeholder="Project name"
         onChange={event => setName(event.target.value)}
         onBlur={saveName}
