@@ -1,3 +1,4 @@
+import type { DocumentsParams } from '@/types/document'
 import type { IssuesParams } from '@/types/issue'
 import type { ItemsParams } from '@/types/item'
 
@@ -30,5 +31,11 @@ export const queryKeys = {
     detail: (id: string) => ['issues', 'detail', id] as const,
     byIdentifier: (workspaceId: string, identifier: string) =>
       ['issues', 'by-identifier', workspaceId, identifier] as const,
+  },
+  documents: {
+    all: ['documents'] as const,
+    lists: () => ['documents', 'list'] as const,
+    list: (params: DocumentsParams) => ['documents', 'list', params] as const,
+    detail: (id: string) => ['documents', 'detail', id] as const,
   },
 }
