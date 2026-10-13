@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { useForm, useWatch, type PathValue } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -142,11 +142,19 @@ export function CreateIssueDialog({
   const cycle = teamCycles.find(c => c.id === values.cycle_id)
   const parent = parentCandidates.find(i => i.id === values.parent_id)
 
+  // Blocks a second submit (Cmd+Enter pressed again, double-click) while the
+  // create request is in flight. A ref, not `pending`: `pending` changes only
+  // after a re-render, so a fast second event still sees `false`.
+  const inFlight = useRef(false)
   const submit = form.handleSubmit(async data => {
+    if (inFlight.current) return
+    inFlight.current = true
     try {
       await onCreate(createIssueFormToPayload(data))
     } catch {
       return // the host shows the error toast
+    } finally {
+      inFlight.current = false
     }
     if (createMore) {
       form.reset({ ...data, title: '', description: '' })
@@ -186,12 +194,12 @@ export function CreateIssueDialog({
         onKeyDown={event => {
           if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
             event.preventDefault()
-            void submit()
+            if (!pending) void submit()
           }
         }}
       >
         <Form {...form}>
-          <form onSubmit={submit} noValidate className="flex flex-col">
+          <form onSubmit={submit} noValidate className="flex min-w-0 flex-col">
             <div className="flex items-center gap-1.5 px-4 pt-3.5 pb-1">
               <PropertyPicker
                 label="Team"
@@ -236,7 +244,7 @@ export function CreateIssueDialog({
               </button>
             </div>
 
-            <div className="px-5 pt-2">
+            <div className="min-w-0 px-5 pt-2">
               <FormField
                 control={form.control}
                 name="title"
@@ -254,7 +262,7 @@ export function CreateIssueDialog({
                           if (event.key === 'Enter' && !event.metaKey && !event.ctrlKey)
                             event.preventDefault()
                         }}
-                        className="field-sizing-content w-full resize-none bg-transparent text-title font-medium text-foreground outline-none placeholder:text-text-tertiary"
+                        className="field-sizing-content w-full max-w-full min-w-0 resize-none bg-transparent [overflow-wrap:anywhere] text-title font-medium text-foreground outline-none placeholder:text-text-tertiary"
                       />
                     </FormControl>
                     <FormMessage />

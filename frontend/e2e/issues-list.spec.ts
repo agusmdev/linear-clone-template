@@ -120,6 +120,96 @@ test.describe('issues list', () => {
     await expect(dialog.getByText('Title is required')).toBeVisible()
   })
 
+  test('a fast second submit does not create a duplicate issue (ISS-1)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { workspace, key } = await seedWorkspace(api, user)
+    const page = await loginAs(user)
+    await page.goto(`/${key}`)
+    await expect(page.getByRole('button', { name: 'Compose issue' })).toBeVisible()
+    await page.goto(`/${key}/team/ENG/issues`)
+    await expect(page.getByText('No issues yet')).toBeVisible()
+    const dialog = page.getByRole('dialog', { name: 'New issue' })
+    const title = dialog.getByLabel('Issue title')
+    const total = async () => (await listIssues(api, user, workspace.id)).total
+
+    // Cmd+Enter pressed three times quickly.
+    await page.locator('body').click()
+    await page.keyboard.press('c')
+    await title.fill('Double submit')
+    await title.press('ControlOrMeta+Enter')
+    await title.press('ControlOrMeta+Enter')
+    await title.press('ControlOrMeta+Enter')
+    await expect(dialog).toBeHidden()
+    await page.waitForLoadState('networkidle')
+    expect(await total()).toBe(1)
+
+    // A double-click on "Create issue".
+    await page.locator('body').click()
+    await page.keyboard.press('c')
+    await title.fill('Double click')
+    await dialog.getByRole('button', { name: 'Create issue' }).dblclick()
+    await expect(dialog).toBeHidden()
+    await page.waitForLoadState('networkidle')
+    expect(await total()).toBe(2)
+
+    // "Create more" on, Cmd+Enter twice: one issue, the modal stays open.
+    await page.locator('body').click()
+    await page.keyboard.press('c')
+    await dialog.getByRole('switch', { name: 'Create more' }).click()
+    await title.fill('Create more twice')
+    await title.press('ControlOrMeta+Enter')
+    await title.press('ControlOrMeta+Enter')
+    await expect(page.getByText('Created ENG-3')).toBeVisible()
+    await expect(title).toHaveValue('')
+    await page.waitForLoadState('networkidle')
+    expect(await total()).toBe(3)
+    const titles = (await listIssues(api, user, workspace.id)).items.map(i => i.title).sort()
+    expect(titles).toEqual(['Create more twice', 'Double click', 'Double submit'])
+  })
+
+  test('a long title with no spaces wraps inside the create modal (ISS-1)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { key } = await seedWorkspace(api, user)
+    const page = await loginAs(user)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto(`/${key}/team/ENG/issues`)
+    await expect(page.getByText('No issues yet')).toBeVisible()
+    await page.locator('body').click()
+    await page.keyboard.press('c')
+    const dialog = page.getByRole('dialog', { name: 'New issue' })
+    await expect(dialog).toBeVisible()
+
+    const inside = async () => {
+      const box = (await dialog.boundingBox())!
+      for (const part of [
+        dialog.getByLabel('Issue title'),
+        dialog.getByRole('button', { name: 'Create issue' }),
+        dialog.getByRole('button', { name: 'Close' }),
+      ]) {
+        const b = (await part.boundingBox())!
+        expect(b.x).toBeGreaterThanOrEqual(box.x)
+        expect(b.x + b.width).toBeLessThanOrEqual(box.x + box.width + 0.5)
+      }
+    }
+    await dialog
+      .getByLabel('Issue title')
+      .fill(
+        'https://example.com/a/very/long/url/without/any/spaces/at/all/that/keeps/going/and/going/forever/and/ever'
+      )
+    await inside()
+    await dialog.getByLabel('Issue title').fill('L'.repeat(600))
+    await inside()
+    const viewport = page.viewportSize()!
+    const button = (await dialog.getByRole('button', { name: 'Create issue' }).boundingBox())!
+    expect(button.y + button.height).toBeLessThanOrEqual(viewport.height)
+  })
+
   test('groups by status, changes properties inline and switches tabs (ISS-3, ISS-13)', async ({
     api,
     user,
