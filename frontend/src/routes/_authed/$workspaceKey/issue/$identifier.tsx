@@ -328,13 +328,13 @@ function IssueDetail({ issue }: { issue: Issue }) {
               {parent ? (
                 <Link
                   to={issuePath(parent.identifier) as '/'}
-                  className="flex w-fit items-center gap-1.5 text-mini text-text-secondary hover:text-foreground"
+                  className="flex w-fit max-w-full items-center gap-1.5 text-mini whitespace-nowrap text-text-secondary hover:text-foreground"
                 >
-                  <CornerLeftUp className="size-3.5" />
-                  <span>Sub-issue of</span>
+                  <CornerLeftUp className="size-3.5 shrink-0" />
+                  <span className="shrink-0">Sub-issue of</span>
                   <StatusIcon type={parent.state.type} color={parent.state.color} size={12} />
-                  <span className="text-text-tertiary">{parent.identifier}</span>
-                  <span className="max-w-xs truncate text-foreground">{parent.title}</span>
+                  <span className="shrink-0 text-text-tertiary">{parent.identifier}</span>
+                  <span className="max-w-xs min-w-0 truncate text-foreground">{parent.title}</span>
                 </Link>
               ) : null}
               <IssueTitleInput
