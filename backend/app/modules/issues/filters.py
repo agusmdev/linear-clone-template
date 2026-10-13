@@ -16,11 +16,11 @@ from sqlalchemy.sql import Select
 from app.core.filters import ModelFilter
 from app.core.text_search import like_pattern
 from app.modules.issues.models import Issue, IssueLabel, IssueSubscriber
-from app.modules.teams.models import WorkflowState, WorkflowStateType
+from app.modules.teams.models import Team, WorkflowState, WorkflowStateType
 
 ME = "me"
 NONE = "none"
-_IDENTIFIER = re.compile(r"^(?:[A-Za-z]{2,5}-)?(\d+)$")
+_IDENTIFIER = re.compile(r"^(?:([A-Za-z]{2,5})-)?(\d+)$")
 
 
 def _user_refs(values: list[str] | None, *, allow_none: bool) -> list[str] | None:
@@ -67,7 +67,8 @@ class IssueFilter(ModelFilter):  # ?order_by= accepts Issue columns only (else 4
     ?project_id__in=<uuid>,none  ?cycle_id__in=<uuid>,none
     ?project_id= ?cycle_id= ?parent_id=   (parent_id__isnull=true: top-level only)
     ?include_archived=true  (default: archived issues are left out)
-    ?search=            title or description (ILIKE), or the number ("12", "ENG-12")
+    ?search=            title or description (ILIKE), or the number ("12" in any team,
+                        "ENG-12" in team ENG only)
     ?order_by=          e.g. sort_order, -priority, -created_at, -updated_at, due_date
     """
 
@@ -220,6 +221,13 @@ class IssueFilter(ModelFilter):  # ?order_by= accepts Issue columns only (else 4
                 Issue.description.ilike(pattern),
             ]
             if match := _IDENTIFIER.match(self.search.strip()):
-                conditions.append(Issue.number == int(match.group(1)))
+                key, number = match.groups()
+                number_matches = Issue.number == int(number)
+                if key:
+                    # "ENG-12" is ENG's issue 12, not issue 12 of every team.
+                    number_matches = number_matches & Issue.team_id.in_(
+                        select(Team.id).where(Team.key == key.upper())
+                    )
+                conditions.append(number_matches)
             query = query.where(or_(*conditions))
         return query

@@ -10,6 +10,7 @@ import pytest
 from tests.e2e.helpers import (
     assert_error,
     create_issue,
+    create_team,
     create_workspace,
     join_workspace,
     team_states,
@@ -163,6 +164,20 @@ def test_search_treats_like_wildcards_as_literal_text(
     create_issue(client, team_id, "Fix C:\\temp path")
 
     assert _identifiers(setup, search=search) == expected
+
+
+def test_search_by_identifier_matches_the_team_key(setup: dict[str, Any]) -> None:
+    client = setup["owner"].client
+    design = create_team(client, setup["workspace"]["id"], name="Design", key="DES")
+    create_issue(client, design["id"], "Moodboard")
+    create_issue(client, design["id"], "Icons")
+
+    assert _identifiers(setup, search="DES-2") == ["DES-2"]
+    assert _identifiers(setup, search="des-2") == ["DES-2"]
+    assert _identifiers(setup, search="ENG-2") == ["ENG-2"]
+    assert _identifiers(setup, search="OPS-2") == []
+    # A bare number matches that number in every team.
+    assert _identifiers(setup, search="2") == ["ENG-2", "DES-2"]
 
 
 def test_filters_by_ids(setup: dict[str, Any]) -> None:
