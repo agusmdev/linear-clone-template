@@ -35,7 +35,10 @@ export function StatusIcon({
   className,
   label,
 }: StatusIconProps) {
-  const stroke = color ?? DEFAULT_COLORS[type]
+  // Stored state colors are picked for the dark theme (e.g. Todo #e2e2e2). The
+  // light theme caps their lightness (--status-icon-max-l) so they stay visible on white.
+  const shown = `oklch(from ${color ?? DEFAULT_COLORS[type]} min(l, var(--status-icon-max-l)) c h)`
+  const stroke = 'currentColor'
   const a11y = label ? { role: 'img', 'aria-label': label } : { 'aria-hidden': true }
   const common = {
     width: size,
@@ -43,6 +46,7 @@ export function StatusIcon({
     viewBox: '0 0 14 14',
     fill: 'none',
     className: cn('shrink-0', className),
+    style: { color: shown },
     'data-status-type': type,
     ...a11y,
   }
