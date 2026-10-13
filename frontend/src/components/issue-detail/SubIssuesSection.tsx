@@ -148,6 +148,7 @@ export function SubIssuesSection({
             autoFocus
             aria-label="Sub-issue title"
             placeholder="Sub-issue title"
+            maxLength={500}
             value={title}
             onChange={event => setTitle(event.target.value)}
             onKeyDown={event => {
