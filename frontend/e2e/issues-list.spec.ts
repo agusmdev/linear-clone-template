@@ -298,9 +298,12 @@ test.describe('issues list', () => {
     await expect(dialog.getByLabel('Issue title')).toHaveValue('Important title')
     await expect(description).toContainText('Long description I wrote. /')
 
-    // A second Escape (no menu open) still closes the modal.
+    // A second Escape (no menu open) closes the modal: with text typed, it asks first.
     await page.keyboard.press('Escape')
+    const prompt = page.getByRole('alertdialog', { name: 'Save issue as draft?' })
+    await prompt.getByRole('button', { name: 'Discard' }).click()
     await expect(dialog).toBeHidden()
+    await expect(prompt).toBeHidden()
 
     // Cmd+Enter from the description submits without adding a hard break.
     await page.locator('body').click()
@@ -318,6 +321,112 @@ test.describe('issues list', () => {
     const issues = (await listIssues(api, user, workspace.id)).items
     const created = issues.find(issue => issue.title === 'Cmd enter from description')
     expect(created?.description).toBe('<p>desc text</p>')
+  })
+
+  test('closing the modal with text typed asks to save a draft (ISS-1)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { workspace, key } = await seedWorkspace(api, user)
+    const page = await loginAs(user)
+    await page.goto(`/${key}/team/ENG/issues`)
+    await expect(page.getByText('No issues yet')).toBeVisible()
+
+    const dialog = page.getByRole('dialog', { name: 'New issue' })
+    const prompt = page.getByRole('alertdialog', { name: 'Save issue as draft?' })
+    const title = dialog.getByLabel('Issue title')
+    const description = dialog.getByRole('textbox', { name: 'Issue description' })
+
+    // Nothing typed: Escape closes at once.
+    await page.locator('body').click()
+    await page.keyboard.press('c')
+    await expect(dialog).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+    await expect(prompt).toBeHidden()
+
+    // Text typed: Escape asks; Escape on the prompt goes back to the modal.
+    await page.keyboard.press('c')
+    await title.fill('Half written issue')
+    await description.click()
+    await page.keyboard.type('Notes I do not want to lose')
+    await dialog.getByRole('button', { name: /^Priority:/ }).click()
+    await page.getByRole('option', { name: 'Urgent' }).click()
+    await expect(dialog.getByRole('button', { name: 'Priority: Urgent' })).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(prompt).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(prompt).toBeHidden()
+    await expect(dialog).toBeVisible()
+    await expect(title).toHaveValue('Half written issue')
+
+    // "Save draft" from the X button; the draft survives a reload.
+    await dialog.getByRole('button', { name: 'Close' }).click()
+    await prompt.getByRole('button', { name: 'Save draft' }).click()
+    await expect(dialog).toBeHidden()
+    await page.reload()
+    await expect(page.getByText('No issues yet')).toBeVisible()
+    await page.locator('body').click()
+    await page.keyboard.press('c')
+    await expect(title).toHaveValue('Half written issue')
+    await expect(description).toContainText('Notes I do not want to lose')
+    await expect(dialog.getByRole('button', { name: 'Priority: Urgent' })).toBeVisible()
+
+    // Creating the issue uses the draft up.
+    await page.keyboard.press('ControlOrMeta+Enter')
+    await expect(page.getByText('Created ENG-1')).toBeVisible()
+    await expect(row(page, 'Half written issue')).toBeVisible()
+    const [issue] = (await listIssues(api, user, workspace.id)).items
+    expect(issue).toMatchObject({ title: 'Half written issue', priority: 1 })
+    expect(issue.description).toContain('Notes I do not want to lose')
+    await page.locator('body').click()
+    await page.keyboard.press('c')
+    await expect(title).toHaveValue('')
+
+    // "Discard" drops the text: the next modal is empty.
+    await title.fill('Throwaway')
+    await page.keyboard.press('Escape')
+    await prompt.getByRole('button', { name: 'Discard' }).click()
+    await expect(dialog).toBeHidden()
+    await expect(prompt).toBeHidden()
+    await page.keyboard.press('c')
+    await expect(title).toHaveValue('')
+  })
+
+  test('a new issue from the Backlog tab starts in the backlog (ISS-1, ISS-13)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { workspace, key } = await seedWorkspace(api, user)
+    const page = await loginAs(user)
+    await page.goto(`/${key}/team/ENG/issues?tab=backlog`)
+    await expect(page.getByText('No issues in the backlog')).toBeVisible()
+
+    // The empty state's button and the C key both prefill the Backlog status.
+    const dialog = page.getByRole('dialog', { name: 'New issue' })
+    await page.getByRole('main').getByRole('button', { name: 'Create issue' }).click()
+    await expect(dialog.getByRole('button', { name: 'Status: Backlog' })).toBeVisible()
+    await dialog.getByLabel('Issue title').fill('Someday idea')
+    await page.keyboard.press('ControlOrMeta+Enter')
+    await expect(dialog).toBeHidden()
+    await expect(row(page, 'Someday idea')).toBeVisible()
+
+    await page.locator('body').click()
+    await page.keyboard.press('c')
+    await expect(dialog.getByRole('button', { name: 'Status: Backlog' })).toBeVisible()
+    await dialog.getByLabel('Issue title').fill('Another idea')
+    await page.keyboard.press('ControlOrMeta+Enter')
+    await expect(row(page, 'Another idea')).toBeVisible()
+    const { items } = await listIssues(api, user, workspace.id)
+    expect(items.map(issue => issue.state.name)).toEqual(['Backlog', 'Backlog'])
+
+    // The other tabs keep the team's default status (Todo).
+    await page.getByRole('tab', { name: 'Active' }).click()
+    await page.locator('body').click()
+    await page.keyboard.press('c')
+    await expect(dialog.getByRole('button', { name: 'Status: Todo' })).toBeVisible()
   })
 
   test('keeps a pasted multi-line title on one line (ISS-1)', async ({ api, user, loginAs }) => {

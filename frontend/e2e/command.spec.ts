@@ -312,9 +312,12 @@ test.describe('global shortcuts', () => {
     )
     await expect(priority).toBeVisible()
 
-    // Closed, the shortcuts work again.
+    // Closed (the typed title is discarded), the shortcuts work again.
     await page.keyboard.press('Escape')
+    const prompt = page.getByRole('alertdialog', { name: 'Save issue as draft?' })
+    await prompt.getByRole('button', { name: 'Discard' }).click()
     await expect(modal).toBeHidden()
+    await expect(prompt).toBeHidden()
     await page.keyboard.press('g')
     await page.keyboard.press('s')
     await expect(page).toHaveURL(`${base}/settings`)

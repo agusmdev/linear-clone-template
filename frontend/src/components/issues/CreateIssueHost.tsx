@@ -6,6 +6,8 @@ import { useDebounce } from '@/hooks/useDebounce'
 import { useIssue } from '@/hooks/useIssueDetail'
 import { useCycleRefs, useProjectRefs } from '@/hooks/useIssueRefs'
 import { useCreateIssue, useIssuesPage, useWorkspaceStates } from '@/hooks/useIssues'
+import { clearIssueDraft, readIssueDraft, saveIssueDraft } from '@/features/issues/issue-draft'
+import type { CreateIssueFormData } from '@/features/issues/issue-schemas'
 import { toastApiError } from '@/lib/error-handler'
 import { CREATE_ISSUE_EVENT } from '@/lib/issue-events'
 import type { CreateIssueData, CreateIssueEventDetail } from '@/types/issue'
@@ -22,9 +24,12 @@ export function CreateIssueHost() {
   const ws = useCurrentWorkspace()
   const navigate = useNavigate()
   const pathname = useRouterState({ select: s => s.location.pathname })
-  const [session, setSession] = useState<{ id: number; detail: CreateIssueEventDetail } | null>(
-    null
-  )
+  const [session, setSession] = useState<{
+    id: number
+    detail: CreateIssueEventDetail
+    /** The workspace's saved draft when the modal opened. */
+    draft: CreateIssueFormData | null
+  } | null>(null)
   const [open, setOpen] = useState(false)
   const [teamId, setTeamId] = useState<string | undefined>()
   const [parentSearch, setParentSearch] = useState('')
@@ -33,9 +38,11 @@ export function CreateIssueHost() {
   const urlTeamKey = /\/team\/([^/]+)/.exec(pathname)?.[1]
   const urlTeam = ws.teams.find(t => t.key.toLowerCase() === urlTeamKey?.toLowerCase())
 
+  const workspaceId = ws.workspace.id
   useEffect(() => {
     const show = (detail: CreateIssueEventDetail) => {
-      setSession(prev => ({ id: (prev?.id ?? 0) + 1, detail }))
+      const draft = readIssueDraft(workspaceId)
+      setSession(prev => ({ id: (prev?.id ?? 0) + 1, detail, draft }))
       setTeamId(undefined)
       setParentSearch('')
       setOpen(true)
@@ -46,9 +53,18 @@ export function CreateIssueHost() {
     return () => {
       window.removeEventListener(CREATE_ISSUE_EVENT, onEvent)
     }
-  }, [])
+  }, [workspaceId])
 
+  // A draft of a deleted team is not restored.
+  const draft =
+    session?.draft && ws.teams.some(t => t.id === session.draft?.team_id)
+      ? {
+          ...session.draft,
+          label_ids: session.draft.label_ids.filter(id => ws.labels.some(l => l.id === id)),
+        }
+      : null
   const defaultTeamId =
+    draft?.team_id ??
     (session?.detail.teamId && ws.teams.some(t => t.id === session.detail.teamId)
       ? session.detail.teamId
       : undefined) ??
@@ -70,12 +86,15 @@ export function CreateIssueHost() {
     },
     open && !!activeTeamId
   )
-  const defaultParent = useIssue(open ? (session?.detail.parentId ?? null) : null)
+  const defaultParent = useIssue(
+    open ? (draft?.parent_id ?? session?.detail.parentId ?? null) : null
+  )
   const create = useCreateIssue()
 
   const onCreate = async (data: CreateIssueData) => {
     try {
       const issue = await create.mutateAsync(data)
+      clearIssueDraft(workspaceId)
       toast.success(`Created ${issue.identifier}`, {
         description: issue.title,
         action: {
@@ -97,6 +116,9 @@ export function CreateIssueHost() {
       open={open}
       onOpenChange={setOpen}
       defaults={{ ...session.detail, teamId: defaultTeamId }}
+      draft={draft}
+      onSaveDraft={values => saveIssueDraft(workspaceId, values)}
+      onDiscardDraft={() => clearIssueDraft(workspaceId)}
       teams={ws.teams}
       states={states}
       members={ws.members}

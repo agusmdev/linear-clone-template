@@ -172,6 +172,8 @@ export interface BulkDeleteIssuesData {
 export interface CreateIssueEventDetail {
   teamId?: string
   stateId?: string
+  /** Without `stateId`: the team's first state of this type (Backlog tab: `backlog`). */
+  stateType?: WorkflowStateType
   priority?: IssuePriority
   projectId?: string
   cycleId?: string
