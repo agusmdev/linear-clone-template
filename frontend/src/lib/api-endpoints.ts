@@ -40,6 +40,11 @@ export const API = {
     CREATE: '/projects',
     DETAIL: (id: string) => `/projects/${id}`,
   },
+  CYCLES: {
+    TEAM: (teamId: string) => `/teams/${teamId}/cycles`,
+    DETAIL: (cycleId: string) => `/cycles/${cycleId}`,
+    COMPLETE: (cycleId: string) => `/cycles/${cycleId}/complete`,
+  },
   DOCUMENTS: {
     LIST: '/documents',
     CREATE: '/documents',
