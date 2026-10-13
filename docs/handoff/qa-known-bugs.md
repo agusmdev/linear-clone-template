@@ -115,6 +115,14 @@ Bugs found by earlier QA rounds. Do not re-report one unless it still reproduces
 - issue-detail: reopening an issue showed a cached description and typing overwrote a teammate's edit (same fix applied to the project description)
 - create-issue: Cmd+K "Create new issue" while the modal was open wiped the typed draft
 
+## Round 8 (all fixed)
+
+- issues-list: on a board with a tall column the whole board scrolled, so cards could not be dragged to other columns (columns now scroll on their own)
+- issue-detail: a long title was cut off after the window got narrower
+- projects-cycles: cycles were grouped Current/Upcoming/Past by the server's UTC date instead of the user's local date
+- inbox-search: the inbox preview showed an outdated copy of the issue after a teammate changed it
+- create-issue: the parent picker (and issue list search) only matched the exact phrase (now any word order)
+
 ## Known and accepted (not bugs to re-report)
 
 - A tab left open after another admin removes you shows "Workspace <id> not found".
@@ -131,3 +139,4 @@ Bugs found by earlier QA rounds. Do not re-report one unless it still reproduces
 - A card grabbed far from its centre and dropped left of an empty column's centre can land in the next column.
 - A member removed from a workspace stays subscribed to its issues (notifications reappear if re-added).
 - Search shows a generic box instead of a project's own icon.
+- Search shows at most 25 results per type.
