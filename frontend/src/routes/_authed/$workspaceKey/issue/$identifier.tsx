@@ -222,7 +222,12 @@ function IssueDetail({ issue }: { issue: Issue }) {
         <DropdownMenuTrigger asChild>
           <IconButton label="Issue actions" icon={<MoreHorizontal />} />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuContent
+          align="end"
+          className="w-48"
+          // Keep the focus (and its tooltip) off the trigger: the archive banner opens under it.
+          onCloseAutoFocus={event => event.preventDefault()}
+        >
           {archived ? (
             <DropdownMenuItem onSelect={() => setArchived(false)}>
               <ArchiveRestore />

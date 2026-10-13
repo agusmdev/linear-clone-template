@@ -3,13 +3,9 @@ import { Link } from '@tanstack/react-router'
 import { Ban, Copy, Link2, Plus, ShieldAlert, X } from 'lucide-react'
 import { IconButton } from '@/components/IconButton'
 import { StatusIcon } from '@/components/StatusIcon'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { IssueSearchPicker } from '@/components/issue-detail/IssueSearchPicker'
+import { Command, CommandGroup, CommandItem, CommandList } from '@/components/ui/command'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { IssueSearchList } from '@/components/issue-detail/IssueSearchList'
 import type { CreateIssueRelationData, IssueRef, IssueRelation } from '@/types/issue'
 
 export type RelationKind = CreateIssueRelationData['type']
@@ -58,9 +54,16 @@ export function RelationsSection({
   searchResults,
   searching,
 }: RelationsSectionProps) {
+  const [open, setOpenState] = React.useState(false)
+  // The relation type picked in the first step; null = the type list is shown.
   const [pending, setPending] = React.useState<RelationKind | null>(null)
-  // Set when a menu item opens the picker: the menu must not take the focus back.
-  const picked = React.useRef(false)
+  const setOpen = (next: boolean) => {
+    setOpenState(next)
+    if (!next) {
+      setPending(null)
+      onSearchChange('')
+    }
+  }
   const groups = new Map<string, IssueRelation[]>()
   for (const relation of relations) {
     const heading = relationHeading(relation)
@@ -72,60 +75,45 @@ export function RelationsSection({
 
   return (
     <section aria-label="Relations" className="flex flex-col">
-      <IssueSearchPicker
-        open={pending !== null}
-        onOpenChange={open => {
-          if (!open) {
-            setPending(null)
-            onSearchChange('')
-          }
-        }}
-        label={pendingLabel}
-        search={search}
-        onSearchChange={onSearchChange}
-        results={searchResults.filter(issue => !linkedIds.has(issue.id))}
-        loading={searching}
-        onSelect={issue => {
-          if (pending) onAdd(pending, issue)
-          setPending(null)
-          onSearchChange('')
-        }}
-        anchor={
-          <div className="flex h-8 items-center gap-2">
-            <h2 className="text-ui font-medium text-foreground">Relations</h2>
-            {relations.length > 0 ? (
-              <span className="text-mini text-text-tertiary">{relations.length}</span>
-            ) : null}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <IconButton label="Add relation" icon={<Plus />} size="sm" className="ml-auto" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="w-44"
-                onCloseAutoFocus={event => {
-                  if (!picked.current) return
-                  picked.current = false
-                  event.preventDefault()
+      <div className="flex h-8 items-center gap-2">
+        <h2 className="text-ui font-medium text-foreground">Relations</h2>
+        {relations.length > 0 ? (
+          <span className="text-mini text-text-tertiary">{relations.length}</span>
+        ) : null}
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <IconButton label="Add relation" icon={<Plus />} size="sm" className="ml-auto" />
+          </PopoverTrigger>
+          <PopoverContent align="end" className={pending ? 'w-80 p-0' : 'w-48 p-0'}>
+            {pending ? (
+              <IssueSearchList
+                label={pendingLabel}
+                search={search}
+                onSearchChange={onSearchChange}
+                results={searchResults.filter(issue => !linkedIds.has(issue.id))}
+                loading={searching}
+                onSelect={issue => {
+                  onAdd(pending, issue)
+                  setOpen(false)
                 }}
-              >
-                {KINDS.map(kind => (
-                  <DropdownMenuItem
-                    key={kind.type}
-                    onSelect={() => {
-                      picked.current = true
-                      setPending(kind.type)
-                    }}
-                  >
-                    {kind.icon}
-                    {kind.label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        }
-      />
+              />
+            ) : (
+              <Command label="Add relation" loop>
+                <CommandList>
+                  <CommandGroup>
+                    {KINDS.map(kind => (
+                      <CommandItem key={kind.type} onSelect={() => setPending(kind.type)}>
+                        {kind.icon}
+                        {kind.label}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            )}
+          </PopoverContent>
+        </Popover>
+      </div>
       {ordered.length === 0 ? (
         <p className="text-mini text-text-tertiary">No related issues</p>
       ) : (
