@@ -120,9 +120,9 @@ A link is active (`aria-current="page"`, `bg-surface-active`) when the URL start
 | Prop | Type | Notes |
 |---|---|---|
 | `title` | `ReactNode` | The page `<h1>` (tests can use `getByRole('heading', { level: 1 })`). |
-| `breadcrumbs?` | `{ label, to?, icon? }[]` | Shown before the title with `›` separators. |
+| `breadcrumbs?` | `{ label, to?, icon? }[]` | Shown before the title with `›` separators. Crumbs and title shrink and truncate, and the nav clips, so on a small screen they never run under the actions. |
 | `icon?` | `ReactNode` | Before the title. |
-| `actions?` | `ReactNode` | Right side. |
+| `actions?` | `ReactNode` | Right side. It does not shrink: keep it compact below `md` (hide text labels, show icons). |
 | `children?` | `ReactNode` | Second row (tabs, filter bar, display options). |
 
 ## 5. Linear components

@@ -36,21 +36,24 @@ export function PageHeader({
   return (
     <header className={cn('border-b border-border-subtle', className)}>
       <div className="flex h-11 items-center gap-2 px-4">
-        <nav aria-label="Breadcrumb" className="flex min-w-0 flex-1 items-center gap-1.5">
+        <nav
+          aria-label="Breadcrumb"
+          className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden"
+        >
           {breadcrumbs?.map((crumb, index) => (
             <React.Fragment key={`${crumb.label}-${index}`}>
               {crumb.to ? (
                 <Link
                   to={crumb.to as '/'}
-                  className="flex shrink-0 items-center gap-1.5 rounded px-1 text-ui text-text-secondary hover:text-foreground"
+                  className="flex min-w-0 items-center gap-1.5 rounded px-1 text-ui text-text-secondary hover:text-foreground"
                 >
                   {crumb.icon}
-                  {crumb.label}
+                  <span className="truncate">{crumb.label}</span>
                 </Link>
               ) : (
-                <span className="flex shrink-0 items-center gap-1.5 px-1 text-ui text-text-secondary">
+                <span className="flex min-w-0 items-center gap-1.5 px-1 text-ui text-text-secondary">
                   {crumb.icon}
-                  {crumb.label}
+                  <span className="truncate">{crumb.label}</span>
                 </span>
               )}
               <ChevronRight aria-hidden className="size-3 shrink-0 text-text-tertiary" />
