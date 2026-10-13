@@ -6,6 +6,7 @@
 import { randomUUID } from 'node:crypto'
 import {
   type Page,
+  authHeaders,
   createIssue,
   createLabel,
   createTeam,
@@ -82,6 +83,25 @@ test.describe('onboarding and home', () => {
     await page.getByRole('button', { name: 'Create workspace' }).click()
     await expect(page.getByText('This URL is already taken')).toBeVisible()
     await expect(page).toHaveURL('/onboarding')
+  })
+
+  test('onboarding refuses a URL that is an app route', async ({ authedPage: page, api, user }) => {
+    // A workspace lives at /<url_key>: "login" would open the login page instead.
+    await page.goto('/onboarding')
+    await page.getByLabel('Workspace name').fill('Dup')
+    for (const reserved of ['login', 'register', 'onboarding', 'items', 'oauth', 'api']) {
+      await page.getByLabel('Workspace URL').fill(reserved)
+      await page.getByRole('button', { name: 'Create workspace' }).click()
+      await expect(page.getByText('This URL is reserved')).toBeVisible()
+      await expect(page).toHaveURL('/onboarding')
+    }
+    // The backend refuses it too, not only the form.
+    const response = await api.post('/workspaces', {
+      headers: authHeaders(user),
+      data: { name: 'Dup', url_key: 'oauth' },
+    })
+    expect(response.status()).toBe(422)
+    expect(await listWorkspaces(api, user)).toEqual([])
   })
 
   test('"/" and the workspace root open My issues of the first workspace', async ({

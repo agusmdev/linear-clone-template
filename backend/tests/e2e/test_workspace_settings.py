@@ -76,11 +76,26 @@ def test_update_workspace_with_a_taken_url_key_is_refused(
 def test_update_workspace_validates_the_url_key(auth_client: httpx.Client) -> None:
     workspace = create_workspace(auth_client)
 
-    for bad in ("A", "Has Space", "-dash", "x" * 49):
+    for bad in ("A", "Has Space", "-dash", "x" * 49, "login", "register"):
         response = auth_client.patch(
             f"/workspaces/{workspace['id']}", json={"url_key": bad}
         )
         assert_error(response, 422, "validation_error")
+
+
+def test_update_workspace_to_a_reserved_url_key_is_refused(
+    auth_client: httpx.Client,
+) -> None:
+    workspace = create_workspace(auth_client)
+
+    response = auth_client.patch(
+        f"/workspaces/{workspace['id']}", json={"url_key": "onboarding"}
+    )
+
+    body = assert_error(response, 422, "validation_error")
+    assert "This URL is reserved" in body["detail"][0]["msg"]
+    assert auth_client.get(f"/workspaces/{workspace['url_key']}").status_code == 200
+    assert auth_client.get("/workspaces/onboarding").status_code == 404
 
 
 def test_a_member_cannot_change_or_delete_the_workspace(

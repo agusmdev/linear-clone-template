@@ -4,6 +4,22 @@ import { z } from 'zod'
 export const URL_KEY_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 /** 2-5 uppercase letters: the issue prefix (ENG-12). */
 export const TEAM_KEY_PATTERN = /^[A-Z]{2,5}$/
+/**
+ * The app serves a workspace at /<url_key>, so a key must not be a top-level
+ * route (or a name kept for one). Same list as the backend RESERVED_URL_KEYS.
+ */
+export const RESERVED_URL_KEYS: ReadonlySet<string> = new Set([
+  'api',
+  'auth',
+  'items',
+  'login',
+  'logout',
+  'oauth',
+  'onboarding',
+  'register',
+  'settings',
+  'signup',
+])
 export const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/
 
 /** Linear's picker palette (labels, teams, workflow states). */
@@ -43,6 +59,7 @@ const urlKey = z
   .min(2, 'The URL must have at least 2 characters')
   .max(48, 'The URL can have at most 48 characters')
   .regex(URL_KEY_PATTERN, 'Use lowercase letters, numbers and dashes only')
+  .refine(value => !RESERVED_URL_KEYS.has(value), 'This URL is reserved')
 
 export const workspaceSchema = z.object({
   name: z.string().trim().min(1, 'Workspace name is required').max(255),
