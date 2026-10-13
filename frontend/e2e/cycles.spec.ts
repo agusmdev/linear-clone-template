@@ -284,11 +284,17 @@ test.describe('cycle page', () => {
         document.body.dataset.createIssue = JSON.stringify((event as CustomEvent).detail)
       })
     })
-    await page.getByRole('button', { name: 'New issue' }).click()
+    await page.getByRole('main').getByRole('button', { name: 'New issue' }).first().click()
     await expect(page.locator('body')).toHaveAttribute(
       'data-create-issue',
       JSON.stringify({ teamId: team.id, cycleId: cycle.id })
     )
+    const dialog = page.getByRole('dialog', { name: 'New issue' })
+    await expect(dialog.getByRole('button', { name: /^Cycle: / })).not.toHaveAccessibleName(
+      'Cycle: none'
+    )
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
 
     await page
       .getByRole('navigation', { name: 'Breadcrumb' })
