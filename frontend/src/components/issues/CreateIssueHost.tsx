@@ -19,7 +19,8 @@ import { CreateIssueDialog } from './CreateIssueDialog'
  * `linear:create-issue` window event (see `openCreateIssue`; the `C` shortcut of
  * WorkspaceCommands dispatches it).
  * The default team is the event's team, else the team of the current URL
- * (`/<ws>/team/<KEY>/...`), else the first team.
+ * (`/<ws>/team/<KEY>/...`), else the first team the user joined (else the first
+ * team).
  */
 export function CreateIssueHost() {
   const ws = useCurrentWorkspace()
@@ -36,6 +37,9 @@ export function CreateIssueHost() {
   const [parentSearch, setParentSearch] = useState('')
   const debouncedParentSearch = useDebounce(parentSearch.trim(), 200)
 
+  // The user's own teams come first in the team picker, as in the sidebar.
+  const myTeamIds = new Set(ws.myTeams.map(t => t.id))
+  const teams = [...ws.myTeams, ...ws.teams.filter(t => !myTeamIds.has(t.id))]
   const urlTeamKey = /\/team\/([^/]+)/.exec(pathname)?.[1]
   const urlTeam = ws.teams.find(t => t.key.toLowerCase() === urlTeamKey?.toLowerCase())
 
@@ -79,7 +83,7 @@ export function CreateIssueHost() {
       ? session.detail.teamId
       : undefined) ??
     urlTeam?.id ??
-    ws.teams[0]?.id
+    teams[0]?.id
   const activeTeamId = teamId ?? defaultTeamId
 
   const { data: states } = useWorkspaceStates(ws.teams)
@@ -133,7 +137,7 @@ export function CreateIssueHost() {
       draft={draft}
       onSaveDraft={values => saveIssueDraft(workspaceId, values)}
       onDiscardDraft={() => clearIssueDraft(workspaceId)}
-      teams={ws.teams}
+      teams={teams}
       states={states}
       members={ws.members}
       labels={ws.labels}

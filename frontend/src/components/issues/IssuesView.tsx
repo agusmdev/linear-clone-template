@@ -205,7 +205,9 @@ export function IssuesView({
     const detail: CreateIssueEventDetail = { ...createDefaults }
     if (!detail.teamId && params.team_id) detail.teamId = params.team_id
     if (state.grouping === 'status') {
-      const teamId = detail.teamId ?? scopeTeamIds[0]
+      // Without a page team (My issues), the user's own team, as the modal's default.
+      const teamId =
+        detail.teamId ?? ws.myTeams.find(t => scopeTeamIds.includes(t.id))?.id ?? scopeTeamIds[0]
       const target = actions.states.find(s => s.team_id === teamId && statusKey(s) === groupId)
       if (target) {
         detail.teamId = teamId

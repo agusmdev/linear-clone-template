@@ -5,6 +5,7 @@
  * multi-select bulk actions, keyboard navigation and the context menu.
  */
 import {
+  addWorkspaceMember,
   authHeaders,
   bulkDeleteIssues,
   bulkUpdateIssues,
@@ -16,10 +17,13 @@ import {
   expect,
   getIssue,
   getMe,
+  joinTeam,
   listIssues,
+  listMyTeams,
   listLabels,
   listStates,
   listTeams,
+  registerUser,
   test,
   type Page,
   type TestUser,
@@ -1418,6 +1422,47 @@ test.describe('issues list', () => {
     // A row opens the issue page by identifier.
     await row(page, 'Written by me').getByText('Written by me').click()
     await expect(page).toHaveURL(`/${key}/issue/ENG-2`)
+  })
+
+  test("new issue defaults to one of the user's own teams, listed first in the picker (ISS-1)", async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    // "Design" sorts before "Engineering"; the teammate joins only Engineering.
+    const { workspace, team, key } = await seedWorkspace(api, user)
+    await createTeam(api, user, workspace.id, { name: 'Design', key: 'DES' })
+    const teammate = await registerUser(api)
+    await addWorkspaceMember(api, user, workspace.id, teammate)
+    await joinTeam(api, teammate, team.id)
+    expect((await listMyTeams(api, teammate, workspace.id)).map(t => t.key)).toEqual(['ENG'])
+
+    const page = await loginAs(teammate)
+    await page.goto(`/${key}/my-issues`)
+    await expect(page.getByText('Issues assigned to you show up here.')).toBeVisible()
+    const dialog = page.getByRole('dialog', { name: 'New issue' })
+
+    // The sidebar button and C preselect Engineering, not the first team.
+    await page.getByRole('button', { name: 'Compose issue' }).click()
+    await expect(dialog.getByRole('button', { name: 'Team: Engineering' })).toBeVisible()
+    await dialog.getByRole('button', { name: 'Team: Engineering' }).click()
+    await expect(page.getByRole('option')).toHaveText([/Engineering/, /Design/])
+    await page.keyboard.press('Escape')
+    await dialog.getByLabel('Issue title').fill('Filed by the teammate')
+    await dialog.getByRole('button', { name: 'Create issue' }).click()
+    await expect(page.getByText('Created ENG-1')).toBeVisible()
+
+    await page.locator('body').click()
+    await page.keyboard.press('c')
+    await expect(dialog.getByRole('button', { name: 'Team: Engineering' })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+
+    // "+" on a status group of My issues files in the user's team too.
+    await page.getByRole('tab', { name: 'Created' }).click()
+    await expect(row(page, 'Filed by the teammate')).toBeVisible()
+    await page.getByRole('button', { name: 'Add to Todo' }).click()
+    await expect(dialog.getByRole('button', { name: 'Team: Engineering' })).toBeVisible()
   })
 
   test('my issues drops filters a tab hides when switching tabs (ISS-13)', async ({
