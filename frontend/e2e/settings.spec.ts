@@ -592,6 +592,44 @@ test.describe('account', () => {
     await page.getByRole('button', { name: 'Log out' }).click()
     await expect(page).toHaveURL('/login')
   })
+
+  test('small primary and destructive buttons keep white text in the light theme', async ({
+    authedPage: page,
+    api,
+    user,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const [team] = await listTeams(api, user, workspace.id)
+    await page.goto(`/${workspace.url_key}/settings/account`)
+    await page.getByRole('combobox', { name: 'Interface theme' }).click()
+    await page.getByRole('option', { name: 'Light' }).click()
+    await expect(page.locator('html')).toHaveClass(/light/)
+
+    const white = 'rgb(255, 255, 255)'
+    const expectSmallWhiteButton = async (name: string, scope = page.locator('body')) => {
+      const button = scope.getByRole('button', { name, exact: true })
+      await expect(button).toHaveCSS('color', white)
+      await expect(button).toHaveCSS('font-size', '12px')
+    }
+
+    await page.goto(`/${workspace.url_key}/settings/labels`)
+    await expect(page.locator('html')).toHaveClass(/light/)
+    await expectSmallWhiteButton('New label')
+
+    await page.goto(`/${workspace.url_key}/settings/team/${team.key}`)
+    await expectSmallWhiteButton('Add member')
+
+    await page.goto(`/${workspace.url_key}/settings`)
+    await expectSmallWhiteButton('Delete workspace')
+
+    await page.goto(`/${workspace.url_key}/projects`)
+    await expectSmallWhiteButton('New project')
+    await page.getByRole('button', { name: 'New project', exact: true }).click()
+    await expectSmallWhiteButton(
+      'Create project',
+      page.getByRole('dialog', { name: 'New project' })
+    )
+  })
 })
 
 /** Types a hex code in the open color popover and presses Enter. */
