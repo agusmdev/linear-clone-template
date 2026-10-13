@@ -316,6 +316,11 @@ export function GroupedList<T>({
             </div>
           )
         })}
+        {/* The floating BulkActionBar (fixed, bottom-6) shows while rows are
+            selected. This spacer lets the last rows scroll out from under it. */}
+        {selectedIds.size > 0 ? (
+          <div aria-hidden="true" data-bulk-bar-spacer="" className="h-20 shrink-0" />
+        ) : null}
       </div>
     </DndContext>
   )

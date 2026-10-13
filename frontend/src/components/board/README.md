@@ -92,6 +92,9 @@ Interaction:
 | `label`     | `string`     | Text after the count (default `"selected"`) |
 | `className` | `string`     |                                             |
 
+While `selectedIds` is not empty, `GroupedList` adds an 80px spacer after its
+last row, so the last rows can scroll out from under the floating bar.
+
 ```tsx
 const [selected, setSelected] = useState<Set<string>>(new Set())
 

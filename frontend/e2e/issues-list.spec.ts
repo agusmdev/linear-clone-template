@@ -457,6 +457,35 @@ test.describe('issues list', () => {
     await expect(bar).toContainText('1 issue selected')
   })
 
+  test('the bulk bar does not cover the last row (ISS-14)', async ({ api, user, loginAs }) => {
+    const { team, key } = await seedWorkspace(api, user)
+    for (let n = 1; n <= 24; n++) {
+      await createIssue(api, user, { team_id: team.id, title: `Long list ${n}` })
+    }
+
+    const page = await loginAs(user)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto(`/${key}/team/ENG/issues`)
+    const list = issueList(page)
+    await row(page, 'Long list 7').getByRole('checkbox', { name: 'Select row' }).click()
+    const bar = page.getByRole('toolbar', { name: 'Bulk actions' })
+    await expect(bar).toContainText('1 issue selected')
+
+    // The list must scroll, else the test proves nothing.
+    expect(await list.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true)
+    await list.evaluate(el => el.scrollTo(0, el.scrollHeight))
+
+    const last = list.getByRole('option').last()
+    await expect(async () => {
+      const rowBox = await last.boundingBox()
+      const barBox = await bar.boundingBox()
+      if (!rowBox || !barBox) throw new Error('not laid out')
+      expect(rowBox.y + rowBox.height).toBeLessThanOrEqual(barBox.y)
+    }).toPass()
+    // The last row is clickable: the bar is not on top of it.
+    await last.click({ trial: true })
+  })
+
   test('keyboard navigation, pickers and the context menu (ISS-2, ISS-12)', async ({
     api,
     user,
