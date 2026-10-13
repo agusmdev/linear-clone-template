@@ -39,3 +39,31 @@ Bugs found by earlier QA rounds. Do not re-report one unless it still reproduces
 - typed project date saved wrong year
 - target date before start date allowed
 - Filter menu chip popover closed immediately.
+
+## Round 2 (all fixed)
+
+- auth: onboarding header overflowed at 390px and pushed "Log out" off-screen
+- settings: API accepted blank / padded workspace, team, workflow state and label names
+- settings: Esc in a label or status editor row left Settings when focus was on the row's buttons
+- settings: changing the workspace URL refetched the old URL key (404)
+- issues-list: manual drag-reorder did nothing in views that mix teams (tied sort_order)
+- issues-list: "+" on a priority group or board column did not prefill the priority
+- create-issue: parent picker only listed the 100 most recent issues (now searches the server)
+- create-issue: long assignee name wrapped inside its chip; "Create more" track invisible in dark theme
+- issue-detail: description typed just before a reload was lost (keepalive); same for the project description
+- documents: lists showed only the first 100 documents
+- documents: API accepted blank and multi-line document titles; long titles were cut off
+- documents: a document opened under another workspace's URL loaded in the wrong workspace
+- projects-cycles: renamed/deleted favorite project stayed stale in the sidebar; delete refetched the project (404)
+- projects-cycles: New issue on a past cycle's page showed an empty Cycle chip
+- projects-cycles: API accepted blank project names; blank cycle names were stored as-is
+- inbox-search: inbox unusable at phone width (preview pane hidden)
+- inbox-search: status_changed notifications showed the current status instead of the one at the time
+
+## Known and accepted (not bugs to re-report)
+
+- A tab left open after another admin removes you shows "Workspace <id> not found".
+- The last completed status of a team can be deleted.
+- Deleting the last cycle frees its number for reuse.
+- "Move unfinished" can target a past cycle when the next cycle is also past.
+- The first Playwright test on a cold Vite dev server can render a blank page in slow containers.
