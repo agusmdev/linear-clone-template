@@ -6,10 +6,11 @@ from typing import Any
 from sqlalchemy import case, or_, select
 from sqlalchemy.orm import selectinload
 
+from app.core.text_search import html_visible_text, like_pattern
 from app.modules.documents.models import Document
 from app.modules.issues.models import Issue
 from app.modules.projects.models import Project
-from app.modules.search.filters import IDENTIFIER_PATTERN, like_pattern
+from app.modules.search.filters import IDENTIFIER_PATTERN
 from app.modules.teams.models import Team
 from app.repositories.sql_repository import SQLAlchemyRepository
 
@@ -61,7 +62,10 @@ class SearchRepository(SQLAlchemyRepository[Issue]):
             select(Document)
             .where(
                 Document.workspace_id == workspace_id,
-                or_(Document.title.ilike(pattern), Document.content.ilike(pattern)),
+                or_(
+                    Document.title.ilike(pattern),
+                    html_visible_text(Document.content).ilike(pattern),
+                ),
             )
             .order_by(Document.updated_at.desc(), Document.id)
             .limit(limit)

@@ -57,6 +57,34 @@ test.describe('documents list', () => {
     await expect(page.getByLabel('Document title')).toHaveValue('Onboarding guide')
   })
 
+  test('search matches the visible text, not the HTML markup or LIKE wildcards', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    await createDocument(api, user, {
+      workspace_id: workspace.id,
+      title: 'Rich doc',
+      content: '<p><strong>Tom</strong> &amp; <a href="https://x.dev">Jerry</a></p>',
+    })
+    await createDocument(api, user, { workspace_id: workspace.id, title: 'Plain doc' })
+
+    await page.goto(`/${workspace.url_key}/documents`)
+    const rows = page.getByRole('list', { name: 'Documents' }).getByRole('link')
+    await expect(rows).toHaveCount(2)
+
+    const search = page.getByLabel('Search documents')
+    for (const term of ['strong', 'href', '%', '_']) {
+      await search.fill(term)
+      await expect(page.getByText('No documents found')).toBeVisible()
+    }
+
+    await search.fill('Tom & Jerry')
+    await expect(rows).toHaveCount(1)
+    await expect(rows.first()).toContainText('Rich doc')
+  })
+
   test('"New document" creates an Untitled document and opens it', async ({
     api,
     user,

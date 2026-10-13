@@ -165,6 +165,39 @@ def test_list_filters_search_and_order(
     assert titles == ["Alpha v2", "Beta", "Gamma"]
 
 
+def test_search_matches_visible_text_only(
+    owner: RegisteredUser, ws: dict[str, Any]
+) -> None:
+    wid = ws["workspace"]["id"]
+    rich = create_document(
+        owner.client,
+        wid,
+        "Rich",
+        content=(
+            '<p><strong>Bold</strong> and <a href="https://x.dev">link</a></p>'
+            '<ul data-type="taskList"><li data-checked="true">done</li></ul>'
+            "<p>Tom &amp; Jerry &lt;3</p><p>wo<em>rd</em></p><p>last</p>"
+        ),
+    )
+    create_document(owner.client, wid, "Plain", content="<p>plain text</p>")
+
+    def ids(search: str) -> list[str]:
+        return [d["id"] for d in _list(owner.client, wid, search=search)["items"]]
+
+    # Markup (tag names, attributes) is not visible text.
+    for markup in ("strong", "href", "data-checked", "x.dev", "<p>", "&amp;"):
+        assert ids(markup) == [], markup
+    # LIKE wildcards are literal characters.
+    for wildcard in ("%", "_", "\\"):
+        assert ids(wildcard) == [], wildcard
+    # Visible text matches, with entities decoded and inline tags joined.
+    for text in ("bold and link", "Tom & Jerry <3", "word", "done"):
+        assert ids(text) == [rich["id"]], text
+    # Block tags separate words.
+    assert ids("donetom") == []
+    assert ids("jerry <3 word last") == [rich["id"]]
+
+
 def test_list_rejects_unknown_order_field(
     owner: RegisteredUser, ws: dict[str, Any]
 ) -> None:
