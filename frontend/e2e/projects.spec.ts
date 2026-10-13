@@ -613,3 +613,38 @@ test('the project name on the project page stops at 255 characters', async ({
     .toBe('x'.repeat(255))
   await expect(errorToast(page)).toHaveCount(0)
 })
+
+test('reopening a project shows a teammate description edit made since, and typing keeps it', async ({
+  authedPage: page,
+  api,
+  user,
+}) => {
+  const workspace = await createWorkspace(api, user)
+  const project = await createProject(api, user, {
+    workspace_id: workspace.id,
+    name: 'Team plan',
+    description: '<p>First version</p>',
+  })
+  const teammate = await registerUser(api)
+  await addWorkspaceMember(api, user, workspace.id, teammate)
+
+  // Open the project once, so its data is cached, then leave it.
+  await page.goto(`/${workspace.url_key}/projects`)
+  const row = page.getByRole('main').getByRole('link', { name: /Team plan/ })
+  await row.click()
+  const description = page.getByRole('textbox', { name: 'Project description' })
+  await expect(description).toHaveText('First version')
+  await page.goBack()
+  await expect(row).toBeVisible()
+
+  await updateProject(api, teammate, project.id, { description: '<p>Teammate rewrote this</p>' })
+
+  await row.click()
+  await expect(description).toHaveText('Teammate rewrote this')
+  await description.click()
+  await page.keyboard.press('ControlOrMeta+End')
+  await page.keyboard.type(' and I added this')
+  await expect
+    .poll(async () => (await getProject(api, user, project.id))?.description)
+    .toBe('<p>Teammate rewrote this and I added this</p>')
+})

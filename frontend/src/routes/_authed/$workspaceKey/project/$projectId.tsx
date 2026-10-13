@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useIsMutating } from '@tanstack/react-query'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { Box, FileText, ListTodo, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -29,7 +30,12 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useCurrentWorkspace } from '@/contexts/WorkspaceContext'
 import { useNewDocument } from '@/features/documents/useNewDocument'
 import { usePageIssueDefaults } from '@/hooks/usePageIssueDefaults'
-import { useDeleteProject, useProject, useUpdateProject } from '@/hooks/useProjects'
+import {
+  projectUpdateMutationKey,
+  useDeleteProject,
+  useProject,
+  useUpdateProject,
+} from '@/hooks/useProjects'
 import { toastApiError } from '@/lib/error-handler'
 import { openCreateIssue } from '@/lib/issue-events'
 import { cn } from '@/lib/utils'
@@ -66,6 +72,14 @@ function ProjectPage() {
   const navigate = useNavigate()
   const { workspace, path } = useCurrentWorkspace()
   const projectQuery = useProject(projectId)
+  // The description editor starts from the project fetched after the page opened,
+  // and after a save still in flight from the last visit: a cached copy can be
+  // out of date.
+  const saving = useIsMutating({ mutationKey: projectUpdateMutationKey(projectId) }) > 0
+  const [readyFor, setReadyFor] = useState<string | null>(null)
+  if (readyFor !== projectId && projectQuery.isFetchedAfterMount && !saving) {
+    setReadyFor(projectId)
+  }
   const deleteProject = useDeleteProject()
   const [deleteOpen, setDeleteOpen] = useState(false)
   const newDocument = useNewDocument({ project_id: projectId })
@@ -98,7 +112,7 @@ function ProjectPage() {
     )
   }
 
-  if (!project) {
+  if (!project || readyFor !== projectId) {
     return (
       <div className="flex min-h-full flex-col" aria-busy="true">
         <PageHeader breadcrumbs={[{ label: 'Projects', to: path('/projects') }]} title="" />

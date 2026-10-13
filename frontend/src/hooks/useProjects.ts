@@ -13,13 +13,23 @@ export function useProjects(workspaceId: string, params?: ProjectsParams) {
   })
 }
 
+/**
+ * Always refetched when the page opens: the description editor starts from this
+ * data, so a cached copy would hide (and its saves overwrite) a teammate's edits.
+ */
 export function useProject(projectId: string) {
   return useQuery({
     queryKey: queryKeys.projects.detail(projectId),
     queryFn: () => api.get<Project>(API.PROJECTS.DETAIL(projectId)),
+    staleTime: 0,
     refetchOnMount: 'always',
     retry: false,
   })
+}
+
+/** Identifies the PATCH /projects/{id} mutations (see `useIsMutating`). */
+export function projectUpdateMutationKey(projectId: string) {
+  return ['projects', 'update', projectId] as const
 }
 
 export function useCreateProject() {
@@ -40,6 +50,7 @@ export function useUpdateProject(projectId: string) {
   const queryClient = useQueryClient()
   const detailKey = queryKeys.projects.detail(projectId)
   return useMutation({
+    mutationKey: projectUpdateMutationKey(projectId),
     mutationFn: ({ keepalive, ...data }: UpdateProjectVariables) =>
       api.patch<Project>(API.PROJECTS.DETAIL(projectId), data, { keepalive }),
     onMutate: async ({ keepalive: _keepalive, ...data }) => {
