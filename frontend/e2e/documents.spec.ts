@@ -103,6 +103,53 @@ test.describe('documents list', () => {
     expect(items.map(d => d.title)).toEqual(['Untitled'])
     expect(page.url()).toContain(items[0].id)
   })
+
+  test('a team has its own Documents page that lists and creates team documents (DOC-2)', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const [team] = await listTeams(api, user, workspace.id)
+    await createDocument(api, user, {
+      workspace_id: workspace.id,
+      team_id: team.id,
+      title: 'Team runbook',
+    })
+    await createDocument(api, user, { workspace_id: workspace.id, title: 'Company handbook' })
+
+    // The sidebar shows a Documents link under the team.
+    await page.goto(`/${workspace.url_key}/team/${team.key}/issues`)
+    await page
+      .getByRole('navigation', { name: 'Main' })
+      .locator(`a[href="/${workspace.url_key}/team/${team.key}/documents"]`)
+      .click()
+    await expect(page).toHaveURL(`/${workspace.url_key}/team/${team.key}/documents`)
+
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Documents')
+    const rows = page.getByRole('list', { name: 'Documents' }).getByRole('link')
+    await expect(rows).toHaveCount(1)
+    await expect(rows.first()).toContainText('Team runbook')
+
+    await page.getByRole('button', { name: 'New document' }).first().click()
+
+    await expect(page).toHaveURL(new RegExp(`/${workspace.url_key}/document/[0-9a-f-]+$`))
+    await expect(page.getByLabel('Document title')).toHaveValue('Untitled')
+    const { items } = await listDocuments(api, user, workspace.id)
+    const created = items.find(d => d.title === 'Untitled')
+    expect(created?.team_id).toBe(team.id)
+    expect(page.url()).toContain(created?.id)
+  })
+
+  test('a team Documents page for an unknown team key says so', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    await page.goto(`/${workspace.url_key}/team/NOPE/documents`)
+    await expect(page.getByText('Team not found')).toBeVisible()
+  })
 })
 
 test.describe('document editor', () => {

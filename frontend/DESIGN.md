@@ -98,10 +98,10 @@ function WorkspaceLayout() {
 | `projectsTo`, `documentsTo`, `viewsTo` | `string` | "Workspace" section. |
 | `favorites?` | `SidebarLink[]` | "Favorites" section, hidden when empty. |
 | `onFavoriteMove?` | `(from, to) => void` | Makes favorite rows drag-and-drop reorderable. |
-| `teams` | `SidebarTeam[]` | "Your teams" section. Each team is collapsible with Issues, Cycles, Projects (+ `extraLinks`). |
+| `teams` | `SidebarTeam[]` | "Your teams" section. Each team is collapsible with Issues, Cycles, Projects, Documents (+ `extraLinks`). |
 | `footer?` | `ReactNode` | Bottom slot (theme toggle, help, user menu). |
 
-`SidebarLink = { label, to, icon?, badge? }`. `SidebarTeam = { id, name, key?, color?, issuesTo, cyclesTo, projectsTo, extraLinks? }`.
+`SidebarLink = { label, to, icon?, badge? }`. `SidebarTeam = { id, name, key?, color?, issuesTo, cyclesTo, projectsTo, documentsTo, extraLinks? }`.
 A link is active (`aria-current="page"`, `bg-surface-active`) when the URL starts with its `to`. Paths are plain strings, so dynamic routes work. `SidebarNavLink` is exported for custom rows.
 
 ### `WorkspaceSwitcher` (`components/WorkspaceSwitcher.tsx`)
