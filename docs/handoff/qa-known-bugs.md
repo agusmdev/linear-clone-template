@@ -111,6 +111,9 @@ Bugs found by earlier QA rounds. Do not re-report one unless it still reproduces
 ## Round 7
 
 - inbox-search: 5-letter identifiers wrapped in search results; the issue list rows cut them with an ellipsis (fixed in all identifier columns)
+- issues-list: bulk actions on more than 250 selected issues failed (now sent in batches of 250)
+- issue-detail: reopening an issue showed a cached description and typing overwrote a teammate's edit (same fix applied to the project description)
+- create-issue: Cmd+K "Create new issue" while the modal was open wiped the typed draft
 
 ## Known and accepted (not bugs to re-report)
 
