@@ -16,8 +16,9 @@ export function notificationMessage(notification: Notification): string {
     case 'mentioned':
       return 'mentioned you'
     case 'status_changed':
-      return notification.issue
-        ? `changed status to ${notification.issue.state.name}`
+      // The state picked then, not the issue's current one (it may have moved since).
+      return notification.state
+        ? `changed status to ${notification.state.name}`
         : 'changed the status'
   }
 }
@@ -82,8 +83,12 @@ export function NotificationRow({
             )}
           </span>
           <span className="flex min-w-0 items-center gap-1.5 text-mini text-text-secondary">
-            {issue && notification.type === 'status_changed' ? (
-              <StatusIcon type={issue.state.type} color={issue.state.color} size={12} />
+            {notification.type === 'status_changed' && notification.state ? (
+              <StatusIcon
+                type={notification.state.type}
+                color={notification.state.color}
+                size={12}
+              />
             ) : null}
             <span className="truncate">
               {actor} {notificationMessage(notification)}

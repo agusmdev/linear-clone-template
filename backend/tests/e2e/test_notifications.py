@@ -40,6 +40,7 @@ NOTIFICATION_FIELDS = {
     "archived_at",
     "created_at",
     "issue",
+    "state",
     "actor",
 }
 
@@ -102,6 +103,8 @@ def test_assigning_someone_notifies_them(
         "title": "Fix login",
         "state": issue["state"],
     }
+    # Only ``status_changed`` carries the state it moved to.
+    assert notification["state"] is None
     assert notification["actor"] == {
         "id": owner.id,
         "name": "Owner",
@@ -166,6 +169,39 @@ def test_status_change_notifies_subscribers_except_the_actor(
     # The same state again is no change: no new notification.
     member.client.patch(f"/issues/{issue['id']}", json={"state_id": done["id"]})
     assert len(list_notifications(owner.client, ws_id)) == 1
+
+
+def test_status_change_keeps_the_state_it_moved_to(
+    owner: RegisteredUser, member: RegisteredUser, ws: dict[str, Any]
+) -> None:
+    """Each ``status_changed`` names its own state, not the issue's current one."""
+    ws_id = ws["workspace"]["id"]
+    issue = create_issue(owner.client, ws["team"]["id"], assignee_id=member.id)
+    qa_state = owner.client.post(
+        f"/teams/{ws['team']['id']}/states",
+        json={"name": "QA", "type": "started", "color": "#123456"},
+    ).json()
+    for state in (qa_state, ws["states"]["Done"]):
+        response = owner.client.patch(
+            f"/issues/{issue['id']}", json={"state_id": state["id"]}
+        )
+        assert response.status_code == 200, response.text
+
+    newest, oldest = list_notifications(member.client, ws_id, type="status_changed")
+    assert newest["state"]["name"] == "Done"
+    assert oldest["state"] == {
+        "id": qa_state["id"],
+        "name": "QA",
+        "type": "started",
+        "color": "#123456",
+    }
+    assert oldest["issue"]["state"]["name"] == "Done"
+
+    # Deleting that state leaves the notification without one.
+    response = owner.client.delete(f"/workflow-states/{qa_state['id']}")
+    assert response.status_code == 204, response.text
+    _, oldest = list_notifications(member.client, ws_id, type="status_changed")
+    assert oldest["state"] is None
 
 
 def test_list_is_newest_first_filters_unread_and_lists_comments(

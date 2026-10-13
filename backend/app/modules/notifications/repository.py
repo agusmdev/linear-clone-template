@@ -15,6 +15,7 @@ from app.repositories.sql_repository import SQLAlchemyRepository
 LOAD_OPTIONS = (
     selectinload(Notification.issue).selectinload(Issue.team),
     selectinload(Notification.issue).selectinload(Issue.state),
+    selectinload(Notification.state),
     selectinload(Notification.actor),
 )
 

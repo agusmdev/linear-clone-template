@@ -376,8 +376,10 @@ Assign issues with `PATCH /issues/{id} {cycle_id}`; cycle issues with `GET /issu
 
 ### Notifications / inbox (UX-3)
 
-`Notification = {id, user_id, workspace_id, issue_id, actor_id, type, read_at, archived_at, created_at, issue: IssueRef|null, actor: UserSummary|null}`
-(`type`: assigned | commented | status_changed | mentioned.)
+`Notification = {id, user_id, workspace_id, issue_id, actor_id, type, read_at, archived_at, created_at, issue: IssueRef|null, state: WorkflowStateSummary|null, actor: UserSummary|null}`
+(`type`: assigned | commented | status_changed | mentioned. `state`: for
+`status_changed`, the state the issue moved to then (the issue's current state
+is `issue.state`); null for the other types or once that state is deleted.)
 
 Created by the issue features: `assigned` to the new assignee (not when you
 assign yourself); `commented` and `status_changed` to every subscriber except

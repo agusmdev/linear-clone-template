@@ -136,6 +136,7 @@ class NotificationService(BaseService[Notification]):
         issue_id: uuid.UUID,
         actor_id: uuid.UUID,
         exclude: set[uuid.UUID] | None = None,
+        state_id: uuid.UUID | None = None,
     ) -> None:
         """One notification for every subscriber of the issue except the actor."""
         skip = {actor_id} | (exclude or set())
@@ -148,6 +149,7 @@ class NotificationService(BaseService[Notification]):
                     "issue_id": issue_id,
                     "actor_id": actor_id,
                     "type": notification_type,
+                    "state_id": state_id,
                 }
                 for recipient in sorted(recipients)
             ]
@@ -158,6 +160,7 @@ class NotificationService(BaseService[Notification]):
         *,
         workspace_id: uuid.UUID,
         issue_id: uuid.UUID,
+        state_id: uuid.UUID,
         actor_id: uuid.UUID,
     ) -> None:
         await self.notify_subscribers(
@@ -165,4 +168,5 @@ class NotificationService(BaseService[Notification]):
             workspace_id=workspace_id,
             issue_id=issue_id,
             actor_id=actor_id,
+            state_id=state_id,
         )
