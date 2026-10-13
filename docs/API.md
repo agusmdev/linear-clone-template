@@ -36,6 +36,7 @@ This file is the contract between the backend (`backend/`) and the frontend
 | A referenced row is in another workspace/team, or does not exist (state, assignee, label, project, cycle, parent) | 400 | `invalid_reference` |
 | Delete blocked by references | 400 | `referenced_item` |
 | No session / bad session / expired | 403 `http_error` / 401 `invalid_session` / 401 `session_expired` |
+| `POST /auth/login` fails (unknown email, wrong password or inactive user: one response, so it does not reveal which emails have an account) | 401 | `invalid_credentials` (`detail` = `Invalid email or password`) |
 
 ### Shared shapes
 

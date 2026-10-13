@@ -102,7 +102,7 @@ Every error body is `{"detail": ..., "error_code": "..."}` (`app/exceptions.py` 
 | Unknown or revoked session | 401 | `invalid_session` |
 | Expired session | 401 | `session_expired` |
 | Inactive user | 401 | `inactive_user` |
-| Login: unknown or inactive user / wrong password | 401 | `authentication_error` / `invalid_password` |
+| Login: unknown email, wrong password or inactive user (one response, no user enumeration) | 401 | `invalid_credentials` (`Invalid email or password`) |
 | Not found (missing, or owned by another user) | 404 | `not_found` |
 | Unique / foreign-key violation | 400 | `duplicate_item` / `referenced_item` |
 | Router 404/405, plain `HTTPException` | — | `http_error` |

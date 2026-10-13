@@ -67,7 +67,7 @@ def test_updated_email_is_the_new_login(
     assert response.status_code == 200
     assert response.json()["email"] == new_email
     assert login(api, new_email, user.password).status_code == 200
-    assert_error(login(api, user.email, user.password), 401, "authentication_error")
+    assert_error(login(api, user.email, user.password), 401, "invalid_credentials")
 
 
 def test_updated_email_is_stored_lowercase(
@@ -113,7 +113,9 @@ def test_update_ignores_protected_fields(
         "is_email_verified": False,
     }
     assert login(api, user.email, user.password).status_code == 200
-    assert_error(login(api, user.email, "taken-over-password"), 401, "invalid_password")
+    assert_error(
+        login(api, user.email, "taken-over-password"), 401, "invalid_credentials"
+    )
     assert other.client.get("/users/me").json()["id"] == other.id
 
 
@@ -167,7 +169,7 @@ def test_delete_removes_the_account_its_sessions_and_its_items(
     assert response.status_code == 204
     assert response.content == b""
     assert_error(user.client.get("/users/me"), 401, "invalid_session")
-    assert_error(login(api, user.email, user.password), 401, "authentication_error")
+    assert_error(login(api, user.email, user.password), 401, "invalid_credentials")
     # No endpoint lists another user's rows; the database shows the cascade.
     for table in (
         "item",

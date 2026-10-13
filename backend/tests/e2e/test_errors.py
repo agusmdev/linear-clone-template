@@ -201,7 +201,7 @@ def test_register_with_a_nul_character_creates_no_account(api: httpx.Client) -> 
     assert_error(
         response, 422, "validation_error", "Text must not contain NUL characters"
     )
-    assert_error(login(api, email, DEFAULT_PASSWORD), 401, "authentication_error")
+    assert_error(login(api, email, DEFAULT_PASSWORD), 401, "invalid_credentials")
 
 
 def test_unhandled_error_is_a_json_500_the_frontend_can_read(
