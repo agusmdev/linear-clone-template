@@ -190,9 +190,17 @@ export function CreateIssueDialog({
     inFlight.current = true
     let created = false
     try {
-      // Send the state the chip shows: the server default (Todo) can differ from it.
+      // Send what the chips show: the server default state (Todo) can differ from
+      // the status chip, and a restored draft can hold a state, project or cycle
+      // deleted since (the chip shows none; the id would fail the create).
       await onCreate(
-        createIssueFormToPayload({ ...data, state_id: data.state_id ?? state?.id ?? null })
+        createIssueFormToPayload({
+          ...data,
+          state_id: state?.id ?? null,
+          project_id: project?.id ?? null,
+          cycle_id: cycle?.id ?? null,
+          assignee_id: assignee?.user_id ?? null,
+        })
       )
       created = true
     } catch {

@@ -9,6 +9,7 @@ import {
   bulkDeleteIssues,
   bulkUpdateIssues,
   createIssue,
+  createProject,
   createWorkspace,
   expect,
   getIssue,
@@ -392,6 +393,52 @@ test.describe('issues list', () => {
     await expect(prompt).toBeHidden()
     await page.keyboard.press('c')
     await expect(title).toHaveValue('')
+  })
+
+  test('a draft whose project was deleted since still creates the issue (ISS-1)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { workspace, team, key } = await seedWorkspace(api, user)
+    const project = await createProject(api, user, {
+      workspace_id: workspace.id,
+      name: 'Short lived',
+      team_ids: [team.id],
+    })
+    const page = await loginAs(user)
+    await page.goto(`/${key}/team/ENG/issues`)
+    await expect(page.getByText('No issues yet')).toBeVisible()
+
+    const dialog = page.getByRole('dialog', { name: 'New issue' })
+    await page.locator('body').click()
+    await page.keyboard.press('c')
+    await dialog.getByLabel('Issue title').fill('Drafted with a project')
+    await dialog.getByRole('button', { name: /^Project:/ }).click()
+    await page.getByRole('option', { name: 'Short lived' }).click()
+    await expect(dialog.getByRole('button', { name: 'Project: Short lived' })).toBeVisible()
+    await dialog.getByRole('button', { name: 'Close' }).click()
+    await page
+      .getByRole('alertdialog', { name: 'Save issue as draft?' })
+      .getByRole('button', { name: 'Save draft' })
+      .click()
+    await expect(dialog).toBeHidden()
+
+    const deleted = await api.delete(`/projects/${project.id}`, { headers: authHeaders(user) })
+    expect(deleted.ok()).toBe(true)
+    await page.reload()
+    await expect(page.getByText('No issues yet')).toBeVisible()
+    await page.locator('body').click()
+    await page.keyboard.press('c')
+    await expect(dialog.getByLabel('Issue title')).toHaveValue('Drafted with a project')
+    await expect(dialog.getByRole('button', { name: 'Project: none' })).toBeVisible()
+
+    // The create sends what the chips show (no project), not the deleted id.
+    await page.keyboard.press('ControlOrMeta+Enter')
+    await expect(page.getByText('Created ENG-1')).toBeVisible()
+    await expect(dialog).toBeHidden()
+    const [issue] = (await listIssues(api, user, workspace.id)).items
+    expect(issue).toMatchObject({ title: 'Drafted with a project', project_id: null })
   })
 
   test('a new issue from the Backlog tab starts in the backlog (ISS-1, ISS-13)', async ({
