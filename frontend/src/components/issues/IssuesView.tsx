@@ -129,6 +129,17 @@ export function IssuesView({
 
   const clearSelection = () => setSelectedIds(new Set())
 
+  const containerRef = useRef<HTMLDivElement>(null)
+  const listbox = () => containerRef.current?.querySelector<HTMLElement>('[role="listbox"]')
+  // A row picker closed: focus goes back to the list (not to the row's trigger
+  // button, which can also be gone when the issue moved to another group).
+  const onPickerCloseAutoFocus = (event: Event) => {
+    const list = listbox()
+    if (!list) return
+    event.preventDefault()
+    list.focus({ preventScroll: true })
+  }
+
   const context: IssueViewContextValue = {
     teams: ws.teams,
     states: actions.states,
@@ -139,6 +150,7 @@ export function IssuesView({
     actions,
     openPicker,
     setOpenPicker,
+    onPickerCloseAutoFocus,
     targetsFor: issue => (selectedIds.has(issue.id) && selected.length > 1 ? selected : [issue]),
     confirmDelete: setDeleteTargets,
     path: ws.path,
@@ -192,10 +204,8 @@ export function IssuesView({
   }
 
   // --- keyboard: S / P / A / L open pickers, Cmd+Backspace deletes -------------
-  const containerRef = useRef<HTMLDivElement>(null)
   const focusedIssue = (): Issue | undefined => {
-    const listbox = containerRef.current?.querySelector('[role="listbox"]')
-    const domId = listbox?.getAttribute('aria-activedescendant')
+    const domId = listbox()?.getAttribute('aria-activedescendant')
     return domId ? byId.get(domId.slice(-36)) : undefined
   }
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {

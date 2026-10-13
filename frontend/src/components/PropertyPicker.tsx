@@ -49,6 +49,9 @@ interface PropertyPickerBaseProps<V extends string> {
   contentClassName?: string
   /** Extra rows under the list, e.g. a "Create label" CommandItem. */
   footer?: React.ReactNode
+  /** Runs when the picker closes, before focus goes back to the trigger. Call
+   * `event.preventDefault()` to put focus somewhere else (e.g. an issue list). */
+  onCloseAutoFocus?: (event: Event) => void
 }
 
 interface SingleProps<V extends string> extends PropertyPickerBaseProps<V> {
@@ -97,6 +100,7 @@ export function PropertyPicker<V extends string = string>(props: PropertyPickerP
     side,
     contentClassName,
     footer,
+    onCloseAutoFocus,
   } = props
   const [innerOpen, setInnerOpen] = React.useState(false)
   const [search, setSearch] = React.useState('')
@@ -142,6 +146,7 @@ export function PropertyPicker<V extends string = string>(props: PropertyPickerP
         side={side}
         className={cn('w-64 p-0', contentClassName)}
         onKeyDown={onKeyDown}
+        onCloseAutoFocus={onCloseAutoFocus}
       >
         <Command filter={filterOption} label={label} loop>
           <CommandInput placeholder={placeholder} value={search} onValueChange={setSearch} />
