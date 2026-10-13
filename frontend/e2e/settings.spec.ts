@@ -6,6 +6,7 @@
 import { randomUUID } from 'node:crypto'
 import {
   type Page,
+  addFavorite,
   authHeaders,
   createIssue,
   createLabel,
@@ -484,6 +485,43 @@ test.describe('team settings', () => {
       description: 'Core services',
     })
     expect((await getIssue(api, user, issue.id)).identifier).toBe(`PLT-${issue.number}`)
+  })
+
+  test('a new team key updates the sidebar favorite links of its issues', async ({
+    authedPage: page,
+    api,
+    user,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const [team] = await listTeams(api, user, workspace.id)
+    const issue = await createIssue(api, user, { team_id: team.id, title: 'Starred' })
+    await addFavorite(api, user, {
+      workspace_id: workspace.id,
+      entity_type: 'issue',
+      entity_id: issue.id,
+    })
+    await page.goto(`/${workspace.url_key}/my-issues`)
+    const favorite = page.getByTestId('sidebar-favorite').getByRole('link')
+    await expect(favorite).toHaveAttribute(
+      'href',
+      `/${workspace.url_key}/issue/${issue.identifier}`
+    )
+
+    // In-app navigation: the favorites stay cached on the way.
+    await page.getByRole('button', { name: `Workspace: ${workspace.name}` }).click()
+    await page.getByRole('menuitem', { name: 'Settings' }).click()
+    await page.getByRole('link', { name: team.name }).click()
+    await page.getByLabel('Team key').fill('fav')
+    await page.getByRole('button', { name: 'Save changes' }).click()
+    await expect(page).toHaveURL(`/${workspace.url_key}/settings/team/FAV`)
+    await page.getByRole('link', { name: 'Back to app' }).click()
+
+    await expect(favorite).toHaveAttribute(
+      'href',
+      `/${workspace.url_key}/issue/FAV-${issue.number}`
+    )
+    await favorite.click()
+    await expect(page.getByRole('textbox', { name: 'Issue title' })).toHaveValue('Starred')
   })
 
   test('adds and removes team members', async ({ authedPage: page, api, user }) => {

@@ -152,8 +152,12 @@ export function useUpdateTeam(teamId: string) {
     mutationFn: (data: UpdateTeamData) => api.patch<Team>(API.TEAMS.DETAIL(teamId), data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.teams.all })
-      // A new key changes every issue identifier.
+      // A new key changes every issue identifier, also the ones in the sidebar
+      // favorites, the inbox and search results (their links use it).
       queryClient.invalidateQueries({ queryKey: queryKeys.issues.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.favorites.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.search.all })
     },
   })
 }
