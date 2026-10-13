@@ -58,7 +58,7 @@ def test_reset_sets_a_new_password_and_ends_old_sessions(
         "status": "success",
         "message": "Password has been reset successfully",
     }
-    assert_error(login(api, user.email, user.password), 401, "invalid_password")
+    assert_error(login(api, user.email, user.password), 401, "invalid_credentials")
     assert login(api, user.email, "brand-new-pass").status_code == 200
     # Every session that existed before the reset is revoked.
     assert_error(user.client.get("/users/me"), 401, "invalid_session")
@@ -105,7 +105,9 @@ def test_a_new_request_invalidates_the_previous_token(
     assert_error(old, 400, "invalid_token")
     assert new.status_code == 200
     assert login(api, user.email, "from-the-new-token").status_code == 200
-    assert_error(login(api, user.email, "from-the-old-token"), 401, "invalid_password")
+    assert_error(
+        login(api, user.email, "from-the-old-token"), 401, "invalid_credentials"
+    )
 
 
 def test_expired_token_is_rejected(

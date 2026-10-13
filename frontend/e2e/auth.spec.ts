@@ -212,6 +212,29 @@ test.describe('login', () => {
     await expect(loginLink(page)).toBeVisible()
   })
 
+  test('shows the same generic error for an unknown email and a wrong password', async ({
+    page,
+    user,
+  }) => {
+    const errors: { status: number; body: unknown }[] = []
+    for (const email of [user.email, `nobody-${Date.now()}@example.com`]) {
+      await page.goto('/login')
+      await fillLoginForm(page, email, 'Wrong-Password-1')
+      const responsePromise = page.waitForResponse(r => r.url().endsWith('/auth/login'))
+      await page.getByRole('button', { name: 'Sign in' }).click()
+      const response = await responsePromise
+      errors.push({ status: response.status(), body: await response.json() })
+      await expect(errorToast(page)).toContainText('Invalid email or password')
+    }
+
+    // The response must not tell which emails have an account.
+    expect(errors[0]).toEqual({
+      status: 401,
+      body: { detail: 'Invalid email or password', error_code: 'invalid_credentials' },
+    })
+    expect(errors[1]).toEqual(errors[0])
+  })
+
   test('a wrong password does not sign out a signed-in user', async ({
     authedPage: page,
     user,

@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from tests.e2e.stack import Database
 
 ONE_YEAR_S = 365 * 24 * 3600
+INVALID_CREDENTIALS = "Invalid email or password"
 
 
 def test_register_returns_a_session_for_the_new_user(
@@ -91,7 +92,7 @@ def test_register_rejects_a_password_shorter_than_8(
 
     body = assert_error(response, 422, "validation_error")
     assert [issue["loc"] for issue in body["detail"]] == [["body", "raw_password"]]
-    assert_error(login(api, email, password), 401, "authentication_error")
+    assert_error(login(api, email, password), 401, "invalid_credentials")
 
 
 def test_email_is_stored_lowercase_and_matches_in_any_case(
@@ -139,18 +140,32 @@ def test_login_with_a_wrong_password_is_401(
 
     response = login(api, user.email, "wrong-password")
 
-    assert_error(response, 401, "invalid_password", "Invalid password")
+    assert_error(response, 401, "invalid_credentials", INVALID_CREDENTIALS)
 
 
 def test_login_with_an_unknown_email_is_401(api: httpx.Client) -> None:
     response = login(api, unique_email(), DEFAULT_PASSWORD)
 
-    assert_error(
-        response,
-        401,
-        "authentication_error",
-        "User does not exist or is not allowed to login",
-    )
+    assert_error(response, 401, "invalid_credentials", INVALID_CREDENTIALS)
+
+
+def test_login_errors_do_not_reveal_whether_the_account_exists(
+    api: httpx.Client, register_user: Callable[..., RegisteredUser], db: Database
+) -> None:
+    """Unknown email, wrong password and inactive user give the same response."""
+    user = register_user()
+    inactive = register_user()
+    deactivate_user(db, inactive.id)
+
+    responses = [
+        login(api, user.email, "wrong-password"),
+        login(api, unique_email("nobody"), "wrong-password"),
+        login(api, inactive.email, "wrong-password"),
+        login(api, inactive.email, inactive.password),
+    ]
+
+    assert {r.status_code for r in responses} == {401}
+    assert len({r.content for r in responses}) == 1
 
 
 def test_account_without_password_cannot_log_in_with_one(
@@ -161,7 +176,7 @@ def test_account_without_password_cannot_log_in_with_one(
 
     response = login(api, email, DEFAULT_PASSWORD)
 
-    assert_error(response, 401, "invalid_password", "Invalid password")
+    assert_error(response, 401, "invalid_credentials", INVALID_CREDENTIALS)
 
 
 def test_login_requires_email_and_password(api: httpx.Client) -> None:
@@ -178,12 +193,7 @@ def test_deactivated_user_cannot_log_in(
 
     response = login(api, user.email, user.password)
 
-    assert_error(
-        response,
-        401,
-        "authentication_error",
-        "User does not exist or is not allowed to login",
-    )
+    assert_error(response, 401, "invalid_credentials", INVALID_CREDENTIALS)
 
 
 def test_logout_ends_only_the_current_session(

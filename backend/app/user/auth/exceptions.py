@@ -7,9 +7,15 @@ class AuthenticationError(HTTPExceptionMixin):
     status_code = 401
 
 
-class InvalidPasswordError(AuthenticationError):
-    detail = "Invalid password"
-    error_code = "invalid_password"
+class InvalidCredentialsError(AuthenticationError):
+    """Any failed password login: unknown email, wrong password or inactive user.
+
+    One detail and error_code for every case, so the response never tells
+    whether an account exists for the email (no user enumeration).
+    """
+
+    detail = "Invalid email or password"
+    error_code = "invalid_credentials"
     status_code = 401
 
 

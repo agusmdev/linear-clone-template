@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from pydantic import BaseModel
 
 from app.services.base_crud_service import BaseService
-from app.user.auth.exceptions import AuthenticationError, InvalidPasswordError
+from app.user.auth.exceptions import InvalidCredentialsError
 from app.user.auth.repository import (
     EmailVerificationTokenRepository,
     PasswordResetTokenRepository,
@@ -66,13 +66,14 @@ class UserService(BaseService[User]):
         user = await self.repo.get_by_field(
             "email", normalize_email(email), raise_error=False
         )
-        if not user or not user.is_active:
-            raise AuthenticationError(
-                detail="User does not exist or is not allowed to login"
-            )
+        if user is None:
+            # Hash the password anyway, so an unknown email takes as long as a
+            # wrong password and the timing does not reveal the account.
+            _ph.hash(password)
+            raise InvalidCredentialsError()
 
-        if not user.check_password(password):
-            raise InvalidPasswordError()
+        if not user.check_password(password) or not user.is_active:
+            raise InvalidCredentialsError()
 
         return user
 
