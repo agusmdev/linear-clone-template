@@ -211,14 +211,17 @@ function WorkspaceGeneralSettings() {
         pending={deleteWorkspace.isPending}
         canConfirm={typedName === workspace.name}
       >
-        <label className="flex flex-col gap-1.5 text-mini text-text-secondary">
-          Type <span className="font-medium text-foreground">{workspace.name}</span> to confirm
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="confirm-workspace-name" className="text-mini text-text-secondary">
+            Type <span className="font-medium text-foreground">{workspace.name}</span> to confirm
+          </label>
           <Input
+            id="confirm-workspace-name"
             aria-label="Workspace name to confirm"
             value={typedName}
             onChange={event => setTypedName(event.target.value)}
           />
-        </label>
+        </div>
       </ConfirmDialog>
     </>
   )
