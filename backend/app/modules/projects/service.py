@@ -5,12 +5,15 @@ non-member gets the 404 of a missing project). The lead must be a member of
 the workspace and the teams must be teams of the workspace, else 400
 ``invalid_reference``. Responses embed the lead, the teams and the issue
 progress (completed / total; canceled and archived issues are not counted).
+The target date must not be before the start date (also after a PATCH that
+sends only one of them), else 422 ``validation_error``.
 """
 
 import uuid
 from dataclasses import dataclass
 from datetime import date, datetime
 
+from app.modules.projects.exceptions import InvalidProjectDatesError
 from app.modules.projects.models import Project, ProjectStatus
 from app.modules.projects.repository import ProjectRepository
 from app.modules.projects.schemas import ProjectCreate, ProjectProgress, ProjectUpdate
@@ -121,6 +124,11 @@ class ProjectService(BaseService[Project]):
                 detail=f"User {lead_id} is not a member of this workspace"
             )
 
+    @staticmethod
+    def _check_dates(start_date: date | None, target_date: date | None) -> None:
+        if start_date and target_date and target_date < start_date:
+            raise InvalidProjectDatesError()
+
     async def _check_teams(
         self, workspace_id: uuid.UUID, team_ids: set[uuid.UUID]
     ) -> None:
@@ -158,6 +166,7 @@ class ProjectService(BaseService[Project]):
     ) -> ProjectDetails:
         workspace_id = data.workspace_id
         await self.workspace_service.require_member(workspace_id, user_id)
+        self._check_dates(data.start_date, data.target_date)
         await self._check_lead(workspace_id, data.lead_id)
         team_ids = set(data.team_ids)
         await self._check_teams(workspace_id, team_ids)
@@ -172,6 +181,11 @@ class ProjectService(BaseService[Project]):
     ) -> ProjectDetails:
         project = await self._get_member_project(project_id, user_id)
         changes = data.model_dump(exclude_unset=True)
+        # A PATCH may send one date only: compare it with the stored other one.
+        self._check_dates(
+            changes.get("start_date", project.start_date),
+            changes.get("target_date", project.target_date),
+        )
         team_ids: set[uuid.UUID] | None = None
         if "team_ids" in changes:
             team_ids = set(changes.pop("team_ids"))

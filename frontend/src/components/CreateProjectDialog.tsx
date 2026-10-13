@@ -99,6 +99,8 @@ export function CreateProjectDialog({
 
   const icon = useWatch({ control: form.control, name: 'icon' })
   const color = useWatch({ control: form.control, name: 'color' })
+  const startDate = useWatch({ control: form.control, name: 'start_date' })
+  const targetDate = useWatch({ control: form.control, name: 'target_date' })
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -192,6 +194,7 @@ export function CreateProjectDialog({
                   <ProjectDatePicker
                     label="Start date"
                     value={field.value}
+                    max={targetDate}
                     onChange={field.onChange}
                   />
                 )}
@@ -203,6 +206,7 @@ export function CreateProjectDialog({
                   <ProjectDatePicker
                     label="Target date"
                     value={field.value}
+                    min={startDate}
                     onChange={field.onChange}
                   />
                 )}

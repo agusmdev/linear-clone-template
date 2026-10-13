@@ -160,16 +160,40 @@ interface DatePickerProps {
   label: string
   value: string | null
   onChange: (date: string | null) => void
+  /** Earliest allowed date (`YYYY-MM-DD`), e.g. the start date for the target. */
+  min?: string | null
+  /** Latest allowed date (`YYYY-MM-DD`), e.g. the target date for the start. */
+  max?: string | null
   className?: string
 }
 
-/** A chip that opens a date input; "Clear" sets null. */
-export function ProjectDatePicker({ label, value, onChange, className }: DatePickerProps) {
+/**
+ * A chip that opens a date input; "Clear" sets null. A date outside
+ * `min`..`max` is not sent: the popover shows why instead.
+ */
+export function ProjectDatePicker({
+  label,
+  value,
+  onChange,
+  min,
+  max,
+  className,
+}: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
   const id = React.useId()
+  const errorId = `${id}-error`
+  // Set when the last commit was refused: Enter then keeps the popover open.
+  const refused = React.useRef(false)
   const shown = formatProjectDate(value)
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={next => {
+        setOpen(next)
+        if (!next) setError(null)
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -189,15 +213,36 @@ export function ProjectDatePicker({ label, value, onChange, className }: DatePic
         <DateInput
           id={id}
           value={value}
+          min={min ?? undefined}
+          max={max ?? undefined}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
           onCommit={date => {
             // The native control can only clear via "Clear" below.
-            if (date) onChange(date)
+            if (!date) return
+            // ISO dates compare as strings.
+            refused.current = true
+            if (min && date < min) {
+              setError('The target date must not be before the start date')
+            } else if (max && date > max) {
+              setError('The start date must not be after the target date')
+            } else {
+              refused.current = false
+              setError(null)
+              onChange(date)
+            }
           }}
           onKeyDown={event => {
-            if (event.key === 'Enter') setOpen(false)
+            // DateInput commits on Enter before this runs.
+            if (event.key === 'Enter' && !refused.current) setOpen(false)
           }}
           className="h-8 w-full rounded-md border border-border bg-input px-2.5 text-ui text-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:outline-none"
         />
+        {error ? (
+          <p id={errorId} role="alert" className="text-mini text-destructive">
+            {error}
+          </p>
+        ) : null}
         {value ? (
           <Button
             type="button"

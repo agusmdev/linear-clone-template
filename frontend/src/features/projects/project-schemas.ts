@@ -26,7 +26,7 @@ export const projectSchema = z
     color: z.string(),
   })
   .refine(data => !data.start_date || !data.target_date || data.start_date <= data.target_date, {
-    message: 'The target date must be after the start date',
+    message: 'The target date must not be before the start date',
     path: ['target_date'],
   })
 

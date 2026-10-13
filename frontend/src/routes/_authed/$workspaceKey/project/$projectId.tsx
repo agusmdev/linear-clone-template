@@ -261,11 +261,13 @@ function ProjectOverview({ project }: { project: Project }) {
         <ProjectDatePicker
           label="Start date"
           value={project.start_date}
+          max={project.target_date}
           onChange={date => update({ start_date: date })}
         />
         <ProjectDatePicker
           label="Target date"
           value={project.target_date}
+          min={project.start_date}
           onChange={date => update({ target_date: date })}
         />
         <ProjectTeamsPicker
