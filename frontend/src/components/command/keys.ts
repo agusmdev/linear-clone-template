@@ -100,6 +100,18 @@ export function isTypingTarget(target: EventTarget | null): boolean {
   return false
 }
 
+/**
+ * True when the event target is inside a dialog, a popover or a menu. Their
+ * keys belong to them: a page shortcut would act behind them (e.g. `C` would
+ * reset the open create-issue form, `g s` would navigate under it).
+ */
+export function isInsideOverlay(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    target.closest('[role="dialog"], [role="alertdialog"], [role="menu"]') !== null
+  )
+}
+
 const KEY_LABELS: Record<string, string> = {
   escape: 'Esc',
   enter: '↵',

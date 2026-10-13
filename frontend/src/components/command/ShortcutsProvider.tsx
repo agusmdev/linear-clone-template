@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode } from 'react'
 
 import {
+  isInsideOverlay,
   isMacPlatform,
   isModifierOnly,
   isTypingTarget,
@@ -84,7 +85,8 @@ export function ShortcutsProvider({ children, disabled = false }: ShortcutsProvi
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.isComposing || isModifierOnly(event)) return
-      const typing = isTypingTarget(event.target)
+      // Shortcuts without `allowInInputs` stay off while the user types or works in an overlay.
+      const typing = isTypingTarget(event.target) || isInsideOverlay(event.target)
 
       // Try the sequence so far plus this key, then this key alone.
       const candidates = buffer.current.length ? [[...buffer.current, event], [event]] : [[event]]
@@ -149,7 +151,7 @@ export interface UseShortcutOptions {
   enabled?: boolean
   /** Fire only while this scope is active (see `useShortcutScope`). Default: "global". */
   scope?: string
-  /** Also fire while focus is in an input, textarea or contenteditable. Default: false. */
+  /** Also fire while focus is in an input, textarea, contenteditable, dialog, popover or menu. Default: false. */
   allowInInputs?: boolean
   /** Call `event.preventDefault()` when the shortcut fires. Default: true. */
   preventDefault?: boolean
