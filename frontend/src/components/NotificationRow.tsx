@@ -94,7 +94,7 @@ export function NotificationRow({
           <time
             dateTime={notification.created_at}
             title={fullDateTime(notification.created_at)}
-            className="text-mini text-text-tertiary group-hover:invisible group-focus-within:invisible"
+            className="text-mini text-text-tertiary group-hover:invisible group-has-[:focus-visible]:invisible"
           >
             {timeAgo(notification.created_at)}
           </time>
@@ -102,12 +102,12 @@ export function NotificationRow({
             <span
               role="img"
               aria-label="Unread"
-              className="size-2 rounded-full bg-primary group-hover:invisible group-focus-within:invisible"
+              className="size-2 rounded-full bg-primary group-has-[:focus-visible]:opacity-0 group-hover:opacity-0"
             />
           ) : null}
         </span>
       </button>
-      <div className="invisible absolute top-2 right-3 flex items-center gap-0.5 rounded-md bg-popover shadow-popover group-focus-within:visible group-hover:visible">
+      <div className="invisible absolute top-2 right-3 flex items-center gap-0.5 rounded-md bg-popover shadow-popover group-has-[:focus-visible]:visible group-hover:visible">
         <IconButton
           size="sm"
           label={unread ? 'Mark as read' : 'Mark as unread'}

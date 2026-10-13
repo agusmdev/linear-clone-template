@@ -39,6 +39,7 @@ export function NotificationPreview({
   const unread = !notification.read_at
   const archived = !!notification.archived_at
   const state = issue?.state ?? ref?.state
+  const assigneeName = issue?.assignee ? issue.assignee.name || issue.assignee.email : null
   return (
     <section aria-label="Notification preview" className="flex min-h-0 flex-1 flex-col">
       <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border-subtle px-4">
@@ -108,8 +109,8 @@ export function NotificationPreview({
                       {PRIORITY_LABELS[issue.priority]}
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <UserAvatar name={issue.assignee?.name ?? null} size="xs" />
-                      {issue.assignee?.name ?? 'Unassigned'}
+                      <UserAvatar name={assigneeName} size="xs" />
+                      {assigneeName ?? 'Unassigned'}
                     </span>
                     {issue.labels.map(label => (
                       <span key={label.id} className="flex items-center gap-1.5">
