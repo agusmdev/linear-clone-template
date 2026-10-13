@@ -241,8 +241,8 @@ export function Sidebar({
   return (
     <nav aria-label="Main" className={cn('flex h-full w-full flex-col bg-sidebar', className)}>
       <div className="flex h-12 shrink-0 items-center justify-between gap-1 px-3">
-        <div className="min-w-0">{workspaceSwitcher}</div>
-        {actions ? <div className="flex items-center gap-0.5">{actions}</div> : null}
+        <div className="flex min-w-0 flex-1">{workspaceSwitcher}</div>
+        {actions ? <div className="flex shrink-0 items-center gap-0.5">{actions}</div> : null}
       </div>
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 pb-3">
         <div className="flex flex-col gap-px">
