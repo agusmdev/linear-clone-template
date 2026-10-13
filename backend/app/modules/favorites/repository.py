@@ -3,7 +3,7 @@
 import uuid
 from dataclasses import dataclass
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 
 from app.modules.documents.models import Document
 from app.modules.favorites.models import Favorite, FavoriteEntityType
@@ -45,6 +45,12 @@ class FavoriteRepository(SQLAlchemyRepository[Favorite]):
             Favorite.entity_id == entity_id,
         )
         return (await self._session.execute(query)).scalar_one_or_none()
+
+    async def delete_ids(self, favorite_ids: list[uuid.UUID]) -> None:
+        if favorite_ids:
+            await self.delete_many(
+                delete(Favorite).where(Favorite.id.in_(favorite_ids))
+            )
 
     async def next_sort_order(
         self, workspace_id: uuid.UUID, user_id: uuid.UUID
