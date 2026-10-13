@@ -17,6 +17,14 @@ import type { Page } from '@/types/page'
 import type { UserSummary } from '@/types/user'
 
 /**
+ * The sub-resources of the issue page (comments, activity, relations,
+ * sub-issues, subscribers) are refetched every time the page opens: teammates
+ * change them, and a cached copy would hide e.g. the comment a notification
+ * links to.
+ */
+const REFETCH_ON_OPEN = { refetchOnMount: 'always' } as const
+
+/**
  * The issue page: one issue by its identifier (`ENG-12`), archived issues too.
  * Always refetched when the page opens: the description editor starts from this
  * data, so a cached copy would hide (and its saves overwrite) a teammate's edits.
@@ -128,6 +136,7 @@ export function useSubIssues(issueId: string) {
   return useQuery({
     queryKey: queryKeys.issueDetail.subIssues(issueId),
     queryFn: () => api.get<SubIssues>(API.ISSUE_DETAIL.SUB_ISSUES(issueId)),
+    ...REFETCH_ON_OPEN,
   })
 }
 
@@ -148,6 +157,7 @@ export function useComments(issueId: string) {
   return useQuery({
     queryKey: queryKeys.issueDetail.comments(issueId),
     queryFn: () => api.get<Comment[]>(API.ISSUE_DETAIL.COMMENTS(issueId)),
+    ...REFETCH_ON_OPEN,
   })
 }
 
@@ -198,6 +208,7 @@ export function useRelations(issueId: string) {
   return useQuery({
     queryKey: queryKeys.issueDetail.relations(issueId),
     queryFn: () => api.get<IssueRelation[]>(API.ISSUE_DETAIL.RELATIONS(issueId)),
+    ...REFETCH_ON_OPEN,
   })
 }
 
@@ -225,6 +236,7 @@ export function useIssueActivity(issueId: string) {
   return useQuery({
     queryKey: queryKeys.issueDetail.activity(issueId),
     queryFn: () => api.get<IssueActivity[]>(API.ISSUE_DETAIL.ACTIVITY(issueId)),
+    ...REFETCH_ON_OPEN,
   })
 }
 
@@ -232,6 +244,7 @@ export function useSubscribers(issueId: string) {
   return useQuery({
     queryKey: queryKeys.issueDetail.subscribers(issueId),
     queryFn: () => api.get<UserSummary[]>(API.ISSUE_DETAIL.SUBSCRIBERS(issueId)),
+    ...REFETCH_ON_OPEN,
   })
 }
 

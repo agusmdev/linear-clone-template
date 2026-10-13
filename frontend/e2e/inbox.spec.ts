@@ -152,6 +152,39 @@ test.describe('inbox', () => {
     await expect(comment.locator('strong')).toHaveText('auth')
   })
 
+  test('Open issue on a comment notification shows the new comment on the issue page', async ({
+    api,
+    user: owner,
+    loginAs,
+  }) => {
+    const { workspace, member, memberUser, team } = await setUp(api, owner)
+    const issue = await createIssue(api, owner, {
+      team_id: team.id,
+      title: 'Talk it over',
+      assignee_id: memberUser.id,
+    })
+    await createComment(api, owner, issue.id, '<p>First thought</p>')
+
+    // The member reads the issue first: its comments and activity are cached.
+    const page = await loginAs(member)
+    await page.goto(`/${workspace.url_key}/issue/${issue.identifier}`)
+    const main = page.getByRole('main')
+    await expect(main.getByText('First thought')).toBeVisible()
+
+    await createComment(api, owner, issue.id, '<p>A reply to read</p>')
+    await inboxLink(page).click()
+    await expect(rows(page).nth(0)).toContainText('commented: "A reply to read"')
+    await rows(page).nth(0).getByRole('button').first().click()
+    await page
+      .getByRole('region', { name: 'Notification preview' })
+      .getByRole('link', { name: 'Open issue' })
+      .click()
+
+    await expect(page).toHaveURL(`/${workspace.url_key}/issue/${issue.identifier}`)
+    await expect(main.getByText('A reply to read')).toBeVisible()
+    await expect(main.getByText('First thought')).toBeVisible()
+  })
+
   test('archives with undo, deletes, and opens the issue page', async ({
     api,
     user: owner,
