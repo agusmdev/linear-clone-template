@@ -1,0 +1,211 @@
+/**
+ * Inbox (UX-3): notifications created by issue changes, the split view
+ * (list + issue preview), read on open, J/K, unread filter, mark all read,
+ * archive (with undo), delete, and the unread badge on the sidebar.
+ */
+import {
+  addWorkspaceMember,
+  createIssue,
+  createWorkspace,
+  expect,
+  getUnreadNotificationCount,
+  listNotifications,
+  listStates,
+  listTeams,
+  markAllNotificationsRead,
+  registerUser,
+  test,
+  updateIssue,
+  updateNotification,
+  type Page,
+  type TestUser,
+} from './fixtures'
+
+type Api = Parameters<typeof createWorkspace>[0]
+
+/** Owner + member in one workspace; the owner acts, the member gets notified. */
+async function setUp(api: Api, owner: TestUser) {
+  const workspace = await createWorkspace(api, owner, { name: 'Inbox Co' })
+  const member = await registerUser(api)
+  const memberUser = await addWorkspaceMember(api, workspace.id, member)
+  const [team] = await listTeams(api, owner, workspace.id)
+  const states = await listStates(api, owner, team.id)
+  return { workspace, member, memberUser, team, states }
+}
+
+function rows(page: Page) {
+  return page.getByRole('list', { name: 'Notifications' }).getByRole('listitem')
+}
+
+function inboxLink(page: Page) {
+  return page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: /^Inbox/ })
+}
+
+test.describe('inbox', () => {
+  test('lists notifications, previews the issue, marks read on open and moves with J/K', async ({
+    api,
+    user: owner,
+    loginAs,
+  }) => {
+    const { workspace, member, memberUser, team, states } = await setUp(api, owner)
+    const done = states.find(s => s.name === 'Done')
+    if (!done) throw new Error('No Done state')
+
+    const login = await createIssue(api, owner, {
+      team_id: team.id,
+      title: 'Fix the login page',
+      description: '<p>The <strong>submit</strong> button does nothing.</p>',
+      assignee_id: memberUser.id,
+    })
+    const billing = await createIssue(api, owner, { team_id: team.id, title: 'Billing export' })
+    await updateIssue(api, owner, billing.id, { assignee_id: memberUser.id })
+    await updateIssue(api, owner, billing.id, { state_id: done.id })
+    // The actor is never notified: the owner's inbox stays empty.
+    expect(await listNotifications(api, owner, workspace.id)).toEqual([])
+    expect(await getUnreadNotificationCount(api, member, workspace.id)).toBe(3)
+
+    const page = await loginAs(member)
+    await page.goto(`/${workspace.url_key}/inbox`)
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Inbox')
+    await expect(inboxLink(page)).toContainText('3')
+
+    // Newest first.
+    await expect(rows(page)).toHaveCount(3)
+    await expect(rows(page).nth(0)).toContainText('Billing export')
+    await expect(rows(page).nth(0)).toContainText('changed status to Done')
+    await expect(rows(page).nth(1)).toContainText(billing.identifier)
+    await expect(rows(page).nth(1)).toContainText('assigned you')
+    await expect(rows(page).nth(2)).toContainText('Fix the login page')
+    await expect(rows(page).getByRole('img', { name: 'Unread' })).toHaveCount(3)
+    await expect(page.getByText('No notification selected')).toBeVisible()
+
+    // Open the oldest one: preview + read.
+    await rows(page).nth(2).getByRole('button').first().click()
+    const preview = page.getByRole('region', { name: 'Notification preview' })
+    await expect(preview.getByRole('heading', { name: 'Fix the login page' })).toBeVisible()
+    await expect(preview.getByText('does nothing')).toBeVisible()
+    await expect(preview.locator('strong')).toHaveText('submit')
+    await expect(preview.getByTestId('preview-status')).toHaveText('Todo')
+    await expect(preview.getByRole('link', { name: 'Open issue' })).toHaveAttribute(
+      'href',
+      `/${workspace.url_key}/issue/${login.identifier}`
+    )
+    await expect(rows(page).nth(2).getByRole('img', { name: 'Unread' })).toHaveCount(0)
+    await expect.poll(() => getUnreadNotificationCount(api, member, workspace.id)).toBe(2)
+    await expect(inboxLink(page)).toContainText('2')
+
+    // K moves up (and reads), J moves back down.
+    await page.keyboard.press('k')
+    await expect(rows(page).nth(1)).toHaveAttribute('data-selected', 'true')
+    await expect(preview.getByRole('heading', { name: 'Billing export' })).toBeVisible()
+    await expect(preview.getByTestId('preview-status')).toHaveText('Done')
+    await expect.poll(() => getUnreadNotificationCount(api, member, workspace.id)).toBe(1)
+    await page.keyboard.press('j')
+    await expect(rows(page).nth(2)).toHaveAttribute('data-selected', 'true')
+
+    // U marks the selected one unread again.
+    await page.keyboard.press('u')
+    await expect(rows(page).nth(2).getByRole('img', { name: 'Unread' })).toHaveCount(1)
+    await expect.poll(() => getUnreadNotificationCount(api, member, workspace.id)).toBe(2)
+
+    // Unread only: the two unread rows.
+    await page.getByRole('button', { name: 'Show unread only' }).click()
+    await expect(rows(page)).toHaveCount(2)
+    await expect(page.getByText('Unread notifications')).toBeVisible()
+
+    // Mark all as read empties the unread list.
+    await page.getByRole('button', { name: 'Mark all as read' }).click()
+    await expect(page.getByText('No unread notifications')).toBeVisible()
+    await expect.poll(() => getUnreadNotificationCount(api, member, workspace.id)).toBe(0)
+    await expect(inboxLink(page)).toHaveText('Inbox')
+
+    await page.getByRole('button', { name: 'Show all notifications' }).click()
+    await expect(rows(page)).toHaveCount(3)
+    await expect(rows(page).getByRole('img', { name: 'Unread' })).toHaveCount(0)
+  })
+
+  test('archives with undo, deletes, and opens the issue page', async ({
+    api,
+    user: owner,
+    loginAs,
+  }) => {
+    const { workspace, member, memberUser, team } = await setUp(api, owner)
+    const first = await createIssue(api, owner, {
+      team_id: team.id,
+      title: 'First task',
+      assignee_id: memberUser.id,
+    })
+    await createIssue(api, owner, {
+      team_id: team.id,
+      title: 'Second task',
+      assignee_id: memberUser.id,
+    })
+
+    const page = await loginAs(member)
+    await page.goto(`/${workspace.url_key}/inbox`)
+    await expect(rows(page)).toHaveCount(2)
+
+    // Archive from the row's hover action, then undo from the toast.
+    await rows(page).nth(1).hover()
+    await rows(page).nth(1).getByRole('button', { name: 'Archive' }).click()
+    await expect(rows(page)).toHaveCount(1)
+    await expect(rows(page).first()).toContainText('Second task')
+    // The UI updates at once; the server write follows.
+    await expect
+      .poll(async () => {
+        const all = await listNotifications(api, member, workspace.id, '&include_archived=true')
+        return all.find(n => n.issue_id === first.id)?.archived_at ?? null
+      })
+      .not.toBeNull()
+    await page.getByRole('button', { name: 'Undo' }).click()
+    await expect(rows(page)).toHaveCount(2)
+
+    // E archives the selected one and selects the next.
+    await page.keyboard.press('j')
+    await expect(rows(page).nth(0)).toHaveAttribute('data-selected', 'true')
+    await page.keyboard.press('e')
+    await expect(rows(page)).toHaveCount(1)
+    await expect(rows(page).first()).toContainText('First task')
+    await expect(rows(page).first()).toHaveAttribute('data-selected', 'true')
+
+    // Delete from the preview.
+    const preview = page.getByRole('region', { name: 'Notification preview' })
+    await preview.getByRole('button', { name: 'Delete notification' }).click()
+    await expect(page.getByText('No notifications', { exact: true })).toBeVisible()
+    await expect
+      .poll(async () =>
+        (await listNotifications(api, member, workspace.id, '&include_archived=true')).map(
+          n => n.issue?.title
+        )
+      )
+      .toEqual(['Second task'])
+    const left = await listNotifications(api, member, workspace.id, '&include_archived=true')
+
+    // Restore the archived one through the API, then open its issue with Enter.
+    const restored = await updateNotification(api, member, left[0].id, { archived: false })
+    expect(restored.archived_at).toBeNull()
+    await page.reload()
+    await expect(rows(page)).toHaveCount(1)
+    await page.keyboard.press('j')
+    await page.keyboard.press('Enter')
+    await expect(page).toHaveURL(new RegExp(`/${workspace.url_key}/issue/ENG-2$`))
+  })
+
+  test('the sidebar badge shows the unread count on every workspace page', async ({
+    api,
+    user: owner,
+    loginAs,
+  }) => {
+    const { workspace, member, memberUser, team } = await setUp(api, owner)
+    await createIssue(api, owner, { team_id: team.id, title: 'One', assignee_id: memberUser.id })
+
+    const page = await loginAs(member)
+    await page.goto(`/${workspace.url_key}/inbox`)
+    await expect(inboxLink(page)).toContainText('1')
+
+    expect(await markAllNotificationsRead(api, member, workspace.id)).toBe(1)
+    await page.reload()
+    await expect(rows(page)).toHaveCount(1)
+    await expect(inboxLink(page)).toHaveText('Inbox')
+  })
+})

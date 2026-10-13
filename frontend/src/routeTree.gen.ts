@@ -18,6 +18,7 @@ import { Route as OauthCallbackRouteImport } from './routes/oauth/callback'
 import { Route as AuthedItemsRouteImport } from './routes/_authed/items'
 import { Route as AuthedWorkspaceKeyRouteImport } from './routes/_authed/$workspaceKey'
 import { Route as AuthedWorkspaceKeyProjectsRouteImport } from './routes/_authed/$workspaceKey/projects'
+import { Route as AuthedWorkspaceKeyInboxRouteImport } from './routes/_authed/$workspaceKey/inbox'
 import { Route as AuthedWorkspaceKeyDocumentsRouteImport } from './routes/_authed/$workspaceKey/documents'
 import { Route as AuthedWorkspaceKeyProjectProjectIdRouteImport } from './routes/_authed/$workspaceKey/project/$projectId'
 import { Route as AuthedWorkspaceKeyDocumentDocumentIdRouteImport } from './routes/_authed/$workspaceKey/document/$documentId'
@@ -70,6 +71,11 @@ const AuthedWorkspaceKeyProjectsRoute =
     path: '/projects',
     getParentRoute: () => AuthedWorkspaceKeyRoute,
   } as any)
+const AuthedWorkspaceKeyInboxRoute = AuthedWorkspaceKeyInboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => AuthedWorkspaceKeyRoute,
+} as any)
 const AuthedWorkspaceKeyDocumentsRoute =
   AuthedWorkspaceKeyDocumentsRouteImport.update({
     id: '/documents',
@@ -116,6 +122,7 @@ export interface FileRoutesByFullPath {
   '/oauth/callback': typeof OauthCallbackRoute
   '/oauth/error': typeof OauthErrorRoute
   '/$workspaceKey/documents': typeof AuthedWorkspaceKeyDocumentsRoute
+  '/$workspaceKey/inbox': typeof AuthedWorkspaceKeyInboxRoute
   '/$workspaceKey/projects': typeof AuthedWorkspaceKeyProjectsRoute
   '/$workspaceKey/document/$documentId': typeof AuthedWorkspaceKeyDocumentDocumentIdRoute
   '/$workspaceKey/project/$projectId': typeof AuthedWorkspaceKeyProjectProjectIdRoute
@@ -132,6 +139,7 @@ export interface FileRoutesByTo {
   '/oauth/callback': typeof OauthCallbackRoute
   '/oauth/error': typeof OauthErrorRoute
   '/$workspaceKey/documents': typeof AuthedWorkspaceKeyDocumentsRoute
+  '/$workspaceKey/inbox': typeof AuthedWorkspaceKeyInboxRoute
   '/$workspaceKey/projects': typeof AuthedWorkspaceKeyProjectsRoute
   '/$workspaceKey/document/$documentId': typeof AuthedWorkspaceKeyDocumentDocumentIdRoute
   '/$workspaceKey/project/$projectId': typeof AuthedWorkspaceKeyProjectProjectIdRoute
@@ -150,6 +158,7 @@ export interface FileRoutesById {
   '/oauth/callback': typeof OauthCallbackRoute
   '/oauth/error': typeof OauthErrorRoute
   '/_authed/$workspaceKey/documents': typeof AuthedWorkspaceKeyDocumentsRoute
+  '/_authed/$workspaceKey/inbox': typeof AuthedWorkspaceKeyInboxRoute
   '/_authed/$workspaceKey/projects': typeof AuthedWorkspaceKeyProjectsRoute
   '/_authed/$workspaceKey/document/$documentId': typeof AuthedWorkspaceKeyDocumentDocumentIdRoute
   '/_authed/$workspaceKey/project/$projectId': typeof AuthedWorkspaceKeyProjectProjectIdRoute
@@ -168,6 +177,7 @@ export interface FileRouteTypes {
     | '/oauth/callback'
     | '/oauth/error'
     | '/$workspaceKey/documents'
+    | '/$workspaceKey/inbox'
     | '/$workspaceKey/projects'
     | '/$workspaceKey/document/$documentId'
     | '/$workspaceKey/project/$projectId'
@@ -184,6 +194,7 @@ export interface FileRouteTypes {
     | '/oauth/callback'
     | '/oauth/error'
     | '/$workspaceKey/documents'
+    | '/$workspaceKey/inbox'
     | '/$workspaceKey/projects'
     | '/$workspaceKey/document/$documentId'
     | '/$workspaceKey/project/$projectId'
@@ -201,6 +212,7 @@ export interface FileRouteTypes {
     | '/oauth/callback'
     | '/oauth/error'
     | '/_authed/$workspaceKey/documents'
+    | '/_authed/$workspaceKey/inbox'
     | '/_authed/$workspaceKey/projects'
     | '/_authed/$workspaceKey/document/$documentId'
     | '/_authed/$workspaceKey/project/$projectId'
@@ -283,6 +295,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedWorkspaceKeyProjectsRouteImport
       parentRoute: typeof AuthedWorkspaceKeyRoute
     }
+    '/_authed/$workspaceKey/inbox': {
+      id: '/_authed/$workspaceKey/inbox'
+      path: '/inbox'
+      fullPath: '/$workspaceKey/inbox'
+      preLoaderRoute: typeof AuthedWorkspaceKeyInboxRouteImport
+      parentRoute: typeof AuthedWorkspaceKeyRoute
+    }
     '/_authed/$workspaceKey/documents': {
       id: '/_authed/$workspaceKey/documents'
       path: '/documents'
@@ -330,6 +349,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthedWorkspaceKeyRouteChildren {
   AuthedWorkspaceKeyDocumentsRoute: typeof AuthedWorkspaceKeyDocumentsRoute
+  AuthedWorkspaceKeyInboxRoute: typeof AuthedWorkspaceKeyInboxRoute
   AuthedWorkspaceKeyProjectsRoute: typeof AuthedWorkspaceKeyProjectsRoute
   AuthedWorkspaceKeyDocumentDocumentIdRoute: typeof AuthedWorkspaceKeyDocumentDocumentIdRoute
   AuthedWorkspaceKeyProjectProjectIdRoute: typeof AuthedWorkspaceKeyProjectProjectIdRoute
@@ -340,6 +360,7 @@ interface AuthedWorkspaceKeyRouteChildren {
 
 const AuthedWorkspaceKeyRouteChildren: AuthedWorkspaceKeyRouteChildren = {
   AuthedWorkspaceKeyDocumentsRoute: AuthedWorkspaceKeyDocumentsRoute,
+  AuthedWorkspaceKeyInboxRoute: AuthedWorkspaceKeyInboxRoute,
   AuthedWorkspaceKeyProjectsRoute: AuthedWorkspaceKeyProjectsRoute,
   AuthedWorkspaceKeyDocumentDocumentIdRoute:
     AuthedWorkspaceKeyDocumentDocumentIdRoute,
