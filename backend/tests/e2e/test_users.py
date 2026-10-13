@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from tests.e2e.helpers import (
+    EMAIL_TAKEN,
     assert_error,
     create_item,
     email_verification_token,
@@ -124,7 +125,7 @@ def test_update_rejects_an_email_another_user_has(
 
     response = user.client.patch("/users/me", json={"email": other.email})
 
-    assert_error(response, 400, "duplicate_item", "Duplicate entry found in User")
+    assert_error(response, 400, "duplicate_item", EMAIL_TAKEN)
     assert user.client.get("/users/me").json()["email"] == user.email
 
 

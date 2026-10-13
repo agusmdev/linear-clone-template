@@ -31,7 +31,7 @@ function Login() {
     API.AUTH.LOGIN,
     'Signed in successfully',
     'Login failed',
-    { to: (redirectTo ?? '/') as '/' }
+    { redirect: { to: (redirectTo ?? '/') as '/' } }
   )
 
   const form = useForm<LoginFormData>({

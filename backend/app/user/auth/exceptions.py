@@ -1,4 +1,5 @@
 from app.exceptions import HTTPExceptionMixin
+from app.repositories.exceptions import DuplicateError
 
 
 class AuthenticationError(HTTPExceptionMixin):
@@ -67,3 +68,9 @@ class OAuthProviderError(HTTPExceptionMixin):
     detail = "The sign-in provider did not complete the sign-in"
     error_code = "provider_error"
     status_code = 502
+
+
+class EmailAlreadyRegisteredError(DuplicateError):
+    """Another account already uses this email (same 400 `duplicate_item`)."""
+
+    detail = "An account with this email already exists"

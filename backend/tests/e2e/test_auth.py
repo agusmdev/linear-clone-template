@@ -9,6 +9,7 @@ import pytest
 
 from tests.e2e.helpers import (
     DEFAULT_PASSWORD,
+    EMAIL_TAKEN,
     assert_error,
     create_passwordless_user,
     deactivate_user,
@@ -64,7 +65,7 @@ def test_register_rejects_an_email_that_is_taken(
         "/auth/register", json={"email": user.email, "raw_password": "other-password"}
     )
 
-    assert_error(response, 400, "duplicate_item", "Duplicate entry found in User")
+    assert_error(response, 400, "duplicate_item", EMAIL_TAKEN)
     # The original account still logs in with its own password.
     assert login(api, user.email, user.password).status_code == 200
 
@@ -112,7 +113,7 @@ def test_email_is_stored_lowercase_and_matches_in_any_case(
     duplicate = api.post(
         "/auth/register", json={"email": email, "raw_password": DEFAULT_PASSWORD}
     )
-    assert_error(duplicate, 400, "duplicate_item")
+    assert_error(duplicate, 400, "duplicate_item", EMAIL_TAKEN)
 
 
 def test_login_issues_a_new_session_each_time(

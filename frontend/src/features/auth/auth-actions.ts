@@ -8,9 +8,10 @@ import type { AuthSessionResponse } from '@/types/auth'
  * Core auth submit logic — a framework-agnostic orchestrator used by the
  * useAuthSubmit hook.
  *
- * Handles the api.post → login → toast → navigate sequence. On failure the
- * error is surfaced via toastApiError AND re-thrown so callers (e.g.
- * useAuthSubmit / useMutation) can observe rejection and react accordingly.
+ * Handles the api.post → login → toast → navigate sequence. On failure,
+ * `handleError` may show the error itself (e.g. under a form field) and return
+ * true; otherwise the error is surfaced via toastApiError. Either way it is
+ * re-thrown so callers (e.g. useAuthSubmit / useMutation) can observe rejection.
  * Lives in features/auth/ (not hooks/) because it is a plain async function
  * that uses no React APIs.
  */
@@ -23,6 +24,7 @@ export async function executeAuthSubmit(
     successMessage: string
     errorMessage: string
     redirect: NavigateOptions
+    handleError?: (error: unknown) => boolean
   }
 ): Promise<void> {
   try {
@@ -31,7 +33,7 @@ export async function executeAuthSubmit(
     toast.success(deps.successMessage)
     deps.navigate(deps.redirect)
   } catch (err) {
-    toastApiError(err, deps.errorMessage)
+    if (!deps.handleError?.(err)) toastApiError(err, deps.errorMessage)
     throw err
   }
 }

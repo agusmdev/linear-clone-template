@@ -18,6 +18,8 @@ if TYPE_CHECKING:
 from tests.e2e.stack import SERVER_DB_POOL_SIZE
 
 DEFAULT_PASSWORD = "correct-horse-battery-staple"
+# The detail of a 400 `duplicate_item` on register or an email change.
+EMAIL_TAKEN = "An account with this email already exists"
 EXPIRED = "2000-01-01 00:00:00+00"
 # JSON allows "\u0000" in strings; Postgres text cannot store it.
 NUL = "\u0000"
