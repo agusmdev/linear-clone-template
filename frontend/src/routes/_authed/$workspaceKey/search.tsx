@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { Box, FileText, Search } from 'lucide-react'
+import { Box, Search } from 'lucide-react'
+import { DocumentIcon } from '@/components/documents/DocumentIcon'
 import { EmptyState } from '@/components/EmptyState'
 import { FavoriteButton } from '@/components/FavoriteButton'
 import { PageHeader } from '@/components/PageHeader'
@@ -81,7 +82,7 @@ function toSections(results: SearchResults, path: (p: string) => string): Result
         to: path(`/document/${document.id}`),
         entityType: 'document',
         entityId: document.id,
-        icon: <FileText className="size-3.5 text-text-secondary" />,
+        icon: <DocumentIcon icon={document.icon} size={14} />,
         title: document.title,
         meta: 'Document',
       })),

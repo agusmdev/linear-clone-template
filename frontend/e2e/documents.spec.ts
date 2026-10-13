@@ -201,6 +201,29 @@ test.describe('documents list', () => {
     await page.goto(`/${workspace.url_key}/team/NOPE/documents`)
     await expect(page.getByText('Team not found')).toBeVisible()
   })
+
+  test('the search page and the command menu show the emoji icon of a document', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    await createDocument(api, user, {
+      workspace_id: workspace.id,
+      title: 'Rocket roadmap',
+      icon: '🚀',
+    })
+
+    await page.goto(`/${workspace.url_key}/search`)
+    await page.getByLabel('Search workspace').fill('Rocket')
+    const results = page.getByRole('region', { name: 'Search results' })
+    await expect(results.getByRole('link', { name: /Rocket roadmap/ })).toContainText('🚀')
+
+    await page.keyboard.press('ControlOrMeta+k')
+    const palette = page.getByRole('dialog', { name: 'Command menu' })
+    await palette.getByRole('combobox').fill('Rocket')
+    await expect(palette.getByRole('option', { name: /Rocket roadmap/ })).toContainText('🚀')
+  })
 })
 
 test.describe('document editor', () => {

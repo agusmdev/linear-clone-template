@@ -28,6 +28,7 @@ import {
   type ShortcutHelpGroup,
 } from '@/components/command'
 import { CreateProjectDialog } from '@/components/CreateProjectDialog'
+import { DocumentIcon } from '@/components/documents/DocumentIcon'
 import { StatusIcon } from '@/components/StatusIcon'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -352,7 +353,7 @@ export function WorkspaceCommands() {
         items: results.documents.map(document => ({
           id: `search-document-${document.id}`,
           label: document.title,
-          icon: <FileText />,
+          icon: <DocumentIcon icon={document.icon} />,
           onSelect: () => navigate({ to: path(`/document/${document.id}`) as '/' }),
         })),
       })
