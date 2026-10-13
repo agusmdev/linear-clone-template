@@ -192,6 +192,49 @@ test.describe('document editor', () => {
     expect((await fetchDocument(api, user, doc.id)).status()).toBe(404)
   })
 
+  test('the sidebar favorite follows a rename, an icon change and a delete at once', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const doc = await createDocument(api, user, { workspace_id: workspace.id, title: 'Draft' })
+    const doomed = await createDocument(api, user, {
+      workspace_id: workspace.id,
+      title: 'To delete',
+    })
+    await page.goto(`/${workspace.url_key}/document/${doc.id}`)
+
+    const favorites = page.getByRole('navigation', { name: 'Main' }).getByTestId('sidebar-favorite')
+    await page.getByRole('button', { name: 'Add to favorites' }).click()
+    await expect(favorites).toHaveCount(1)
+    await expect(favorites.first()).toHaveText('Draft')
+
+    // Rename: the favorite shows the new title without a reload.
+    const title = page.getByLabel('Document title')
+    await title.fill('Final plan')
+    await title.blur()
+    await expect(page.getByRole('status')).toHaveText('Saved')
+    await expect(favorites.first()).toHaveText('Final plan')
+
+    // Icon: the favorite shows the document's emoji, not the generic page icon.
+    await page.getByRole('button', { name: 'Add icon' }).click()
+    await page.getByRole('option', { name: 'Icon 🚀' }).click()
+    await expect(favorites.first()).toContainText('🚀')
+
+    // Delete: the favorite of the deleted document goes away without a reload.
+    await page.goto(`/${workspace.url_key}/document/${doomed.id}`)
+    await page.getByRole('button', { name: 'Add to favorites' }).click()
+    await expect(favorites).toHaveCount(2)
+    await expect(favorites.nth(1)).toHaveText('To delete')
+    await page.getByRole('button', { name: 'Document actions' }).click()
+    await page.getByRole('menuitem', { name: 'Delete document' }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click()
+    await expect(page).toHaveURL(`/${workspace.url_key}/documents`)
+    await expect(favorites).toHaveCount(1)
+    await expect(favorites.first()).toContainText('Final plan')
+  })
+
   test('shows "Document not found" for a missing document', async ({
     api,
     user,

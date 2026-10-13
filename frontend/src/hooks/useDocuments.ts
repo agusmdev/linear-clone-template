@@ -53,6 +53,8 @@ export function useUpdateDocument(documentId: string) {
     onSuccess: document => {
       queryClient.setQueryData(queryKeys.documents.detail(documentId), document)
       queryClient.invalidateQueries({ queryKey: queryKeys.documents.lists() })
+      // A favorite shows the document's title and emoji (built by the server).
+      queryClient.invalidateQueries({ queryKey: queryKeys.favorites.all })
     },
   })
 }
@@ -64,6 +66,8 @@ export function useDeleteDocument(documentId: string) {
     onSuccess: () => {
       queryClient.removeQueries({ queryKey: queryKeys.documents.detail(documentId) })
       queryClient.invalidateQueries({ queryKey: queryKeys.documents.lists() })
+      // The server deletes the document's favorites too.
+      queryClient.invalidateQueries({ queryKey: queryKeys.favorites.all })
     },
   })
 }
