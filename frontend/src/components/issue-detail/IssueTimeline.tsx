@@ -140,7 +140,7 @@ function CommentCard({
                   icon={<MoreHorizontal />}
                   size="sm"
                   tooltip={false}
-                  className="ml-auto opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+                  className="ml-auto opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 pointer-coarse:opacity-100"
                 />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-36">
