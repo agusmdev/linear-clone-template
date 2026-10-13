@@ -30,14 +30,16 @@ export interface CommandPaletteProps {
 
 /**
  * Value prefix of async search items. The server already filtered them, so
- * `filterItems` always keeps them. They stay normal (not `forceMount`) items, so
+ * `filterItems` always keeps them (score 0.5). They stay normal (not `forceMount`) items, so
  * cmdk counts them: it selects the first one and hides `Command.Empty`.
  */
 const SEARCH_VALUE_PREFIX = 'search-result:'
 
 /** Case-insensitive match on label + keywords: substring first, then fuzzy. */
 function filterItems(value: string, search: string, keywords?: string[]): number {
-  if (value.startsWith(SEARCH_VALUE_PREFIX)) return 1
+  // Kept always, ranked below commands whose label or keywords match the query
+  // (so "engineering issues" still opens the team page) and above fuzzy matches.
+  if (value.startsWith(SEARCH_VALUE_PREFIX)) return 0.5
   const query = search.trim().toLowerCase()
   if (!query) return 1
   const haystack = (keywords ?? []).join(' ').toLowerCase()

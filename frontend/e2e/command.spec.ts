@@ -85,6 +85,8 @@ test.describe('command palette', () => {
     await palette(page).getByRole('combobox').fill('light theme')
     await page.keyboard.press('Enter')
     await expect(page.locator('html')).toHaveClass(/light/)
+    // Cmd+K toggles: wait until the action has closed the palette.
+    await expect(palette(page)).toBeHidden()
 
     // Team navigation.
     await page.keyboard.press('ControlOrMeta+k')
