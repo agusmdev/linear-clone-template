@@ -108,6 +108,10 @@ Bugs found by earlier QA rounds. Do not re-report one unless it still reproduces
 - documents: reopening a stale document let autosave overwrite a teammate's newer edits
 - create-issue: a restored draft whose parent issue was deleted could not be created
 
+## Round 7
+
+- inbox-search: 5-letter identifiers wrapped in search results; the issue list rows cut them with an ellipsis (fixed in all identifier columns)
+
 ## Known and accepted (not bugs to re-report)
 
 - A tab left open after another admin removes you shows "Workspace <id> not found".
