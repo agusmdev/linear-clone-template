@@ -83,8 +83,7 @@ function TeamCyclesPage() {
         breadcrumbs={[{ label: team.name, to: path(`/team/${team.key}/issues`) }]}
         title="Cycles"
         actions={
-          // The create defaults start after the last cycle: wait for the list.
-          <Button size="sm" onClick={openCreate} disabled={cyclesQuery.isPending}>
+          <Button size="sm" onClick={openCreate}>
             <Plus />
             New cycle
           </Button>
