@@ -103,7 +103,10 @@ function SelectItem({
           <CheckIcon className="size-4" />
         </SelectPrimitive.ItemIndicator>
       </span>
-      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+      {/* Flex keeps an icon (a block svg) on the same line as the text. */}
+      <SelectPrimitive.ItemText>
+        <span className="flex min-w-0 items-center gap-2">{children}</span>
+      </SelectPrimitive.ItemText>
     </SelectPrimitive.Item>
   )
 }
