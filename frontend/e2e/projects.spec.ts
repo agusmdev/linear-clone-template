@@ -71,9 +71,12 @@ test('creates a project with every field through the dialog', async ({
   await dialog.getByRole('button', { name: 'Start date: none' }).click()
   await page.getByLabel('Start date', { exact: true }).fill('2026-11-01')
   await page.keyboard.press('Escape')
+  // Each picker is a popover: wait until it has closed before opening the next.
+  await expect(page.getByLabel('Start date', { exact: true })).toBeHidden()
   await dialog.getByRole('button', { name: 'Target date: none' }).click()
   await page.getByLabel('Target date', { exact: true }).fill('2026-12-31')
   await page.keyboard.press('Escape')
+  await expect(page.getByLabel('Target date', { exact: true })).toBeHidden()
   await dialog.getByRole('button', { name: 'Teams: none' }).click()
   await page.getByRole('option', { name: team.name }).click()
   await page.keyboard.press('Escape')
