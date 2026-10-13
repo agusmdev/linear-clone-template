@@ -6,12 +6,19 @@ import { StatusIcon } from '@/components/StatusIcon'
 import { UserAvatar } from '@/components/UserAvatar'
 import { formatDueDate } from '@/lib/relative-time'
 import { cn } from '@/lib/utils'
+import type { Cycle } from '@/types/cycle'
 import type { Issue, IssuePriority, UpdateIssueData } from '@/types/issue'
 import type { Label } from '@/types/label'
 import type { WorkflowState } from '@/types/team'
 import type { WorkspaceMember } from '@/types/workspace'
 
 const NONE = 'none'
+const CYCLE_GROUPS = { current: 'Current', upcoming: 'Upcoming', past: 'Past' } as const
+
+/** "Sprint 4" or "Cycle 3". */
+export function cycleLabel(cycle: Pick<Cycle, 'name' | 'number'>): string {
+  return cycle.name || `Cycle ${cycle.number}`
+}
 const ESTIMATES = [1, 2, 3, 5, 8, 13, 21]
 
 interface IssuePropertiesPanelProps {
@@ -22,6 +29,8 @@ interface IssuePropertiesPanelProps {
   /** Display name of the issue's project / cycle (read-only rows); null = none. */
   projectName: string | null
   cycleName: string | null
+  /** The team's cycles; without them the cycle row is read-only. */
+  cycles?: Cycle[]
   onUpdate: (data: UpdateIssueData) => void
   className?: string
 }
@@ -50,6 +59,7 @@ export function IssuePropertiesPanel({
   labels,
   projectName,
   cycleName,
+  cycles,
   onUpdate,
   className,
 }: IssuePropertiesPanelProps) {
@@ -86,6 +96,18 @@ export function IssuePropertiesPanel({
       value: String(points),
       label: `${points} ${points === 1 ? 'point' : 'points'}`,
     })),
+  ]
+  const cycleOptions: PropertyOption[] = [
+    { value: NONE, label: 'No cycle' },
+    // Past cycles are closed: only the issue's own cycle stays in the list.
+    ...(cycles ?? [])
+      .filter(cycle => cycle.status !== 'past' || cycle.id === issue.cycle_id)
+      .map(cycle => ({
+        value: cycle.id,
+        label: cycleLabel(cycle),
+        keywords: [`Cycle ${cycle.number}`],
+        group: CYCLE_GROUPS[cycle.status],
+      })),
   ]
   const assigneeName = issue.assignee ? issue.assignee.name || issue.assignee.email : null
 
@@ -186,14 +208,34 @@ export function IssuePropertiesPanel({
       </Row>
 
       <Row label="Cycle">
-        <span className={cn(valueButtonClass, 'cursor-default hover:bg-transparent')}>
-          <RefreshCcw className="size-3.5 text-text-secondary" />
-          {cycleName ? (
-            <span className="truncate">{cycleName}</span>
-          ) : (
-            <Placeholder>No cycle</Placeholder>
-          )}
-        </span>
+        {cycles ? (
+          <PropertyPicker
+            label="Cycle"
+            placeholder="Add to cycle..."
+            options={cycleOptions}
+            value={issue.cycle_id ?? NONE}
+            onChange={value => onUpdate({ cycle_id: value === NONE ? null : value })}
+            trigger={
+              <button type="button" aria-label="Change cycle" className={valueButtonClass}>
+                <RefreshCcw className="size-3.5 text-text-secondary" />
+                {cycleName ? (
+                  <span className="truncate">{cycleName}</span>
+                ) : (
+                  <Placeholder>Add to cycle</Placeholder>
+                )}
+              </button>
+            }
+          />
+        ) : (
+          <span className={cn(valueButtonClass, 'cursor-default hover:bg-transparent')}>
+            <RefreshCcw className="size-3.5 text-text-secondary" />
+            {cycleName ? (
+              <span className="truncate">{cycleName}</span>
+            ) : (
+              <Placeholder>No cycle</Placeholder>
+            )}
+          </span>
+        )}
       </Row>
 
       <Row label="Project">

@@ -47,7 +47,13 @@ export function useUpdateIssueDetail(issue: Pick<Issue, 'id' | 'workspace_id' | 
         updated
       )
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.issues.all }),
+    onSettled: (_data, _error, data) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.issues.all })
+      // Cycle progress counts the issue's state and cycle.
+      if ('cycle_id' in data || 'state_id' in data || 'archived' in data) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.cycles.all })
+      }
+    },
   })
 }
 

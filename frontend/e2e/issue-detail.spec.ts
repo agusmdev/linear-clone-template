@@ -4,7 +4,9 @@
  * archive and delete. Everything is checked against the real backend.
  */
 import {
+  addWorkspaceMember,
   createComment,
+  createCycle,
   createIssue,
   createRelation,
   createWorkspace,
@@ -12,14 +14,17 @@ import {
   expect,
   getIssue,
   getMe,
+  isoDay,
   listActivity,
   listComments,
   listLabels,
+  listNotifications,
   listRelations,
   listStates,
   listSubIssues,
   listSubscribers,
   listTeams,
+  registerUser,
   subscribe,
   test,
   unsubscribe,
@@ -113,6 +118,11 @@ test.describe('issue page', () => {
     const bug = labels.find(l => l.name === 'Bug')
     if (!bug) throw new Error('No Bug label')
     const issue = await createIssue(api, user, { team_id: team.id, title: 'Panel' })
+    const cycle = await createCycle(api, user, team.id, {
+      name: 'Sprint 1',
+      starts_at: isoDay(-1),
+      ends_at: isoDay(6),
+    })
     await openIssue(page, workspace.url_key, issue.identifier)
     const panel = page.getByRole('complementary', { name: 'Issue properties' })
 
@@ -140,6 +150,10 @@ test.describe('issue page', () => {
     await panel.getByLabel('Due date', { exact: true }).fill('2026-12-24')
     await expect(panel).toContainText('Dec 24')
 
+    await panel.getByRole('button', { name: 'Change cycle' }).click()
+    await page.getByRole('option', { name: 'Sprint 1' }).click()
+    await expect(panel.getByRole('button', { name: 'Change cycle' })).toContainText('Sprint 1')
+
     await expect
       .poll(async () => {
         const saved = await getIssue(api, user, issue.id)
@@ -150,9 +164,10 @@ test.describe('issue page', () => {
           saved.labels.map(l => l.id),
           saved.estimate,
           saved.due_date,
+          saved.cycle_id,
         ]
       })
-      .toEqual([state('In Progress').id, 2, me.id, [bug.id], 3, '2026-12-24'])
+      .toEqual([state('In Progress').id, 2, me.id, [bug.id], 3, '2026-12-24', cycle.id])
 
     // Readable values in the timeline, not ids.
     const activity = page.getByRole('list', { name: 'Activity' })
@@ -160,6 +175,7 @@ test.describe('issue page', () => {
     await expect(activity.getByText(/set priority to High/)).toBeVisible()
     await expect(activity.getByText(/added label Bug/)).toBeVisible()
     await expect(activity.getByText(/set the due date to Dec 24/)).toBeVisible()
+    await expect(activity.getByText(/added the issue to Sprint 1/)).toBeVisible()
 
     await panel.getByLabel('Due date', { exact: true }).hover()
     await panel.getByRole('button', { name: 'Remove due date' }).click()
@@ -311,6 +327,29 @@ test.describe('issue page', () => {
     await seededCard.getByRole('link', { name: other.identifier }).click()
     await expect(page).toHaveURL(issueUrl(workspace.url_key, other.identifier))
     await expect(page.getByRole('textbox', { name: 'Issue title' })).toHaveValue('Linked issue')
+  })
+
+  test("a teammate's comment notifies subscribers and cannot be edited by others", async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const { workspace, team } = await seedWorkspace(api, user)
+    const teammate = await registerUser(api)
+    const teammateUser = await addWorkspaceMember(api, workspace.id, teammate)
+    const issue = await createIssue(api, user, { team_id: team.id, title: 'Shared issue' })
+
+    await createComment(api, teammate, issue.id, '<p>Can I take this one?</p>')
+    // The creator (a subscriber) gets a "commented" notification; the author is now subscribed.
+    const notifications = await listNotifications(api, user, workspace.id)
+    expect(notifications.map(n => [n.type, n.actor?.id])).toEqual([['commented', teammateUser.id]])
+    expect((await listSubscribers(api, user, issue.id)).map(u => u.id)).toContain(teammateUser.id)
+
+    await openIssue(page, workspace.url_key, issue.identifier)
+    const card = page.getByRole('article').filter({ hasText: 'Can I take this one?' })
+    await expect(card).toBeVisible()
+    await card.hover()
+    await expect(card.getByRole('button', { name: 'Comment actions' })).toHaveCount(0)
   })
 
   test('subscribe and unsubscribe', async ({ api, user, authedPage: page }) => {

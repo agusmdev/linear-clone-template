@@ -20,7 +20,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { StatusIcon } from '@/components/StatusIcon'
 import { UserAvatar } from '@/components/UserAvatar'
 import { RichTextEditor, useDebouncedAutosave } from '@/components/editor'
-import { IssuePropertiesPanel } from '@/components/issue-detail/IssuePropertiesPanel'
+import { cycleLabel, IssuePropertiesPanel } from '@/components/issue-detail/IssuePropertiesPanel'
 import {
   CommentComposer,
   IssueTimeline,
@@ -40,6 +40,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useCurrentWorkspace } from '@/contexts/WorkspaceContext'
+import { useTeamCycles } from '@/hooks/useCycles'
 import { useDebounce } from '@/hooks/useDebounce'
 import {
   useComments,
@@ -122,6 +123,7 @@ function IssueDetail({ issue }: { issue: Issue }) {
   const issuePath = React.useCallback((identifier: string) => path(`/issue/${identifier}`), [path])
 
   const statesQuery = useTeamStates(issue.team_id)
+  const cyclesQuery = useTeamCycles(issue.team_id)
   const parentQuery = useIssue(issue.parent_id)
   const subIssuesQuery = useSubIssues(issue.id)
   const relationsQuery = useRelations(issue.id)
@@ -203,6 +205,12 @@ function IssueDetail({ issue }: { issue: Issue }) {
     })
 
   const parent = parentQuery.data
+  const currentCycle = cyclesQuery.data?.find(cycle => cycle.id === issue.cycle_id)
+  const cycleName = !issue.cycle_id
+    ? null
+    : currentCycle
+      ? cycleLabel(currentCycle)
+      : (lastValue(activityQuery.data, 'cycle') ?? 'Cycle')
   const breadcrumbs = [
     { label: issue.team.name, to: path(`/team/${issue.team.key}/issues`) },
     ...(parent ? [{ label: parent.identifier, to: issuePath(parent.identifier) }] : []),
@@ -424,7 +432,8 @@ function IssueDetail({ issue }: { issue: Issue }) {
             projectName={
               issue.project_id ? (lastValue(activityQuery.data, 'project') ?? 'Project') : null
             }
-            cycleName={issue.cycle_id ? (lastValue(activityQuery.data, 'cycle') ?? 'Cycle') : null}
+            cycleName={cycleName}
+            cycles={cyclesQuery.data}
             onUpdate={update}
           />
         </div>
