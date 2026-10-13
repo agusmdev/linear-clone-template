@@ -195,7 +195,9 @@ add or remove labels and keep the others. `state_id`, `priority`, `label_ids`,
 (else 400 `invalid_reference`, nothing changes).
 
 **Board drag** (ISS-4): no extra endpoint. `PATCH /issues/{id} {state_id, sort_order}`
-with `sort_order` = the mean of the neighbours' values (top: first - 1, bottom: last + 1).
+with `sort_order` = the mean of the neighbours' values. At the top or bottom of a
+column the free side is the closest value among the other issues on screen (so no
+two issues tie), else first - 1 / last + 1; a drop into an empty column keeps it.
 
 **CreateIssue** `{team_id, title, description?, state_id?, priority?, assignee_id?, label_ids?, project_id?, cycle_id?, parent_id?, estimate?, due_date?, sort_order?}`
 - `title` 1-500 chars; `priority` 0-4 (default 0); `estimate` 0-1000; `label_ids` max 50.

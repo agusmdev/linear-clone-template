@@ -179,7 +179,9 @@ export function IssuesView({
     if (state.ordering === 'manual') {
       const before = event.beforeId ? byId.get(event.beforeId) : undefined
       const after = event.afterId ? byId.get(event.afterId) : undefined
-      changes.sort_order = sortOrderBetween(before, after)
+      const others = issues.filter(i => i.id !== issue.id)
+      const sortOrder = sortOrderBetween(before, after, others)
+      if (sortOrder !== undefined) changes.sort_order = sortOrder
     }
     if (event.fromColumnId !== event.toColumnId) {
       const column = event.toColumnId

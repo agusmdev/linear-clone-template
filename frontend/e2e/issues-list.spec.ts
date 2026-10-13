@@ -682,6 +682,55 @@ test.describe('issues list', () => {
       .toBe('In Progress')
   })
 
+  test('a card dropped at the bottom of a column does not tie with another column (ISS-4)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { team, states, key } = await seedWorkspace(api, user)
+    const moved = await createIssue(api, user, {
+      team_id: team.id,
+      title: 'Moved card',
+      state_id: states.Backlog.id,
+    })
+    const todo = await createIssue(api, user, { team_id: team.id, title: 'Todo card' })
+    const review = await createIssue(api, user, {
+      team_id: team.id,
+      title: 'Review card',
+      state_id: states['In Review'].id,
+    })
+
+    const page = await loginAs(user)
+    await page.goto(`/${key}/team/ENG/issues?layout=board`)
+    const board = page.getByRole('region', { name: 'Issue board' })
+    const card = board.locator('[data-issue-card="ENG-1"]')
+    const target = board.getByRole('region', { name: 'Todo' })
+    await expect(target).toContainText('Todo card')
+
+    const from = await card.boundingBox()
+    const to = await target.boundingBox()
+    if (!from || !to) throw new Error('board not laid out')
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(from.x + from.width / 2 + 10, from.y + from.height / 2 + 10, { steps: 5 })
+    // Below the column's only card: the bottom of the column.
+    await page.mouse.move(to.x + to.width / 2, to.y + 300, { steps: 15 })
+    await page.mouse.up()
+
+    await expect.poll(async () => (await getIssue(api, user, moved.id)).state.name).toBe('Todo')
+    // last + 1 would equal the In Review card's sort order.
+    const sortOrder = (await getIssue(api, user, moved.id)).sort_order
+    expect(sortOrder).toBeGreaterThan(todo.sort_order)
+    expect(sortOrder).toBeLessThan(review.sort_order)
+
+    await page.goto(`/${key}/team/ENG/issues?group=none`)
+    await expect(issueList(page).getByRole('option')).toHaveText([
+      /Todo card/,
+      /Moved card/,
+      /Review card/,
+    ])
+  })
+
   test('selects rows and runs bulk actions (ISS-14)', async ({ api, user, loginAs }) => {
     const { workspace, team, key } = await seedWorkspace(api, user)
     const one = await createIssue(api, user, { team_id: team.id, title: 'Bulk one' })

@@ -152,10 +152,28 @@ export function groupIssues(input: GroupingInput): GroupingResult {
   return { groups: visible, items, groupOf }
 }
 
-/** A sort order between two neighbours (manual ordering). */
-export function sortOrderBetween(before: Issue | undefined, after: Issue | undefined): number {
+/**
+ * The sort order of an issue dropped between two neighbours of its group
+ * (manual ordering), or `undefined` to keep its own (an empty group). At the
+ * top or bottom of a group, the free side is the closest sort order among the
+ * other issues on screen: `first - 1` or `last + 1` would tie with an issue of
+ * another group, and in a view without that grouping the tied issues swap.
+ */
+export function sortOrderBetween(
+  before: Issue | undefined,
+  after: Issue | undefined,
+  others: Issue[]
+): number | undefined {
   if (before && after) return (before.sort_order + after.sort_order) / 2
-  if (before) return before.sort_order + 1
-  if (after) return after.sort_order - 1
-  return 0
+  if (before) {
+    const above = before.sort_order
+    const next = Math.min(...others.map(i => i.sort_order).filter(order => order > above))
+    return Number.isFinite(next) ? (above + next) / 2 : above + 1
+  }
+  if (after) {
+    const below = after.sort_order
+    const prev = Math.max(...others.map(i => i.sort_order).filter(order => order < below))
+    return Number.isFinite(prev) ? (prev + below) / 2 : below - 1
+  }
+  return undefined
 }
