@@ -166,6 +166,22 @@ def test_search_treats_like_wildcards_as_literal_text(
     assert _identifiers(setup, search=search) == expected
 
 
+def test_search_matches_the_visible_description_text_only(
+    setup: dict[str, Any],
+) -> None:
+    client = setup["owner"].client
+    team_id = setup["team"]["id"]
+    create_issue(
+        client, team_id, "Budget", description="<p><strong>R&amp;D</strong> plan</p>"
+    )
+
+    # Markup is not text: "strong" is a tag name, not a word in any issue.
+    assert _identifiers(setup, search="strong") == []
+    # Entities are decoded: "R&D" matches the stored "R&amp;D".
+    assert _identifiers(setup, search="R&D") == ["ENG-6"]
+    assert _identifiers(setup, search="trace") == ["ENG-1"]
+
+
 def test_search_by_identifier_matches_the_team_key(setup: dict[str, Any]) -> None:
     client = setup["owner"].client
     design = create_team(client, setup["workspace"]["id"], name="Design", key="DES")

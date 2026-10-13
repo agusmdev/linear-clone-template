@@ -14,7 +14,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.sql import Select
 
 from app.core.filters import ModelFilter
-from app.core.text_search import like_pattern
+from app.core.text_search import html_visible_text, like_pattern
 from app.modules.issues.models import Issue, IssueLabel, IssueSubscriber
 from app.modules.teams.models import Team, WorkflowState, WorkflowStateType
 
@@ -218,7 +218,7 @@ class IssueFilter(ModelFilter):  # ?order_by= accepts Issue columns only (else 4
             pattern = like_pattern(self.search)
             conditions = [
                 Issue.title.ilike(pattern),
-                Issue.description.ilike(pattern),
+                html_visible_text(Issue.description).ilike(pattern),
             ]
             if match := _IDENTIFIER.match(self.search.strip()):
                 key, number = match.groups()
