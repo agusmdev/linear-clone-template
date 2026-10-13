@@ -19,6 +19,7 @@ import { useMe, useWorkspaces } from '@/hooks/useWorkspace'
 import { useCreateWorkspace } from '@/hooks/useWorkspaceSettings'
 import { ApiError } from '@/lib/api-client'
 import { toastApiError } from '@/lib/error-handler'
+import { cn } from '@/lib/utils'
 import {
   deriveUrlKey,
   workspaceSchema,
@@ -76,18 +77,22 @@ function OnboardingPage() {
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-[radial-gradient(ellipse_at_top,color-mix(in_srgb,var(--primary)_14%,transparent),transparent_65%)]"
       />
-      <header className="relative flex h-14 items-center justify-between px-6">
-        <span className="text-ui font-semibold">Linear Clone</span>
-        <div className="flex items-center gap-3 text-mini text-text-secondary">
+      {/* On a phone only the actions fit next to the name: the email shows from sm up. */}
+      <header className="relative flex h-14 items-center justify-between gap-3 px-4 sm:px-6">
+        <span className="min-w-0 truncate text-ui font-semibold sm:shrink-0">Linear Clone</span>
+        <div className="flex min-w-0 items-center gap-1 text-mini text-text-secondary sm:gap-3">
           {me.data ? (
-            <span>
+            <span className="hidden min-w-0 truncate sm:block">
               Logged in as <span className="text-foreground">{me.data.email}</span>
             </span>
           ) : null}
-          <Link to="/login" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+          <Link
+            to="/login"
+            className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'shrink-0')}
+          >
             Use another account
           </Link>
-          <Button variant="ghost" size="sm" onClick={() => void logout()}>
+          <Button variant="ghost" size="sm" className="shrink-0" onClick={() => void logout()}>
             Log out
           </Button>
         </div>
