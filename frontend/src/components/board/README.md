@@ -37,7 +37,7 @@ import { KanbanBoard, GroupedList, BulkActionBar, type MoveEvent } from '@/compo
 - Cross-column moves show live while dragging; the board keeps a local copy of the order
   during the drag and goes back to `items` on drop. Update `items` in `onMove` (optimistic
   update), or the card snaps back.
-- Horizontal scroll, sticky column headers, drag overlay with drop animation.
+- Horizontal scroll; each column scrolls on its own under its header; drag overlay with drop animation.
 - Keyboard: focus a card with Tab, Space to lift, arrows to move, Space to drop, Escape to
   cancel. Screen reader announcements come from dnd-kit.
 

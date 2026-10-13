@@ -237,10 +237,10 @@ function KanbanColumn<T>({
   return (
     <section
       aria-label={column.title}
-      className="flex shrink-0 flex-col"
+      className="flex min-h-0 shrink-0 flex-col"
       style={{ width, minWidth: width }}
     >
-      <header className="sticky top-0 z-10 flex h-11 items-center gap-2 bg-[var(--background,#0f1011)] px-1">
+      <header className="flex h-11 shrink-0 items-center gap-2 bg-[var(--background,#0f1011)] px-1">
         {column.icon ? <span className="flex size-4 items-center">{column.icon}</span> : null}
         <span className="truncate font-medium">{column.title}</span>
         <span className="text-[var(--muted-foreground,#8a8f98)] tabular-nums">{count}</span>
@@ -259,7 +259,8 @@ function KanbanColumn<T>({
         <div
           ref={setNodeRef}
           className={cn(
-            'flex min-h-24 flex-1 flex-col gap-2 rounded-md p-1 transition-colors',
+            // Each column scrolls on its own, so every header and drop area stays in view.
+            'flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto rounded-md p-1 transition-colors',
             isOver && 'bg-[var(--foreground,#f7f8f8)]/[0.04]'
           )}
         >
