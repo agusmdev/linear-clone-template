@@ -139,6 +139,40 @@ def join_workspace(db: Database, workspace_id: str, user_id: str) -> None:
     )
 
 
+def invite_member(
+    client: httpx.Client, workspace_id: str, email: str, role: str | None = None
+) -> dict[str, Any]:
+    """Add an existing user to a workspace through POST /workspaces/{id}/members."""
+    payload: dict[str, Any] = {"email": email}
+    if role is not None:
+        payload["role"] = role
+    response = client.post(f"/workspaces/{workspace_id}/members", json=payload)
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+def create_team(
+    client: httpx.Client, workspace_id: str, name: str = "Design", key: str = "DES"
+) -> dict[str, Any]:
+    """Create a team through POST /workspaces/{id}/teams and return the body."""
+    response = client.post(
+        f"/workspaces/{workspace_id}/teams", json={"name": name, "key": key}
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+def create_label(
+    client: httpx.Client, workspace_id: str, name: str, color: str = "#4cb782"
+) -> dict[str, Any]:
+    """Create a label through POST /workspaces/{id}/labels and return the body."""
+    response = client.post(
+        f"/workspaces/{workspace_id}/labels", json={"name": name, "color": color}
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
 def login(api: httpx.Client, email: str, password: str) -> httpx.Response:
     """Call POST /auth/login and return the raw response."""
     return api.post("/auth/login", json={"email": email, "password": password})

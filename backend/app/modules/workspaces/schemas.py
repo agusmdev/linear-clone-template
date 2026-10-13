@@ -5,9 +5,10 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.core.optional_model import partial_model
 from app.database.mixins import OrmBaseModel
 from app.modules.workspaces.models import WorkspaceRole
-from app.user.schemas import UserSummary
+from app.user.schemas import NormalizedEmail, UserSummary
 
 URL_KEY_PATTERN = r"^[a-z0-9]+(?:-[a-z0-9]+)*$"
 TEAM_KEY_PATTERN = r"^[A-Z]{2,5}$"
@@ -26,6 +27,13 @@ class WorkspaceCreate(WorkspaceBase):
     team_key: str | None = Field(None, pattern=TEAM_KEY_PATTERN)
 
 
+@partial_model
+class WorkspaceUpdate(WorkspaceBase):
+    """PATCH: rename the workspace or change its URL key (admins only)."""
+
+    pass
+
+
 class WorkspaceResponse(WorkspaceBase, OrmBaseModel):
     id: uuid.UUID
     created_by_id: uuid.UUID | None
@@ -40,3 +48,14 @@ class WorkspaceMemberResponse(OrmBaseModel):
     role: WorkspaceRole
     created_at: datetime
     user: UserSummary
+
+
+class MemberInvite(BaseModel):
+    """Add an existing user to the workspace by email (no email is sent)."""
+
+    email: NormalizedEmail
+    role: WorkspaceRole = WorkspaceRole.member
+
+
+class MemberUpdate(BaseModel):
+    role: WorkspaceRole
