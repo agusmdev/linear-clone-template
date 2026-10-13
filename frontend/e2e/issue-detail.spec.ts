@@ -12,6 +12,7 @@ import {
   createRelation,
   createWorkspace,
   deleteRelation,
+  devices,
   expect,
   getIssue,
   getMe,
@@ -360,6 +361,56 @@ test.describe('issue page', () => {
     await expect(activity).toContainText(`removed blocking relation with ${issue.identifier}`)
   })
 
+  test('the inline sub-issue title stops at 500 characters', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const { workspace, team } = await seedWorkspace(api, user)
+    const parent = await createIssue(api, user, { team_id: team.id, title: 'Launch v2' })
+    await openIssue(page, workspace.url_key, parent.identifier)
+
+    await page.getByRole('button', { name: 'Add sub-issues' }).click()
+    const input = page.getByRole('textbox', { name: 'Sub-issue title' })
+    await input.fill('y'.repeat(600))
+    await expect(input).toHaveValue('y'.repeat(500))
+    await input.press('Enter')
+    await expect(input).toHaveValue('')
+    const subIssues = await listSubIssues(api, user, parent.id)
+    expect(subIssues.items.map(i => i.title.length)).toEqual([500])
+  })
+
+  test('the add-relation menu works with the keyboard alone', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const { workspace, team } = await seedWorkspace(api, user)
+    const issue = await createIssue(api, user, { team_id: team.id, title: 'Payments page' })
+    const other = await createIssue(api, user, { team_id: team.id, title: 'Payments API' })
+    await openIssue(page, workspace.url_key, issue.identifier)
+
+    const relations = page.getByRole('region', { name: 'Relations' })
+    await relations.getByRole('button', { name: 'Add relation' }).click()
+    // The type list takes the focus: arrows move, Enter picks "Blocking".
+    await page.keyboard.press('ArrowDown')
+    await expect(page.getByRole('option', { name: 'Blocking' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
+    await page.keyboard.press('Enter')
+    const search = page.getByPlaceholder('Search issues...')
+    await expect(search).toBeFocused()
+    await page.keyboard.type(other.identifier)
+    await expect(page.getByRole('option', { name: /Payments API/ })).toBeVisible()
+    await page.keyboard.press('Enter')
+
+    await expect(relations.getByRole('group', { name: 'Blocking' })).toContainText(other.identifier)
+    await expect
+      .poll(async () => (await listRelations(api, user, issue.id)).map(r => [r.type, r.direction]))
+      .toEqual([['blocks', 'outgoing']])
+  })
+
   test('comments: add with Cmd+Enter, edit, delete, and issue links', async ({
     api,
     user,
@@ -652,5 +703,56 @@ test.describe('issue page', () => {
     const { workspace } = await seedWorkspace(api, user)
     await page.goto(`/${workspace.url_key}/issue/ENG-999`)
     await expect(page.getByText('Issue not found')).toBeVisible()
+  })
+})
+
+test.describe('issue page on a touch phone', () => {
+  test('the header shows the identifier, the parent link stays on one line, row actions show without hover', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const page = await loginAs(user, devices['iPhone 13'])
+    const { workspace, team } = await seedWorkspace(api, user)
+    const parent = await createIssue(api, user, {
+      team_id: team.id,
+      title: 'A parent issue with a title far too long for one phone line',
+    })
+    const issue = await createIssue(api, user, {
+      team_id: team.id,
+      title: 'Child',
+      parent_id: parent.id,
+      due_date: isoDay(7),
+    })
+    const other = await createIssue(api, user, { team_id: team.id, title: 'Related one' })
+    await createRelation(api, user, issue.id, { related_issue_id: other.id, type: 'related' })
+    await createComment(api, user, issue.id, '<p>My note</p>')
+    await openIssue(page, workspace.url_key, issue.identifier)
+
+    // The page name is never cut: the team and parent crumbs give way first.
+    const heading = page.getByRole('heading', { level: 1 }).locator('span')
+    expect(await heading.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+
+    // "Sub-issue of ENG-1" is one line; only the parent title is cut.
+    const parentLink = page.getByRole('link', { name: /Sub-issue of/ })
+    for (const text of ['Sub-issue of', parent.identifier]) {
+      const part = parentLink.getByText(text, { exact: true })
+      expect(await part.evaluate(el => el.getBoundingClientRect().height)).toBeLessThan(20)
+    }
+    const linkBox = await parentLink.boundingBox()
+    if (!linkBox) throw new Error('parent link is not laid out')
+    expect(linkBox.x + linkBox.width).toBeLessThanOrEqual(390)
+
+    // A phone has no hover: the comment menu and the remove buttons are shown.
+    for (const control of [
+      page.getByRole('button', { name: 'Comment actions' }),
+      page.getByRole('button', { name: `Remove relation to ${other.identifier}` }),
+      page.getByRole('button', { name: 'Remove due date' }),
+    ]) {
+      await expect(control).toHaveCSS('opacity', '1')
+    }
+    await page.getByRole('button', { name: 'Comment actions' }).tap()
+    await page.getByRole('menuitem', { name: 'Delete' }).tap()
+    await expect.poll(async () => (await listComments(api, user, issue.id)).length).toBe(0)
   })
 })

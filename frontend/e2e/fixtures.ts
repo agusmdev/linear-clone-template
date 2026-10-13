@@ -28,10 +28,12 @@
 import { randomUUID } from 'node:crypto'
 import {
   test as base,
+  devices,
   expect,
   type APIRequestContext,
   type APIResponse,
   type BrowserContext,
+  type BrowserContextOptions,
   type Page,
   type Request,
 } from '@playwright/test'
@@ -83,7 +85,7 @@ import type {
 } from '../src/types/workspace'
 import { BACKEND_URL, FRONTEND_URL } from './support/stack'
 
-export { expect }
+export { devices, expect }
 export type { Locator, Page } from '@playwright/test'
 export { BACKEND_URL, FRONTEND_URL }
 
@@ -945,7 +947,8 @@ function watchContext(context: BrowserContext): () => void {
 interface Fixtures {
   api: APIRequestContext
   user: TestUser
-  loginAs: (user: TestUser) => Promise<Page>
+  /** `options` are extra context options, e.g. `devices['iPhone 13']` for a touch phone. */
+  loginAs: (user: TestUser, options?: BrowserContextOptions) => Promise<Page>
   authedPage: Page
 }
 
@@ -968,9 +971,10 @@ export const test = base.extend<Fixtures>({
 
   loginAs: async ({ browser }, use) => {
     const opened: { context: BrowserContext; assertNoPageErrors: () => void }[] = []
-    await use(async user => {
+    await use(async (user, options) => {
       // The same thing a real sign-in leaves behind: the session token in localStorage.
       const context = await browser.newContext({
+        ...options,
         storageState: {
           cookies: [],
           origins: [

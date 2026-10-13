@@ -373,7 +373,7 @@ function DueDateField({
           type="button"
           aria-label="Remove due date"
           onClick={() => onChange(null)}
-          className="absolute right-1 flex size-6 items-center justify-center rounded text-text-tertiary opacity-0 group-hover:opacity-100 hover:bg-surface-active hover:text-foreground focus-visible:opacity-100"
+          className="absolute right-1 flex size-6 items-center justify-center rounded text-text-tertiary opacity-0 group-hover:opacity-100 hover:bg-surface-active hover:text-foreground focus-visible:opacity-100 pointer-coarse:opacity-100"
         >
           <X className="size-3.5" />
         </button>
