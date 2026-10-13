@@ -3,7 +3,7 @@
 import re
 from typing import Any
 
-from sqlalchemy import func
+from sqlalchemy import and_, func, or_
 
 # Block tags of the TipTap HTML. They separate words, so they become a space.
 # Every other tag (strong, em, a, span, ...) is removed with no space, so
@@ -27,6 +27,17 @@ def like_pattern(text: str) -> str:
     """``%text%`` with ``%``, ``_`` and ``\\`` escaped (Postgres' default escape)."""
     escaped = re.sub(r"([\\%_])", r"\\\1", text)
     return f"%{escaped}%"
+
+
+def words_match(text: str, *columns: Any) -> Any:
+    """Every word of ``text`` is in one of ``columns`` (any order), so
+    "redirect login" finds "Fix login redirect"."""
+    return and_(
+        *(
+            or_(*(column.ilike(like_pattern(word)) for column in columns))
+            for word in text.split()
+        )
+    )
 
 
 def html_visible_text(column: Any) -> Any:

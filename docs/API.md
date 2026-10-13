@@ -238,7 +238,7 @@ two issues tie), else first - 1 / last + 1; a drop into an empty column keeps it
 | `project_id`, `cycle_id`, `parent_id` | equality |
 | `parent_id__isnull` | `true` = top-level only, `false` = sub-issues only |
 | `include_archived` | default `false` |
-| `search` | title or description (ILIKE), or the number: `12` / `ENG-12` |
+| `search` | every word in the title or description (ILIKE, any order: `login safari` finds "Login page crashes on Safari"), or the number: `12` / `ENG-12` |
 | `order_by` | comma-separated Issue columns, `-` = desc: `sort_order` (default, manual), `priority`, `created_at`, `updated_at`, `due_date`, `title`, `number` |
 | `page`, `size` | pages |
 

@@ -233,9 +233,10 @@ test.describe('issues list', () => {
     const assigneeChip = dialog.getByRole('button', { name: `Assignee: ${user.email}` })
     expect((await assigneeChip.boundingBox())!.height).toBeLessThanOrEqual(30)
 
-    // ENG-1 is outside the first page of candidates: the search finds it on the server.
+    // ENG-1 is outside the first page of candidates: the search finds it on the
+    // server. Every word matches, in any order, like the search page.
     await dialog.getByRole('button', { name: 'Parent issue: none' }).click()
-    await page.getByPlaceholder('Set parent issue...').fill('Oldest')
+    await page.getByPlaceholder('Set parent issue...').fill('parent oldest')
     await page.getByRole('option', { name: 'ENG-1 Oldest parent' }).click()
     await expect(dialog.getByRole('button', { name: 'Parent issue: ENG-1' })).toBeVisible()
     await dialog.getByLabel('Issue title').fill('Child of the oldest')
