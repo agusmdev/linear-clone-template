@@ -106,6 +106,7 @@ Bugs found by earlier QA rounds. Do not re-report one unless it still reproduces
 - create-issue (r5): a saved draft whose project/cycle/status/assignee was deleted could not be created
 - issues-list: S/P/A/L and row pickers changed only one issue of a multi-selection
 - documents: reopening a stale document let autosave overwrite a teammate's newer edits
+- create-issue: a restored draft whose parent issue was deleted could not be created
 
 ## Known and accepted (not bugs to re-report)
 
