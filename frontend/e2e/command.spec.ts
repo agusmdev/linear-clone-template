@@ -119,6 +119,37 @@ test.describe('command palette', () => {
     await expect(page).toHaveURL(`/${workspace.url_key}/issue/${issue.identifier}`)
   })
 
+  test('the first async result is selected, Enter opens it and no empty message shows', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const [team] = await listTeams(api, user, workspace.id)
+    const issue = await createIssue(api, user, { team_id: team.id, title: 'Zebra crossing bug' })
+
+    await page.goto(`/${workspace.url_key}/views`)
+    await expect(page.getByRole('heading', { level: 1, name: 'Views' })).toBeVisible()
+    await page.keyboard.press('ControlOrMeta+k')
+    // 'zebra' matches no static command: only the async issue result shows.
+    await palette(page).getByRole('combobox').fill('zebra')
+    const result = palette(page).getByRole('option', {
+      name: `${issue.identifier} Zebra crossing bug`,
+    })
+    await expect(result).toBeVisible()
+    await expect(result).toHaveAttribute('aria-selected', 'true')
+    await expect(palette(page).getByText('No results.')).toHaveCount(0)
+    await page.keyboard.press('Enter')
+    await expect(page).toHaveURL(`/${workspace.url_key}/issue/${issue.identifier}`)
+    await expect(palette(page)).toBeHidden()
+
+    // A query with no static and no async match still shows the empty message.
+    await page.keyboard.press('ControlOrMeta+k')
+    await palette(page).getByRole('combobox').fill('qwxzv')
+    await expect(palette(page).getByText('No results.')).toBeVisible()
+    await expect(palette(page).getByRole('option')).toHaveCount(0)
+  })
+
   test('create new document makes a document and opens it', async ({
     api,
     user,

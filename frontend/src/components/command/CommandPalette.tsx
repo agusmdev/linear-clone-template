@@ -28,8 +28,16 @@ export interface CommandPaletteProps {
   className?: string
 }
 
+/**
+ * Value prefix of async search items. The server already filtered them, so
+ * `filterItems` always keeps them. They stay normal (not `forceMount`) items, so
+ * cmdk counts them: it selects the first one and hides `Command.Empty`.
+ */
+const SEARCH_VALUE_PREFIX = 'search-result:'
+
 /** Case-insensitive match on label + keywords: substring first, then fuzzy. */
-function filterItems(_value: string, search: string, keywords?: string[]): number {
+function filterItems(value: string, search: string, keywords?: string[]): number {
+  if (value.startsWith(SEARCH_VALUE_PREFIX)) return 1
   const query = search.trim().toLowerCase()
   if (!query) return 1
   const haystack = (keywords ?? []).join(' ').toLowerCase()
@@ -53,16 +61,16 @@ const groupClass =
 
 interface PaletteItemProps {
   item: CommandItemData
-  forceMount?: boolean
+  /** Async search result: always kept by the filter. */
+  searchResult?: boolean
   onSelect: (item: CommandItemData) => void
 }
 
-function PaletteItem({ item, forceMount, onSelect }: PaletteItemProps) {
+function PaletteItem({ item, searchResult, onSelect }: PaletteItemProps) {
   return (
     <Command.Item
-      value={item.id}
+      value={searchResult ? `${SEARCH_VALUE_PREFIX}${item.id}` : item.id}
       keywords={[item.label, ...(item.keywords ?? [])]}
-      forceMount={forceMount}
       onSelect={() => onSelect(item)}
       className={itemClass}
     >
@@ -183,19 +191,20 @@ export function CommandPalette({
                   Searching…
                 </Command.Loading>
               )}
-              <Command.Empty className="px-5 py-6 text-center text-[var(--color-muted-foreground,#8a8f98)]">
-                {emptyMessage}
-              </Command.Empty>
+              {!(loading && !page) && (
+                <Command.Empty className="px-5 py-6 text-center text-[var(--color-muted-foreground,#8a8f98)]">
+                  {emptyMessage}
+                </Command.Empty>
+              )}
               {showSearchGroups &&
                 searchGroups.map(group => (
                   <Command.Group
                     key={`search-${group.heading}`}
                     heading={group.heading}
-                    forceMount
                     className={groupClass}
                   >
                     {group.items.map(item => (
-                      <PaletteItem key={item.id} item={item} forceMount onSelect={handleSelect} />
+                      <PaletteItem key={item.id} item={item} searchResult onSelect={handleSelect} />
                     ))}
                   </Command.Group>
                 ))}
