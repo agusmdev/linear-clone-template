@@ -71,17 +71,36 @@ function WorkspaceLayout() {
   }, [workspaceId])
 
   const value = useMemo<WorkspaceContextValue | null>(() => {
-    if (!workspace || !teamsQuery.data || !membersQuery.data || !labelsQuery.data || !meQuery.data)
+    if (
+      !workspace ||
+      !teamsQuery.data ||
+      !myTeamsQuery.data ||
+      !membersQuery.data ||
+      !labelsQuery.data ||
+      !meQuery.data
+    )
       return null
+    // "Your teams" = the teams the user joined, as Linear: joining a team adds it
+    // to the sidebar, leaving removes it. The full team list stays the source of
+    // the team data, so a deleted or renamed team updates at once.
+    const myTeamIds = new Set(myTeamsQuery.data.map(team => team.id))
     return {
       workspace,
       teams: teamsQuery.data,
+      myTeams: teamsQuery.data.filter(team => myTeamIds.has(team.id)),
       members: membersQuery.data,
       labels: labelsQuery.data,
       me: meQuery.data,
       path: (subPath: string) => `/${workspace.url_key}${subPath}`,
     }
-  }, [workspace, teamsQuery.data, membersQuery.data, labelsQuery.data, meQuery.data])
+  }, [
+    workspace,
+    teamsQuery.data,
+    myTeamsQuery.data,
+    membersQuery.data,
+    labelsQuery.data,
+    meQuery.data,
+  ])
 
   if (workspaceQuery.isError) {
     return (
@@ -117,11 +136,6 @@ function WorkspaceLayout() {
   }
 
   const base = `/${value.workspace.url_key}`
-  // "Your teams" = the teams the user joined, as Linear: joining a team adds it
-  // to the sidebar, leaving removes it. The full team list stays the source of
-  // the team data, so a deleted or renamed team updates at once.
-  const myTeamIds = new Set((myTeamsQuery.data ?? []).map(team => team.id))
-  const sidebarTeams = value.teams.filter(team => myTeamIds.has(team.id))
   const favorites = favoritesQuery.data ?? []
   const favoriteLinks: SidebarLink[] = favorites.map(favorite => ({
     label: favorite.name,
@@ -197,7 +211,7 @@ function WorkspaceLayout() {
       viewsTo={`${base}/views`}
       favorites={favoriteLinks}
       onFavoriteMove={moveFavorite}
-      teams={sidebarTeams.map(team => ({
+      teams={value.myTeams.map(team => ({
         id: team.id,
         name: team.name,
         key: team.key,

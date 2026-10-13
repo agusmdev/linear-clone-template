@@ -3,7 +3,7 @@ import { FileText, Plus, Search } from 'lucide-react'
 import { DocumentList } from '@/components/documents/DocumentList'
 import { PageHeader, type Breadcrumb } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
-import { useNewDocument } from '@/features/documents/useNewDocument'
+import { useNewDocument, usePageDocumentScope } from '@/features/documents/useNewDocument'
 import { useDebounce } from '@/hooks/useDebounce'
 
 interface DocumentsListPageProps {
@@ -22,6 +22,7 @@ export function DocumentsListPage({ teamId, breadcrumbs }: DocumentsListPageProp
   const debouncedSearch = useDebounce(search, 250)
   const params = teamId ? { team_id: teamId } : {}
   const { createAndOpen, isPending } = useNewDocument(params)
+  usePageDocumentScope(params)
 
   return (
     <div className="flex min-h-full flex-col">

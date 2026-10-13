@@ -33,7 +33,7 @@ import { StatusIcon } from '@/components/StatusIcon'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useCurrentWorkspace } from '@/contexts/WorkspaceContext'
-import { useNewDocument } from '@/features/documents/useNewDocument'
+import { currentPageDocumentScope, useNewDocument } from '@/features/documents/useNewDocument'
 import { useDebounce } from '@/hooks/useDebounce'
 import { favoritePath, useFavorites } from '@/hooks/useFavorites'
 import { useSearch } from '@/hooks/useSearch'
@@ -179,7 +179,8 @@ export function WorkspaceCommands() {
             label: 'Create new document',
             icon: <FilePlus />,
             keywords: ['new document', 'doc'],
-            onSelect: () => void newDocument.createAndOpen(),
+            // In the project or team of the open page, like its "New document".
+            onSelect: () => void newDocument.createAndOpen(currentPageDocumentScope()),
           },
           {
             id: 'create-project',

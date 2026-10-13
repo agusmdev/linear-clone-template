@@ -8,8 +8,9 @@ import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { useCurrentWorkspace } from '@/contexts/WorkspaceContext'
 import type { FilterKind } from '@/features/issues/view-state'
+import { usePageIssueDefaults } from '@/hooks/usePageIssueDefaults'
 import { openCreateIssue } from '@/lib/issue-events'
-import type { IssuesParams } from '@/types/issue'
+import type { CreateIssueEventDetail, IssuesParams } from '@/types/issue'
 
 /** My issues (ISS-13): Assigned / Created / Subscribed tabs over the shared IssuesView. */
 export const Route = createFileRoute('/_authed/$workspaceKey/my-issues')({
@@ -46,6 +47,9 @@ function MyIssuesPage() {
   const ws = useCurrentWorkspace()
   const [tab, setTab] = useSearchTab(TABS, next => HIDDEN_FILTERS[next])
   const params: IssuesParams = { workspace_id: ws.workspace.id, ...TAB_PARAMS[tab] }
+  // Assigned: "New issue", `C` and "Create new issue" assign the new issue to me.
+  const createDefaults: CreateIssueEventDetail = tab === 'assigned' ? { assigneeId: ws.me.id } : {}
+  usePageIssueDefaults(createDefaults)
 
   return (
     <div className="flex h-full flex-col">
@@ -56,7 +60,7 @@ function MyIssuesPage() {
             label="New issue"
             shortcut="C"
             icon={<SquarePen />}
-            onClick={() => openCreateIssue(tab === 'assigned' ? { assigneeId: ws.me.id } : {})}
+            onClick={() => openCreateIssue(createDefaults)}
           />
         }
       >
@@ -66,17 +70,14 @@ function MyIssuesPage() {
         key={tab}
         params={params}
         hiddenFilters={HIDDEN_FILTERS[tab]}
-        createDefaults={tab === 'assigned' ? { assigneeId: ws.me.id } : {}}
+        createDefaults={createDefaults}
         emptyState={
           <EmptyState
             icon={<CircleUserRound />}
             title="No issues"
             description={EMPTY_TEXT[tab]}
             action={
-              <Button
-                size="sm"
-                onClick={() => openCreateIssue(tab === 'assigned' ? { assigneeId: ws.me.id } : {})}
-              >
+              <Button size="sm" onClick={() => openCreateIssue(createDefaults)}>
                 Create issue
               </Button>
             }

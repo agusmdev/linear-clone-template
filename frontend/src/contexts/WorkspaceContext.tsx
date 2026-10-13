@@ -8,6 +8,8 @@ export interface WorkspaceContextValue {
   workspace: Workspace
   /** Teams of the workspace (sidebar order). */
   teams: Team[]
+  /** The teams the user joined (sidebar "Your teams"), in `teams` order. */
+  myTeams: Team[]
   members: WorkspaceMember[]
   labels: Label[]
   me: User
@@ -20,7 +22,8 @@ export const WorkspaceContext = createContext<WorkspaceContextValue | null>(null
 /**
  * The workspace of the current URL (`/$workspaceKey/...`). Every page under
  * routes/_authed/$workspaceKey/ can call it: the layout route provides it and
- * renders children only after the workspace, teams, members, labels and user
+ * renders children only after the workspace, teams, joined teams, members,
+ * labels and user
  * have loaded.
  */
 export function useCurrentWorkspace(): WorkspaceContextValue {

@@ -571,6 +571,17 @@ export async function listTeamMembers(
   return (await response.json()) as TeamMember[]
 }
 
+/** POST /teams/{id}/members with no body: the user joins the team. */
+export async function joinTeam(
+  api: APIRequestContext,
+  user: TestUser,
+  teamId: string
+): Promise<TeamMember> {
+  const response = await api.post(`/teams/${teamId}/members`, { headers: authHeaders(user) })
+  await expectOk(response, 'POST /teams/{id}/members')
+  return (await response.json()) as TeamMember
+}
+
 /** DELETE /teams/{id}/members/{user_id}; `'me'` leaves the team. */
 export async function removeTeamMember(
   api: APIRequestContext,

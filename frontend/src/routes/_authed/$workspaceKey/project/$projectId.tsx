@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCurrentWorkspace } from '@/contexts/WorkspaceContext'
-import { useNewDocument } from '@/features/documents/useNewDocument'
+import { useNewDocument, usePageDocumentScope } from '@/features/documents/useNewDocument'
 import { usePageIssueDefaults } from '@/hooks/usePageIssueDefaults'
 import {
   projectUpdateMutationKey,
@@ -87,6 +87,8 @@ function ProjectPage() {
   const project = projectQuery.data?.workspace_id === workspace.id ? projectQuery.data : undefined
   // `C` creates an issue in this project, like "New issue".
   usePageIssueDefaults({ projectId: project?.id, teamId: project?.team_ids[0] })
+  // The command menu's "Create new document" files the document in this project.
+  usePageDocumentScope({ project_id: project?.id })
 
   if (projectQuery.isError || (projectQuery.data && !project)) {
     return (
