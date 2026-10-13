@@ -68,7 +68,7 @@ On the server it renders the plain text of `html` (one line per block), then the
 
 Returns `{ status, error, flush }`.
 
-- `status`: `'idle' | 'saving' | 'saved' | 'error'`.
+- `status`: `'idle' | 'unsaved' | 'saving' | 'saved' | 'error'`. `'unsaved'` shows as soon as the value changes and lasts until the debounced save starts.
 - The first `value` counts as saved. A change is saved after `delay` ms without new changes.
 - `save` may return a promise; a rejection sets `status: 'error'` and `error`.
 - Only the newest save sets the status. `flush()` saves now (also retries after an error).

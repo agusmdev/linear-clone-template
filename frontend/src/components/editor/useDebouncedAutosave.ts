@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-export type AutosaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+export type AutosaveStatus = 'idle' | 'unsaved' | 'saving' | 'saved' | 'error'
 
 export interface AutosaveResult {
+  /** 'unsaved' while the newest value waits for the delay. */
   status: AutosaveStatus
   /** The error of the last failed save, or null. */
   error: unknown
@@ -15,7 +16,9 @@ const NOT_SAVED: unique symbol = Symbol('not-saved')
 /**
  * Saves `value` after it has not changed for `delay` ms. The first value is
  * taken as already saved. A pending change is saved when the component unmounts.
- * When saves overlap, only the newest one sets the status.
+ * When saves overlap, only the newest one sets the status. While the value differs
+ * from the value last sent to `save`, the status is 'unsaved' (unless a save is in
+ * flight or failed).
  */
 export function useDebouncedAutosave<T>(
   value: T,
@@ -24,6 +27,8 @@ export function useDebouncedAutosave<T>(
 ): AutosaveResult {
   const [status, setStatus] = useState<AutosaveStatus>('idle')
   const [error, setError] = useState<unknown>(null)
+  // The value last sent to `save` (or the first value). Drives the 'unsaved' status.
+  const [sentValue, setSentValue] = useState<T>(value)
   const saveRef = useRef(save)
   const valueRef = useRef(value)
   const lastSavedRef = useRef<T | typeof NOT_SAVED>(value)
@@ -38,6 +43,7 @@ export function useDebouncedAutosave<T>(
     if (Object.is(next, lastSavedRef.current)) return
     const request = ++requestRef.current
     lastSavedRef.current = next
+    setSentValue(next)
     setStatus('saving')
     try {
       await saveRef.current(next)
@@ -74,5 +80,8 @@ export function useDebouncedAutosave<T>(
 
   const flush = useCallback(() => void runSave(valueRef.current), [runSave])
 
-  return { status, error, flush }
+  const dirty = !Object.is(value, sentValue)
+  const shownStatus = dirty && status !== 'saving' && status !== 'error' ? 'unsaved' : status
+
+  return { status: shownStatus, error, flush }
 }

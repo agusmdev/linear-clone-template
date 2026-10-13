@@ -7,7 +7,7 @@ import { DocumentIcon } from '@/components/documents/DocumentIcon'
 import { DocumentIconPicker } from '@/components/documents/DocumentIconPicker'
 import { combineSaveStatus, DocumentSaveStatus } from '@/components/documents/DocumentSaveStatus'
 import { MoveToProjectPicker, type ProjectChoice } from '@/components/documents/MoveToProjectPicker'
-import { RichTextEditor, useDebouncedAutosave } from '@/components/editor'
+import { type AutosaveStatus, RichTextEditor, useDebouncedAutosave } from '@/components/editor'
 import { EmptyState } from '@/components/EmptyState'
 import { FavoriteButton } from '@/components/FavoriteButton'
 import { IconButton } from '@/components/IconButton'
@@ -104,7 +104,7 @@ function DocumentEditor({ document }: { document: Document }) {
     if (deletedRef.current) return
     return update.mutateAsync({ content: next })
   })
-  const [fieldStatus, setFieldStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [fieldStatus, setFieldStatus] = useState<AutosaveStatus>('idle')
   const status = combineSaveStatus([titleSave.status, contentSave.status, fieldStatus])
 
   /** Icon and project changes save at once. */
