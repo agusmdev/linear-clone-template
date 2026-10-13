@@ -33,11 +33,6 @@ export interface IssueViewContextValue {
   actions: IssueActions
   openPicker: OpenPicker | null
   setOpenPicker: (picker: OpenPicker | null) => void
-  /**
-   * Runs when a row picker closes. In the list layout it puts focus back on the
-   * issue listbox (so J/K/S/P/A/Enter keep working), not on the row's trigger.
-   */
-  onPickerCloseAutoFocus: (event: Event) => void
   /** The issues a menu action applies to: the selection if `issue` is in it, else `issue`. */
   targetsFor: (issue: Issue) => Issue[]
   /** Opens the delete confirmation for these issues. */
@@ -86,13 +81,7 @@ export function IssuePicker({ issue, kind, trigger, align = 'start' }: IssuePick
   const open = view.openPicker?.issueId === issue.id && view.openPicker.kind === kind
   const onOpenChange = (next: boolean) =>
     view.setOpenPicker(next ? { issueId: issue.id, kind } : null)
-  const common = {
-    open,
-    onOpenChange,
-    trigger,
-    align,
-    onCloseAutoFocus: view.onPickerCloseAutoFocus,
-  }
+  const common = { open, onOpenChange, trigger, align }
 
   let picker: ReactNode
   if (kind === 'status') {
