@@ -5,6 +5,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.core.names import Name
 from app.core.optional_model import partial_model
 from app.database.mixins import OrmBaseModel
 from app.modules.workspaces.models import WorkspaceRole
@@ -32,7 +33,7 @@ RESERVED_URL_KEYS = frozenset(
 
 
 class WorkspaceBase(BaseModel):
-    name: str = Field(..., min_length=1, max_length=255)
+    name: Name
     # Lowercase letters, digits and single dashes: the slug of the app URL.
     url_key: str = Field(..., min_length=2, max_length=48, pattern=URL_KEY_PATTERN)
 
@@ -52,7 +53,7 @@ class NotReservedUrlKey(BaseModel):
 class WorkspaceCreate(NotReservedUrlKey, WorkspaceBase):
     """Create a workspace with its first team (default "Engineering" / "ENG")."""
 
-    team_name: str | None = Field(None, min_length=1, max_length=255)
+    team_name: Name | None = None
     team_key: str | None = Field(None, pattern=TEAM_KEY_PATTERN)
 
 
@@ -64,6 +65,7 @@ class WorkspaceUpdate(NotReservedUrlKey, WorkspaceBase):
 
 
 class WorkspaceResponse(WorkspaceBase, OrmBaseModel):
+    name: str
     id: uuid.UUID
     created_by_id: uuid.UUID | None
     created_at: datetime
