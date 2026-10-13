@@ -279,7 +279,10 @@ test.describe('session', () => {
   })
 
   test('logout ends the session on the backend too', async ({ authedPage: page, user, api }) => {
-    await page.goto('/')
+    // Not '/': it redirects a user with no workspace to onboarding, which has
+    // no Logout button, so a click there can race the redirect.
+    await page.goto('/items')
+    await expect(page.getByRole('heading', { name: 'Items' })).toBeVisible()
     await logoutButton(page).click()
 
     await expect(page).toHaveURL('/login')
