@@ -6,10 +6,12 @@ import {
   addFavorite,
   createDocument,
   createIssue,
+  createProject,
   createTeam,
   createWorkspace,
   deleteFavorite,
   expect,
+  fetchDocument,
   listFavorites,
   listTeams,
   searchWorkspace,
@@ -194,6 +196,43 @@ test.describe('command palette', () => {
     await expect(page).toHaveURL(new RegExp(`/${workspace.url_key}/document/[0-9a-f-]{36}$`))
     const [doc] = (await searchWorkspace(api, user, workspace.id, 'Untitled')).documents
     expect(page.url()).toContain(doc.id)
+  })
+
+  test('create new document on a project or team page files the document there', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const [team] = await listTeams(api, user, workspace.id)
+    const project = await createProject(api, user, { workspace_id: workspace.id, name: 'Launch' })
+    const createFromPalette = async () => {
+      await page.keyboard.press('ControlOrMeta+k')
+      await palette(page).getByRole('combobox').fill('create new document')
+      await page.keyboard.press('Enter')
+      await expect(page).toHaveURL(new RegExp(`/${workspace.url_key}/document/[0-9a-f-]{36}$`))
+      return (await fetchDocument(api, user, page.url().split('/').pop()!)).json()
+    }
+
+    await page.goto(`/${workspace.url_key}/project/${project.id}?tab=documents`)
+    await expect(page.getByText('No documents in this project')).toBeVisible()
+    const inProject = await createFromPalette()
+    expect([inProject.project_id, inProject.team_id]).toEqual([project.id, null])
+    await page.goto(`/${workspace.url_key}/project/${project.id}?tab=documents`)
+    await expect(page.getByRole('list', { name: 'Documents' }).getByRole('link')).toHaveCount(1)
+
+    await page.goto(`/${workspace.url_key}/team/ENG/documents`)
+    await expect(page.getByText('No documents', { exact: true })).toBeVisible()
+    const inTeam = await createFromPalette()
+    expect([inTeam.project_id, inTeam.team_id]).toEqual([null, team.id])
+    await page.goto(`/${workspace.url_key}/team/ENG/documents`)
+    await expect(page.getByRole('list', { name: 'Documents' }).getByRole('link')).toHaveCount(1)
+
+    // Elsewhere the document stays at workspace level.
+    await page.goto(`/${workspace.url_key}/views`)
+    await expect(page.getByRole('heading', { level: 1, name: 'Views' })).toBeVisible()
+    const loose = await createFromPalette()
+    expect([loose.project_id, loose.team_id]).toEqual([null, null])
   })
 
   test('create new issue while the issue modal is open keeps what is typed', async ({
