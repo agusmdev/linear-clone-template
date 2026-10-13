@@ -80,6 +80,17 @@ def test_update_trims_the_display_name(
     assert response.json()["display_name"] == "After"
 
 
+def test_update_makes_the_display_name_one_line(
+    register_user: Callable[..., RegisteredUser],
+) -> None:
+    user = register_user(display_name="Before")
+
+    response = user.client.patch("/users/me", json={"display_name": "Ada\n Lovelace"})
+
+    assert response.status_code == 200
+    assert response.json()["display_name"] == "Ada Lovelace"
+
+
 def test_updated_email_is_the_new_login(
     api: httpx.Client, register_user: Callable[..., RegisteredUser]
 ) -> None:
