@@ -271,16 +271,16 @@ No extra endpoints. My issues: `assignee_id=me` / `creator_id=me` /
 
 ## 3. Documents
 
-`DocumentSummary = {id, workspace_id, project_id, team_id, title, icon, creator_id, creator: UserSummary|null, last_edited_by_id, last_edited_by: UserSummary|null, sort_order, created_at, updated_at}`
+`DocumentSummary = {id, workspace_id, project_id, team_id, title, icon, creator_id, creator: UserSummary|null, last_edited_by_id, last_edited_by: UserSummary|null, project: {id, name}|null, sort_order, created_at, updated_at}`
 `Document = DocumentSummary & {content}` (HTML)
 
 | Status | Method | Path | Body | Response |
 |---|---|---|---|---|
-| PLANNED | GET | `/documents?workspace_id=..&project_id=&team_id=&search=&order_by=-updated_at` | – | `Page<DocumentSummary>` (search: title and content ILIKE) |
-| PLANNED | POST | `/documents` | `{workspace_id, title, content?, icon?, project_id?, team_id?}` | 201 `Document` |
-| PLANNED | GET | `/documents/{document_id}` | – | `Document` |
-| PLANNED | PATCH | `/documents/{document_id}` | `{title?, content?, icon?, project_id?, team_id?, sort_order?}` | `Document` (`last_edited_by_id = me`) |
-| PLANNED | DELETE | `/documents/{document_id}` | – | 204 |
+| IMPLEMENTED | GET | `/documents?workspace_id=..&project_id=&team_id=&search=&order_by=-updated_at` | – | `Page<DocumentSummary>` (search: title and content ILIKE) |
+| IMPLEMENTED | POST | `/documents` | `{workspace_id, title, content?, icon?, project_id?, team_id?}` | 201 `Document` |
+| IMPLEMENTED | GET | `/documents/{document_id}` | – | `Document` |
+| IMPLEMENTED | PATCH | `/documents/{document_id}` | `{title?, content?, icon?, project_id?, team_id?, sort_order?}` | `Document` (`last_edited_by_id = me`) |
+| IMPLEMENTED | DELETE | `/documents/{document_id}` | – | 204 |
 
 DOC-7 (issue mentions): the client renders `ENG-12` text as a link to
 `/<url_key>/issue/ENG-12` and resolves it with the IMPLEMENTED by-identifier endpoint.
@@ -370,7 +370,7 @@ Issue search matches title, description and identifier (`ENG-12`).
 | `issues` | `issue`, `issue_label`, `issue_relation`, `issue_subscriber`, `comment`, `issue_activity` | issues (+ planned relations, comments, activity, subscribers) |
 | `projects` | `project`, `project_team` | projects (CRUD, progress) |
 | `cycles` | `cycle` | models only |
-| `documents` | `document` | models only |
+| `documents` | `document` | documents |
 | `notifications` | `notification` | models only |
 | `favorites` | `favorite` | models only |
 

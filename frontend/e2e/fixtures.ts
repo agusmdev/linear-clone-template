@@ -37,6 +37,7 @@ import {
 } from '@playwright/test'
 import { AUTH_TOKEN_KEY } from '../src/lib/auth'
 import type { AuthSessionResponse } from '../src/types/auth'
+import type { CreateDocumentData, Document, DocumentSummary } from '../src/types/document'
 import type { CreateIssueData, Issue, UpdateIssueData } from '../src/types/issue'
 import type { CreateItemData, Item, ItemsResponse } from '../src/types/item'
 import type { Label } from '../src/types/label'
@@ -297,7 +298,7 @@ export async function listProjects(
   workspaceId: string,
   query = ''
 ): Promise<Project[]> {
-  const response = await api.get(`/workspaces/${workspaceId}/projects${query}`, {
+  const response = await api.get(`/workspaces/${workspaceId}/projects` + query, {
     headers: authHeaders(user),
   })
   await expectOk(response, 'GET /workspaces/{id}/projects')
@@ -325,6 +326,38 @@ export async function updateProject(
   const response = await api.patch(`/projects/${projectId}`, { data, headers: authHeaders(user) })
   await expectOk(response, 'PATCH /projects/{id}')
   return (await response.json()) as Project
+}
+
+export async function createDocument(
+  api: APIRequestContext,
+  user: TestUser,
+  data: CreateDocumentData
+): Promise<Document> {
+  const response = await api.post('/documents', { data, headers: authHeaders(user) })
+  await expectOk(response, 'POST /documents')
+  return (await response.json()) as Document
+}
+
+/** GET /documents?workspace_id=…: the first page (up to 100), newest edit first. */
+export async function listDocuments(
+  api: APIRequestContext,
+  user: TestUser,
+  workspaceId: string
+): Promise<ApiPage<DocumentSummary>> {
+  const response = await api.get(`/documents?workspace_id=${workspaceId}&size=100`, {
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'GET /documents')
+  return (await response.json()) as ApiPage<DocumentSummary>
+}
+
+/** GET /documents/{id}: the response itself, so a spec can also check a 404. */
+export function fetchDocument(
+  api: APIRequestContext,
+  user: TestUser,
+  documentId: string
+): Promise<APIResponse> {
+  return api.get(`/documents/${documentId}`, { headers: authHeaders(user) })
 }
 
 // ---------------------------------------------------------------------------
