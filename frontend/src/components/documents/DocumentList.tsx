@@ -36,7 +36,6 @@ export function DocumentList({ params, search, emptyState }: DocumentListProps) 
   const { workspace } = useCurrentWorkspace()
   const query = useDocuments({
     workspace_id: workspace.id,
-    size: 100,
     ...params,
     search: search?.trim() || undefined,
   })
@@ -70,7 +69,7 @@ export function DocumentList({ params, search, emptyState }: DocumentListProps) 
     )
   }
 
-  const documents = query.data.items
+  const documents = query.data
   if (documents.length === 0) {
     if (search?.trim()) {
       return (
