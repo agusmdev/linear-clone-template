@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { createFileRoute, Outlet, useLocation, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, Outlet, useLocation, useNavigate } from '@tanstack/react-router'
 import {
   Box,
   CircleDot,
@@ -22,6 +22,7 @@ import { ThemeToggle } from '@/components/ThemeToggle'
 import { UserAvatar } from '@/components/UserAvatar'
 import { WorkspaceCommands } from '@/components/WorkspaceCommands'
 import { WorkspaceSwitcher } from '@/components/WorkspaceSwitcher'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/contexts/AuthContext'
 import { useUnreadNotificationCount } from '@/hooks/useNotifications'
@@ -88,6 +89,24 @@ function WorkspaceLayout() {
         <EmptyState
           title="Workspace not found"
           description="This workspace does not exist or you are not a member of it."
+          action={
+            <>
+              <Link to="/" className={buttonVariants({ size: 'sm' })}>
+                Go to my workspaces
+              </Link>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  await logout()
+                  navigate({ to: '/login' })
+                }}
+              >
+                <LogOut />
+                Log out
+              </Button>
+            </>
+          }
         />
       </div>
     )
