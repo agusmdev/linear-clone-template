@@ -244,6 +244,37 @@ test.describe('issues list', () => {
     await expect(board.getByRole('region', { name: 'Medium' })).toContainText('Polish header')
   })
 
+  test('Clear filters in the empty state also clears the search box (ISS-5)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { team, key } = await seedWorkspace(api, user)
+    await createIssue(api, user, { team_id: team.id, title: 'Polish header' })
+    await createIssue(api, user, { team_id: team.id, title: 'Crash on save' })
+
+    const page = await loginAs(user)
+    await page.goto(`/${key}/team/ENG/issues`)
+    await expect(row(page, 'Polish header')).toBeVisible()
+
+    const search = page.getByLabel('Search issues')
+    await search.fill('zzz')
+    await expect(page).toHaveURL(/q=zzz/)
+    await expect(page.getByText('No issues match')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Clear filters' }).click()
+    await expect(page).not.toHaveURL(/q=/)
+    await expect(search).toHaveValue('')
+    await expect(row(page, 'Polish header')).toBeVisible()
+    await expect(row(page, 'Crash on save')).toBeVisible()
+
+    // The next keystroke starts a new search; the old text does not come back.
+    await search.pressSequentially('c')
+    await expect(page).toHaveURL(/q=c(&|$)/)
+    await expect(search).toHaveValue('c')
+    await expect(row(page, 'Crash on save')).toBeVisible()
+  })
+
   test('drags a card to another status column on the board (ISS-4)', async ({
     api,
     user,
