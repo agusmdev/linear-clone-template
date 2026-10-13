@@ -255,9 +255,33 @@ def test_update_sets_last_edited_by(
 
 def test_update_validation(owner: RegisteredUser, ws: dict[str, Any]) -> None:
     doc = create_document(owner.client, ws["workspace"]["id"])
-    for body in ({"title": ""}, {"title": None}, {"content": None}):
+    for body in (
+        {"title": ""},
+        {"title": "   "},
+        {"title": "\n\t\n"},
+        {"title": None},
+        {"content": None},
+    ):
         response = owner.client.patch(f"/documents/{doc['id']}", json=body)
         assert_error(response, 422, "validation_error")
+
+
+def test_title_is_one_trimmed_line(owner: RegisteredUser, ws: dict[str, Any]) -> None:
+    wid = ws["workspace"]["id"]
+    blank = owner.client.post("/documents", json={"workspace_id": wid, "title": "  "})
+    assert_error(blank, 422, "validation_error")
+
+    created = owner.client.post(
+        "/documents", json={"workspace_id": wid, "title": "  Launch\nplan  "}
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["title"] == "Launch plan"
+
+    updated = owner.client.patch(
+        f"/documents/{created.json()['id']}", json={"title": " Q3\r\n\r\nroadmap "}
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["title"] == "Q3 roadmap"
 
 
 def test_delete_document(owner: RegisteredUser, ws: dict[str, Any]) -> None:

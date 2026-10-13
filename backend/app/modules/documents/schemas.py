@@ -2,21 +2,30 @@
 
 import uuid
 from datetime import datetime
+from typing import Annotated
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, BeforeValidator, Field, StringConstraints
 
 from app.core.optional_model import partial_model
 from app.database.mixins import OrmBaseModel
+from app.modules.issues.schemas import single_line_title
 from app.user.schemas import UserSummary
 
 TITLE_MAX = 255
 CONTENT_MAX = 1_000_000
 ICON_MAX = 64
 
+# One line, ends trimmed; a blank title is a 422.
+DocumentTitle = Annotated[
+    str,
+    BeforeValidator(single_line_title),
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=TITLE_MAX),
+]
+
 
 class DocumentCreate(BaseModel):
     workspace_id: uuid.UUID
-    title: str = Field(..., min_length=1, max_length=TITLE_MAX)
+    title: DocumentTitle
     # HTML from the TipTap editor.
     content: str = Field("", max_length=CONTENT_MAX)
     # An emoji.
@@ -26,7 +35,7 @@ class DocumentCreate(BaseModel):
 
 
 class DocumentUpdateFields(BaseModel):
-    title: str = Field(..., min_length=1, max_length=TITLE_MAX)
+    title: DocumentTitle
     content: str = Field(..., max_length=CONTENT_MAX)
     icon: str | None = Field(None, max_length=ICON_MAX)
     project_id: uuid.UUID | None = None
