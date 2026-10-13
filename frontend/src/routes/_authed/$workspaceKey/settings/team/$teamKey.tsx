@@ -712,6 +712,7 @@ function StateEditor({
   }
 
   return (
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <form
       role="listitem"
       aria-label={initialName ? `Edit ${initialName}` : 'New status'}
@@ -719,6 +720,16 @@ function StateEditor({
       onSubmit={event => {
         event.preventDefault()
         void submit()
+      }}
+      onKeyDown={event => {
+        // Esc anywhere in the row (also on its buttons) cancels the edit, so it
+        // never reaches the settings layout, which leaves settings on Esc. Esc
+        // in the portaled color popover only closes the popover.
+        if (event.key !== 'Escape' || !event.currentTarget.contains(event.target as Node)) {
+          return
+        }
+        event.preventDefault()
+        onCancel()
       }}
     >
       <div className="flex items-center gap-2">
@@ -739,12 +750,6 @@ function StateEditor({
         <Input
           aria-label="Status name"
           ref={inputRef}
-          onKeyDown={event => {
-            if (event.key === 'Escape') {
-              event.preventDefault()
-              onCancel()
-            }
-          }}
           placeholder="Status name"
           value={name}
           onChange={event => {
