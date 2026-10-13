@@ -11,6 +11,7 @@ import { UserAvatar } from '@/components/UserAvatar'
 import { WorkspaceSwitcher } from '@/components/WorkspaceSwitcher'
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/contexts/AuthContext'
+import { useUnreadNotificationCount } from '@/hooks/useNotifications'
 import { WorkspaceContext, type WorkspaceContextValue } from '@/contexts/WorkspaceContext'
 import {
   useLabels,
@@ -44,6 +45,7 @@ function WorkspaceLayout() {
   const membersQuery = useMembers(workspace?.id)
   const labelsQuery = useLabels(workspace?.id)
   const meQuery = useMe()
+  const unreadCountQuery = useUnreadNotificationCount(workspace?.id)
 
   const value = useMemo<WorkspaceContextValue | null>(() => {
     if (!workspace || !teamsQuery.data || !membersQuery.data || !labelsQuery.data || !meQuery.data)
@@ -106,6 +108,7 @@ function WorkspaceLayout() {
         />
       }
       inboxTo={`${base}/inbox`}
+      inboxCount={unreadCountQuery.data?.count}
       myIssuesTo={`${base}/my-issues`}
       projectsTo={`${base}/projects`}
       documentsTo={`${base}/documents`}

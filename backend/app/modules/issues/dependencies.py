@@ -7,6 +7,8 @@ from app.modules.issues.repository import IssueRepository
 from app.modules.issues.service import IssueService
 from app.modules.labels.dependencies import get_label_service
 from app.modules.labels.service import LabelService
+from app.modules.notifications.dependencies import get_notification_service
+from app.modules.notifications.service import NotificationService
 from app.modules.teams.dependencies import get_team_service
 from app.modules.teams.service import TeamService
 from app.modules.workspaces.dependencies import get_workspace_service
@@ -18,10 +20,12 @@ def get_issue_service(
     workspace_service: WorkspaceService = Depends(get_workspace_service),
     team_service: TeamService = Depends(get_team_service),
     label_service: LabelService = Depends(get_label_service),
+    notification_service: NotificationService = Depends(get_notification_service),
 ) -> IssueService:
     return IssueService(
         repo=repo,
         workspace_service=workspace_service,
         team_service=team_service,
         label_service=label_service,
+        notification_service=notification_service,
     )

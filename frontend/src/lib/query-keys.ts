@@ -1,5 +1,8 @@
+import type { DocumentsParams } from '@/types/document'
 import type { IssuesParams } from '@/types/issue'
 import type { ItemsParams } from '@/types/item'
+import type { ProjectsParams } from '@/types/project'
+import type { NotificationsParams } from '@/types/notification'
 
 export const queryKeys = {
   items: {
@@ -32,5 +35,27 @@ export const queryKeys = {
       ['issues', 'by-identifier', workspaceId, identifier] as const,
     /** Every page of a list, flattened (IssuesView). */
     listAll: (params: IssuesParams) => ['issues', 'list-all', params] as const,
+  },
+  projects: {
+    all: ['projects'] as const,
+    list: (workspaceId: string, params?: ProjectsParams) =>
+      ['projects', 'list', workspaceId, params] as const,
+    detail: (id: string) => ['projects', 'detail', id] as const,
+  },
+  notifications: {
+    all: ['notifications'] as const,
+    list: (params: NotificationsParams) => ['notifications', 'list', params] as const,
+    unreadCount: (workspaceId: string) => ['notifications', 'unread-count', workspaceId] as const,
+  },
+  cycles: {
+    all: ['cycles'] as const,
+    list: (teamId: string) => ['cycles', 'list', teamId] as const,
+    detail: (cycleId: string) => ['cycles', 'detail', cycleId] as const,
+  },
+  documents: {
+    all: ['documents'] as const,
+    lists: () => ['documents', 'list'] as const,
+    list: (params: DocumentsParams) => ['documents', 'list', params] as const,
+    detail: (id: string) => ['documents', 'detail', id] as const,
   },
 }

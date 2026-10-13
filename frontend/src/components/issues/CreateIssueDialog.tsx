@@ -138,7 +138,7 @@ export function CreateIssueDialog({
   const assignee = members.find(m => m.user_id === values.assignee_id)
   const pickedLabels = labels.filter(l => values.label_ids.includes(l.id))
   const project = projects.find(p => p.id === values.project_id)
-  const teamCycles = cycles.filter(c => !c.team_id || c.team_id === team?.id)
+  const teamCycles = cycles.filter(c => (!c.team_id || c.team_id === team?.id) && !c.past)
   const cycle = teamCycles.find(c => c.id === values.cycle_id)
   const parent = parentCandidates.find(i => i.id === values.parent_id)
 

@@ -20,6 +20,7 @@ from app.modules.issues.repository import IssueRepository
 from app.modules.issues.schemas import IssueBulkUpdate, IssueCreate, IssueUpdate
 from app.modules.labels.models import Label
 from app.modules.labels.service import LabelService
+from app.modules.notifications.service import NotificationService
 from app.modules.teams.models import Team, WorkflowState, WorkflowStateType
 from app.modules.teams.service import TeamService
 from app.modules.workspaces.exceptions import InvalidReferenceError
@@ -64,11 +65,13 @@ class IssueService(BaseService[Issue]):
         workspace_service: WorkspaceService,
         team_service: TeamService,
         label_service: LabelService,
+        notification_service: NotificationService,
     ) -> None:
         self.repo = repo
         self.workspace_service = workspace_service
         self.team_service = team_service
         self.label_service = label_service
+        self.notification_service = notification_service
 
     # --- reads -------------------------------------------------------------
 
@@ -238,6 +241,12 @@ class IssueService(BaseService[Issue]):
             subscriber_ids=subscribers,
             activities=[{"actor_id": user_id, "action": IssueActivityAction.created}],
         )
+        await self.notification_service.notify_assigned(
+            workspace_id=workspace_id,
+            issue_id=issue.id,
+            assignee_id=issue.assignee_id,
+            actor_id=user_id,
+        )
         self._log_entity(issue.id)
         return issue
 
@@ -251,8 +260,25 @@ class IssueService(BaseService[Issue]):
         if plan is None:
             return issue
         updated = await self.repo.update_issue(issue.id, **plan)
+        await self._notify_update(issue, plan["values"], user_id=user_id)
         self._log_entity(issue.id)
         return updated
+
+    async def _notify_update(
+        self, issue: Issue, values: dict[str, Any], *, user_id: uuid.UUID
+    ) -> None:
+        """Notifications of a written update: new assignee, status change."""
+        if "assignee_id" in values:
+            await self.notification_service.notify_assigned(
+                workspace_id=issue.workspace_id,
+                issue_id=issue.id,
+                assignee_id=values["assignee_id"],
+                actor_id=user_id,
+            )
+        if "state_id" in values:
+            await self.notification_service.notify_status_changed(
+                workspace_id=issue.workspace_id, issue_id=issue.id, actor_id=user_id
+            )
 
     async def _plan_update(
         self, issue: Issue, changes: dict[str, Any], *, user_id: uuid.UUID
@@ -424,6 +450,11 @@ class IssueService(BaseService[Issue]):
                 plans.append({"issue_id": issue.id, **plan})
         if plans:
             await self.repo.update_issues(plans)
+            by_id = {issue.id: issue for issue in issues}
+            for plan in plans:
+                await self._notify_update(
+                    by_id[plan["issue_id"]], plan["values"], user_id=user_id
+                )
         log_entities("issue", [issue.id for issue in issues])
         return await self.repo.get_many_full([issue.id for issue in issues])
 

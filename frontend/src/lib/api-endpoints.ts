@@ -1,5 +1,8 @@
+import type { DocumentsParams } from '@/types/document'
 import type { IssuesParams } from '@/types/issue'
 import type { ItemsParams } from '@/types/item'
+import type { ProjectsParams } from '@/types/project'
+import type { NotificationsParams } from '@/types/notification'
 
 export const API = {
   AUTH: {
@@ -35,6 +38,27 @@ export const API = {
     BULK_UPDATE: '/issues/bulk-update',
     BULK_DELETE: '/issues/bulk-delete',
   },
+  PROJECTS: {
+    LIST: (workspaceId: string) => `/workspaces/${workspaceId}/projects`,
+    CREATE: '/projects',
+    DETAIL: (id: string) => `/projects/${id}`,
+  },
+  NOTIFICATIONS: {
+    LIST: '/notifications',
+    UNREAD_COUNT: '/notifications/unread-count',
+    MARK_ALL_READ: '/notifications/mark-all-read',
+    DETAIL: (id: string) => `/notifications/${id}`,
+  },
+  CYCLES: {
+    TEAM: (teamId: string) => `/teams/${teamId}/cycles`,
+    DETAIL: (cycleId: string) => `/cycles/${cycleId}`,
+    COMPLETE: (cycleId: string) => `/cycles/${cycleId}/complete`,
+  },
+  DOCUMENTS: {
+    LIST: '/documents',
+    CREATE: '/documents',
+    DETAIL: (id: string) => `/documents/${id}`,
+  },
 } as const
 
 /** Makes `%`, `_` and `\` match themselves in an ILIKE pattern (backslash is Postgres' default escape). */
@@ -64,4 +88,38 @@ export function buildIssuesListUrl(params: IssuesParams): string {
     }
   }
   return `${API.ISSUES.LIST}?${queryParams.toString()}`
+}
+
+/** Builds the GET /workspaces/{id}/projects URL (optional `status` and `team_id` filters). */
+export function buildProjectsListUrl(workspaceId: string, params?: ProjectsParams): string {
+  const queryParams = new URLSearchParams()
+  if (params?.status) queryParams.append('status', params.status)
+  if (params?.team_id) queryParams.append('team_id', params.team_id)
+  const queryString = queryParams.toString()
+  const path = API.PROJECTS.LIST(workspaceId)
+  return queryString ? `${path}?${queryString}` : path
+}
+
+/** Builds the GET /notifications URL (newest first). Undefined keys are left out. */
+export function buildNotificationsListUrl(params: NotificationsParams): string {
+  const queryParams = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '') continue
+    queryParams.append(key, String(value))
+  }
+  return `${API.NOTIFICATIONS.LIST}?${queryParams.toString()}`
+}
+
+/** Builds the GET /documents URL (default order: most recently updated first). */
+export function buildDocumentsListUrl(params: DocumentsParams): string {
+  const queryParams = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '') continue
+    if (Array.isArray(value)) {
+      if (value.length > 0) queryParams.append(key, value.join(','))
+    } else {
+      queryParams.append(key, String(value))
+    }
+  }
+  return `${API.DOCUMENTS.LIST}?${queryParams.toString()}`
 }
