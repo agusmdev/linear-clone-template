@@ -37,6 +37,20 @@ function suffix(): string {
     .padEnd(6, 'a')
 }
 
+/**
+ * Records every failed API response of the page (status 400 or higher).
+ * A deleted team or a left workspace must not be requested again (404).
+ */
+function recordFailedResponses(page: Page): string[] {
+  const failed: string[] = []
+  page.on('response', response => {
+    if (response.status() >= 400 && response.request().resourceType() === 'fetch') {
+      failed.push(`${response.status()} ${new URL(response.url()).pathname}`)
+    }
+  })
+  return failed
+}
+
 function settingsNav(page: Page) {
   return page.getByRole('navigation', { name: 'Settings' })
 }
@@ -185,6 +199,7 @@ test.describe('workspace settings', () => {
   }) => {
     const workspace = await createWorkspace(api, user, { name: 'Doomed' })
     await page.goto(`/${workspace.url_key}/settings`)
+    const failed = recordFailedResponses(page)
 
     await page.getByRole('button', { name: 'Delete workspace' }).click()
     const dialog = page.getByRole('alertdialog')
@@ -193,6 +208,9 @@ test.describe('workspace settings', () => {
     await dialog.getByRole('button', { name: 'Delete workspace' }).click()
 
     await expect(page).toHaveURL('/onboarding')
+    await expect(page.getByRole('heading', { name: 'Create a new workspace' })).toBeVisible()
+    await page.waitForLoadState('networkidle')
+    expect(failed).toEqual([])
     expect(await listWorkspaces(api, user)).toEqual([])
   })
 
@@ -206,11 +224,15 @@ test.describe('workspace settings', () => {
     await expect(page.getByLabel('Workspace name')).toBeDisabled()
     await expect(page.getByText('Only admins can change the workspace settings.')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Delete workspace' })).toHaveCount(0)
+    const failed = recordFailedResponses(page)
 
     await page.getByRole('button', { name: 'Leave workspace' }).click()
     await page.getByRole('alertdialog').getByRole('button', { name: 'Leave workspace' }).click()
 
     await expect(page).toHaveURL('/onboarding')
+    await expect(page.getByRole('heading', { name: 'Create a new workspace' })).toBeVisible()
+    await page.waitForLoadState('networkidle')
+    expect(failed).toEqual([])
     expect(await listWorkspaces(api, member)).toEqual([])
   })
 })
@@ -594,11 +616,16 @@ test.describe('team settings', () => {
     const workspace = await createWorkspace(api, user)
     await createTeam(api, user, workspace.id, { name: 'Temp', key: 'TMP' })
     await page.goto(`/${workspace.url_key}/settings/team/TMP`)
+    await expect(page.getByRole('button', { name: 'Leave team' })).toBeVisible()
+    const failed = recordFailedResponses(page)
 
     await page.getByRole('button', { name: 'Delete team' }).click()
     await page.getByRole('alertdialog').getByRole('button', { name: 'Delete team' }).click()
 
     await expect(page).toHaveURL(`/${workspace.url_key}/settings/teams`)
+    await expect(page.getByText('Team Temp deleted')).toBeVisible()
+    await page.waitForLoadState('networkidle')
+    expect(failed).toEqual([])
     expect((await listTeams(api, user, workspace.id)).map(t => t.key)).toEqual(['ENG'])
 
     await page.goto(`/${workspace.url_key}/settings/team/NOPE`)
