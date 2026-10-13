@@ -1,5 +1,6 @@
 import { Extension, type Editor, type Range } from '@tiptap/core'
 import { PluginKey } from '@tiptap/pm/state'
+import type { EditorView } from '@tiptap/pm/view'
 import { Suggestion, exitSuggestion, type SuggestionOptions } from '@tiptap/suggestion'
 import {
   Code2,
@@ -160,6 +161,7 @@ export interface SlashMenuStore {
 export function createSlashMenuStore(): SlashMenuStore {
   let state = CLOSED
   let command: ((item: SlashCommandItem) => void) | null = null
+  let view: EditorView | null = null
   const listeners = new Set<() => void>()
 
   const set = (next: SlashMenuState) => {
@@ -172,9 +174,31 @@ export function createSlashMenuStore(): SlashMenuStore {
     if (item && command) command(item)
   }
 
+  const close = () => {
+    if (view) exitSuggestion(view, slashCommandPluginKey)
+    set(CLOSED)
+  }
+
+  // Radix overlays (Dialog, Sheet, Popover) listen for Escape on `document` in
+  // the capture phase, before ProseMirror sees the key. Listen earlier, on
+  // `window`, so Escape closes only this menu and not the dialog around it.
+  const onWindowEscape = (event: KeyboardEvent) => {
+    if (event.key !== 'Escape' || event.isComposing || !state.open) return
+    event.preventDefault()
+    event.stopPropagation()
+    close()
+  }
+  const listenForEscape = (listen: boolean) => {
+    if (typeof window === 'undefined') return
+    if (listen) window.addEventListener('keydown', onWindowEscape, { capture: true })
+    else window.removeEventListener('keydown', onWindowEscape, { capture: true })
+  }
+
   const render: SuggestionRender = () => ({
     onStart: props => {
       command = props.command
+      view = props.editor.view
+      listenForEscape(true)
       set({ open: true, items: props.items, selectedIndex: 0, rect: props.clientRect?.() ?? null })
     },
     onUpdate: props => {
@@ -183,9 +207,11 @@ export function createSlashMenuStore(): SlashMenuStore {
     },
     onExit: () => {
       command = null
+      view = null
+      listenForEscape(false)
       set(CLOSED)
     },
-    onKeyDown: ({ event, view }) => {
+    onKeyDown: ({ event, view: editorView }) => {
       if (!state.open) return false
       const count = state.items.length
       switch (event.key) {
@@ -201,7 +227,7 @@ export function createSlashMenuStore(): SlashMenuStore {
           choose(state.selectedIndex)
           return true
         case 'Escape':
-          exitSuggestion(view, slashCommandPluginKey)
+          exitSuggestion(editorView, slashCommandPluginKey)
           set(CLOSED)
           return true
         default:
