@@ -22,10 +22,11 @@ test('the callback stores the session and opens the app', async ({ page, api, us
 
   await page.goto(`/oauth/callback?session=${encodeURIComponent(session)}`)
 
-  await expect(page).toHaveURL('/')
-  await expect(page.getByRole('button', { name: 'Logout' })).toBeVisible()
+  // Signed in without a workspace: the app opens onboarding.
+  await expect(page).toHaveURL('/onboarding')
+  await expect(page.getByText(`Logged in as ${user.email}`)).toBeVisible()
   expect(await storedToken(page)).toBe(session)
-  await page.getByRole('link', { name: 'Items' }).click()
+  await page.goto('/items')
   await expect(page.getByText('Made before the OAuth sign-in')).toBeVisible()
 })
 
@@ -42,9 +43,9 @@ test('an OAuth sign-in over another session shows only the new user and ends the
 
   await page.goto(`/oauth/callback?session=${encodeURIComponent(other.token)}`)
 
-  await expect(page).toHaveURL('/')
+  await expect(page).toHaveURL('/onboarding')
   expect(await storedToken(page)).toBe(other.token)
-  await page.getByRole('link', { name: 'Items' }).click()
+  await page.goto('/items')
   await expect(page.getByText('Owned by the second user')).toBeVisible()
   await expect(page.getByText('Owned by the first user')).toHaveCount(0)
   // The replaced session is revoked on the server, not only forgotten.

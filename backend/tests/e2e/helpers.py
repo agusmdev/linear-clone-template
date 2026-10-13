@@ -127,10 +127,10 @@ def create_issue(
 
 
 def join_workspace(db: Database, workspace_id: str, user_id: str) -> None:
-    """Add a user to a workspace as a member.
+    """Add a user to a workspace as a member, straight in the database.
 
-    Invites (POST /workspaces/{id}/members) are not implemented yet; when they
-    are, use the endpoint instead.
+    Prefer ``invite_member`` (POST /workspaces/{id}/members), which needs an
+    admin client; this helper is for tests that only have the user ids.
     """
     db.execute(
         "INSERT INTO workspace_member (id, workspace_id, user_id, role, created_at, "

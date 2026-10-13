@@ -3,7 +3,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowRight } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import {
   Form,
   FormControl,
@@ -84,6 +84,9 @@ function OnboardingPage() {
               Logged in as <span className="text-foreground">{me.data.email}</span>
             </span>
           ) : null}
+          <Link to="/login" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+            Use another account
+          </Link>
           <Button variant="ghost" size="sm" onClick={() => void logout()}>
             Log out
           </Button>
