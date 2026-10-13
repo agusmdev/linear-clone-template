@@ -14,7 +14,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.sql import Select
 
 from app.core.filters import ModelFilter
-from app.core.text_search import html_visible_text, like_pattern
+from app.core.text_search import html_visible_text, words_match
 from app.modules.issues.models import Issue, IssueLabel, IssueSubscriber
 from app.modules.teams.models import Team, WorkflowState, WorkflowStateType
 
@@ -67,7 +67,7 @@ class IssueFilter(ModelFilter):  # ?order_by= accepts Issue columns only (else 4
     ?project_id__in=<uuid>,none  ?cycle_id__in=<uuid>,none
     ?project_id= ?cycle_id= ?parent_id=   (parent_id__isnull=true: top-level only)
     ?include_archived=true  (default: archived issues are left out)
-    ?search=            title or description (ILIKE), or the number ("12" in any team,
+    ?search=            every word in the title or description (any order), or the number ("12" in any team,
                         "ENG-12" in team ENG only)
     ?order_by=          e.g. sort_order, -priority, -created_at, -updated_at, due_date
     """
@@ -214,11 +214,13 @@ class IssueFilter(ModelFilter):  # ?order_by= accepts Issue columns only (else 4
                     )
                 )
             )
-        if self.search:
-            pattern = like_pattern(self.search)
+        if self.search and self.search.split():
+            # Every word, in any order, like the search page: "login safari"
+            # finds "Login page crashes on Safari".
             conditions = [
-                Issue.title.ilike(pattern),
-                html_visible_text(Issue.description).ilike(pattern),
+                words_match(
+                    self.search, Issue.title, html_visible_text(Issue.description)
+                )
             ]
             if match := _IDENTIFIER.match(self.search.strip()):
                 key, number = match.groups()

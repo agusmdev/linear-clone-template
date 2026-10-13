@@ -137,6 +137,10 @@ def test_include_archived(setup: dict[str, Any]) -> None:
         ({"parent_id__isnull": "true"}, ["ENG-1", "ENG-2", "ENG-4"]),
         ({"search": "crash"}, ["ENG-1"]),
         ({"search": "STACK TRACE"}, ["ENG-1"]),
+        # Every word, in any order, in the title or the description.
+        ({"search": "crash login"}, ["ENG-1"]),
+        ({"search": "trace login"}, ["ENG-1"]),
+        ({"search": "login signup"}, []),
         ({"search": "ENG-2"}, ["ENG-2"]),
         ({"search": "4"}, ["ENG-4"]),
         ({"search": "nothing matches"}, []),

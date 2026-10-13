@@ -70,11 +70,15 @@ interface MultiProps<V extends string> extends PropertyPickerBaseProps<V> {
 
 export type PropertyPickerProps<V extends string = string> = SingleProps<V> | MultiProps<V>
 
-/** Case-insensitive substring search on the label and keywords, like Linear's menus. */
+/**
+ * Case-insensitive search on the label and keywords, like Linear's menus: every
+ * word of the search is in one of them, in any order ("login safari" finds
+ * "Login page crashes on Safari", as the server search of the parent picker does).
+ */
 function filterOption(_value: string, search: string, keywords?: string[]): number {
-  const needle = search.trim().toLowerCase()
-  if (!needle) return 1
-  return (keywords ?? []).some(word => word.toLowerCase().includes(needle)) ? 1 : 0
+  const needles = search.toLowerCase().split(/\s+/).filter(Boolean)
+  const haystacks = (keywords ?? []).map(word => word.toLowerCase())
+  return needles.every(needle => haystacks.some(text => text.includes(needle))) ? 1 : 0
 }
 
 function groupOptions<V extends string>(options: PropertyOption<V>[]) {
