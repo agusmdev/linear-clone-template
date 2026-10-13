@@ -160,6 +160,16 @@ export function useUpdateIssue() {
   })
 }
 
+/** Max issue ids of one bulk request (BULK_MAX of the API). */
+const BULK_MAX = 250
+
+/** Splits `ids` into lists the bulk endpoints accept (a selection can hold every issue of a view). */
+function bulkChunks(ids: string[]): string[][] {
+  const chunks: string[][] = []
+  for (let i = 0; i < ids.length; i += BULK_MAX) chunks.push(ids.slice(i, i + BULK_MAX))
+  return chunks
+}
+
 export interface BulkUpdateVariables {
   data: BulkUpdateIssuesData
   /** The optimistic version of one issue. */
@@ -169,8 +179,17 @@ export interface BulkUpdateVariables {
 export function useBulkUpdateIssues() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ data }: BulkUpdateVariables) =>
-      api.post<BulkUpdateIssuesResponse>(API.ISSUES.BULK_UPDATE, data),
+    mutationFn: async ({ data }: BulkUpdateVariables): Promise<BulkUpdateIssuesResponse> => {
+      const items: Issue[] = []
+      for (const issueIds of bulkChunks(data.issue_ids)) {
+        const result = await api.post<BulkUpdateIssuesResponse>(API.ISSUES.BULK_UPDATE, {
+          ...data,
+          issue_ids: issueIds,
+        })
+        items.push(...result.items)
+      }
+      return { items }
+    },
     onMutate: ({ data, optimistic }) => {
       const ids = new Set(data.issue_ids)
       return patchCache(queryClient, issue =>
@@ -185,7 +204,10 @@ export function useBulkUpdateIssues() {
 export function useBulkDeleteIssues() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: BulkDeleteIssuesData) => api.postNoContent(API.ISSUES.BULK_DELETE, data),
+    mutationFn: async (data: BulkDeleteIssuesData) => {
+      for (const issueIds of bulkChunks(data.issue_ids))
+        await api.postNoContent(API.ISSUES.BULK_DELETE, { issue_ids: issueIds })
+    },
     onMutate: ({ issue_ids }) => {
       const ids = new Set(issue_ids)
       return patchCache(queryClient, issue => (ids.has(issue.id) ? null : issue))
