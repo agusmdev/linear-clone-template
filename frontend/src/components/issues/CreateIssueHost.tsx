@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { useCurrentWorkspace } from '@/contexts/WorkspaceContext'
+import { useDebounce } from '@/hooks/useDebounce'
+import { useIssue } from '@/hooks/useIssueDetail'
 import { useCycleRefs, useProjectRefs } from '@/hooks/useIssueRefs'
 import { useCreateIssue, useIssuesPage, useWorkspaceStates } from '@/hooks/useIssues'
 import { toastApiError } from '@/lib/error-handler'
@@ -25,6 +27,8 @@ export function CreateIssueHost() {
   )
   const [open, setOpen] = useState(false)
   const [teamId, setTeamId] = useState<string | undefined>()
+  const [parentSearch, setParentSearch] = useState('')
+  const debouncedParentSearch = useDebounce(parentSearch.trim(), 200)
 
   const urlTeamKey = /\/team\/([^/]+)/.exec(pathname)?.[1]
   const urlTeam = ws.teams.find(t => t.key.toLowerCase() === urlTeamKey?.toLowerCase())
@@ -33,6 +37,7 @@ export function CreateIssueHost() {
     const show = (detail: CreateIssueEventDetail) => {
       setSession(prev => ({ id: (prev?.id ?? 0) + 1, detail }))
       setTeamId(undefined)
+      setParentSearch('')
       setOpen(true)
     }
     const onEvent = (event: Event) =>
@@ -54,15 +59,18 @@ export function CreateIssueHost() {
   const { data: states } = useWorkspaceStates(ws.teams)
   const projects = useProjectRefs(ws.workspace.id)
   const cycles = useCycleRefs(ws.teams.map(t => t.id))
+  // The parent picker searches the server: a team can have more issues than one page.
   const parents = useIssuesPage(
     {
       workspace_id: ws.workspace.id,
       team_id: activeTeamId,
+      search: debouncedParentSearch || undefined,
       order_by: ['-updated_at'],
       size: 100,
     },
     open && !!activeTeamId
   )
+  const defaultParent = useIssue(open ? (session?.detail.parentId ?? null) : null)
   const create = useCreateIssue()
 
   const onCreate = async (data: CreateIssueData) => {
@@ -97,6 +105,8 @@ export function CreateIssueHost() {
       cycles={cycles}
       meId={ws.me.id}
       parentCandidates={parents.data?.items ?? []}
+      defaultParent={defaultParent.data}
+      onParentSearchChange={setParentSearch}
       onTeamChange={setTeamId}
       onCreate={onCreate}
       pending={create.isPending}
