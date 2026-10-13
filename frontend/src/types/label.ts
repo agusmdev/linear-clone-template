@@ -10,7 +10,7 @@ export interface Label extends LabelSummary {
   updated_at: string
 }
 
-/** Planned: POST /workspaces/{id}/labels, PATCH /labels/{id} (see docs/API.md). */
+/** POST /workspaces/{id}/labels, PATCH /labels/{id}. */
 export interface CreateLabelData {
   name: string
   color: string

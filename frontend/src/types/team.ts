@@ -15,7 +15,7 @@ export interface Team extends TeamSummary {
   updated_at: string
 }
 
-/** Planned: POST /workspaces/{id}/teams, PATCH /teams/{id} (see docs/API.md). */
+/** POST /workspaces/{id}/teams, PATCH /teams/{id}. */
 export interface CreateTeamData {
   name: string
   /** 2-5 uppercase letters, unique in the workspace. */
@@ -27,7 +27,7 @@ export interface CreateTeamData {
 
 export type UpdateTeamData = Partial<CreateTeamData>
 
-/** Planned: GET /teams/{id}/members. */
+/** GET /teams/{id}/members. */
 export interface TeamMember {
   id: string
   team_id: string
@@ -53,7 +53,7 @@ export interface WorkflowState extends WorkflowStateSummary {
   updated_at: string
 }
 
-/** Planned: POST /teams/{id}/states, PATCH /workflow-states/{id}. */
+/** POST /teams/{id}/states, PATCH /workflow-states/{id}. */
 export interface CreateWorkflowStateData {
   name: string
   type: WorkflowStateType

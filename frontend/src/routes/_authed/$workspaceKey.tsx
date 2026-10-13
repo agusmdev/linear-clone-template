@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
-import { createFileRoute, Outlet, useNavigate } from '@tanstack/react-router'
-import { LogOut } from 'lucide-react'
+import { createFileRoute, Outlet, useLocation, useNavigate } from '@tanstack/react-router'
+import { LogOut, Plus, Settings } from 'lucide-react'
 import { AppShell } from '@/components/AppShell'
 import { EmptyState } from '@/components/EmptyState'
+import { SettingsSidebar } from '@/components/SettingsSidebar'
 import { Sidebar } from '@/components/Sidebar'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { UserAvatar } from '@/components/UserAvatar'
@@ -10,6 +11,7 @@ import { WorkspaceSwitcher } from '@/components/WorkspaceSwitcher'
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/contexts/AuthContext'
 import { WorkspaceContext, type WorkspaceContextValue } from '@/contexts/WorkspaceContext'
+import { settingsSections } from '@/features/workspaces/settings-nav'
 import {
   useLabels,
   useMe,
@@ -41,6 +43,10 @@ function WorkspaceLayout() {
   const membersQuery = useMembers(workspace?.id)
   const labelsQuery = useLabels(workspace?.id)
   const meQuery = useMe()
+  // /<ws>/settings/... swaps the app sidebar for the settings sidebar.
+  const inSettings = useLocation({
+    select: location => location.pathname.startsWith(`/${workspaceKey}/settings`),
+  })
 
   const value = useMemo<WorkspaceContextValue | null>(() => {
     if (!workspace || !teamsQuery.data || !membersQuery.data || !labelsQuery.data || !meQuery.data)
@@ -83,6 +89,14 @@ function WorkspaceLayout() {
             if (target) navigate({ to: `/${target.url_key}/my-issues` as '/' })
           }}
         >
+          <DropdownMenuItem onSelect={() => navigate({ to: `${base}/settings` as '/' })}>
+            <Settings />
+            Settings
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => navigate({ to: '/onboarding' })}>
+            <Plus />
+            Create or join workspace
+          </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={async () => {
               await logout()
@@ -122,7 +136,18 @@ function WorkspaceLayout() {
 
   return (
     <WorkspaceContext.Provider value={value}>
-      <AppShell sidebar={sidebar}>
+      <AppShell
+        sidebar={
+          inSettings ? (
+            <SettingsSidebar
+              backTo={`${base}/my-issues`}
+              sections={settingsSections(base, value.teams)}
+            />
+          ) : (
+            sidebar
+          )
+        }
+      >
         <Outlet />
       </AppShell>
     </WorkspaceContext.Provider>

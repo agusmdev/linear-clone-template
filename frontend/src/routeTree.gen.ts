@@ -15,8 +15,17 @@ import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OauthErrorRouteImport } from './routes/oauth/error'
 import { Route as OauthCallbackRouteImport } from './routes/oauth/callback'
+import { Route as AuthedOnboardingRouteImport } from './routes/_authed/onboarding'
 import { Route as AuthedItemsRouteImport } from './routes/_authed/items'
 import { Route as AuthedWorkspaceKeyRouteImport } from './routes/_authed/$workspaceKey'
+import { Route as AuthedWorkspaceKeyIndexRouteImport } from './routes/_authed/$workspaceKey/index'
+import { Route as AuthedWorkspaceKeySettingsRouteImport } from './routes/_authed/$workspaceKey/settings'
+import { Route as AuthedWorkspaceKeySettingsIndexRouteImport } from './routes/_authed/$workspaceKey/settings/index'
+import { Route as AuthedWorkspaceKeySettingsTeamsRouteImport } from './routes/_authed/$workspaceKey/settings/teams'
+import { Route as AuthedWorkspaceKeySettingsMembersRouteImport } from './routes/_authed/$workspaceKey/settings/members'
+import { Route as AuthedWorkspaceKeySettingsLabelsRouteImport } from './routes/_authed/$workspaceKey/settings/labels'
+import { Route as AuthedWorkspaceKeySettingsAccountRouteImport } from './routes/_authed/$workspaceKey/settings/account'
+import { Route as AuthedWorkspaceKeySettingsTeamTeamKeyRouteImport } from './routes/_authed/$workspaceKey/settings/team/$teamKey'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -47,6 +56,11 @@ const OauthCallbackRoute = OauthCallbackRouteImport.update({
   path: '/oauth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedOnboardingRoute = AuthedOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedItemsRoute = AuthedItemsRouteImport.update({
   id: '/items',
   path: '/items',
@@ -57,24 +71,87 @@ const AuthedWorkspaceKeyRoute = AuthedWorkspaceKeyRouteImport.update({
   path: '/$workspaceKey',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedWorkspaceKeyIndexRoute = AuthedWorkspaceKeyIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthedWorkspaceKeyRoute,
+} as any)
+const AuthedWorkspaceKeySettingsRoute =
+  AuthedWorkspaceKeySettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AuthedWorkspaceKeyRoute,
+  } as any)
+const AuthedWorkspaceKeySettingsIndexRoute =
+  AuthedWorkspaceKeySettingsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthedWorkspaceKeySettingsRoute,
+  } as any)
+const AuthedWorkspaceKeySettingsTeamsRoute =
+  AuthedWorkspaceKeySettingsTeamsRouteImport.update({
+    id: '/teams',
+    path: '/teams',
+    getParentRoute: () => AuthedWorkspaceKeySettingsRoute,
+  } as any)
+const AuthedWorkspaceKeySettingsMembersRoute =
+  AuthedWorkspaceKeySettingsMembersRouteImport.update({
+    id: '/members',
+    path: '/members',
+    getParentRoute: () => AuthedWorkspaceKeySettingsRoute,
+  } as any)
+const AuthedWorkspaceKeySettingsLabelsRoute =
+  AuthedWorkspaceKeySettingsLabelsRouteImport.update({
+    id: '/labels',
+    path: '/labels',
+    getParentRoute: () => AuthedWorkspaceKeySettingsRoute,
+  } as any)
+const AuthedWorkspaceKeySettingsAccountRoute =
+  AuthedWorkspaceKeySettingsAccountRouteImport.update({
+    id: '/account',
+    path: '/account',
+    getParentRoute: () => AuthedWorkspaceKeySettingsRoute,
+  } as any)
+const AuthedWorkspaceKeySettingsTeamTeamKeyRoute =
+  AuthedWorkspaceKeySettingsTeamTeamKeyRouteImport.update({
+    id: '/team/$teamKey',
+    path: '/team/$teamKey',
+    getParentRoute: () => AuthedWorkspaceKeySettingsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/$workspaceKey': typeof AuthedWorkspaceKeyRoute
+  '/$workspaceKey': typeof AuthedWorkspaceKeyRouteWithChildren
   '/items': typeof AuthedItemsRoute
+  '/onboarding': typeof AuthedOnboardingRoute
   '/oauth/callback': typeof OauthCallbackRoute
   '/oauth/error': typeof OauthErrorRoute
+  '/$workspaceKey/settings': typeof AuthedWorkspaceKeySettingsRouteWithChildren
+  '/$workspaceKey/': typeof AuthedWorkspaceKeyIndexRoute
+  '/$workspaceKey/settings/account': typeof AuthedWorkspaceKeySettingsAccountRoute
+  '/$workspaceKey/settings/labels': typeof AuthedWorkspaceKeySettingsLabelsRoute
+  '/$workspaceKey/settings/members': typeof AuthedWorkspaceKeySettingsMembersRoute
+  '/$workspaceKey/settings/teams': typeof AuthedWorkspaceKeySettingsTeamsRoute
+  '/$workspaceKey/settings/': typeof AuthedWorkspaceKeySettingsIndexRoute
+  '/$workspaceKey/settings/team/$teamKey': typeof AuthedWorkspaceKeySettingsTeamTeamKeyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/$workspaceKey': typeof AuthedWorkspaceKeyRoute
   '/items': typeof AuthedItemsRoute
+  '/onboarding': typeof AuthedOnboardingRoute
   '/oauth/callback': typeof OauthCallbackRoute
   '/oauth/error': typeof OauthErrorRoute
+  '/$workspaceKey': typeof AuthedWorkspaceKeyIndexRoute
+  '/$workspaceKey/settings/account': typeof AuthedWorkspaceKeySettingsAccountRoute
+  '/$workspaceKey/settings/labels': typeof AuthedWorkspaceKeySettingsLabelsRoute
+  '/$workspaceKey/settings/members': typeof AuthedWorkspaceKeySettingsMembersRoute
+  '/$workspaceKey/settings/teams': typeof AuthedWorkspaceKeySettingsTeamsRoute
+  '/$workspaceKey/settings': typeof AuthedWorkspaceKeySettingsIndexRoute
+  '/$workspaceKey/settings/team/$teamKey': typeof AuthedWorkspaceKeySettingsTeamTeamKeyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -82,10 +159,19 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/_authed/$workspaceKey': typeof AuthedWorkspaceKeyRoute
+  '/_authed/$workspaceKey': typeof AuthedWorkspaceKeyRouteWithChildren
   '/_authed/items': typeof AuthedItemsRoute
+  '/_authed/onboarding': typeof AuthedOnboardingRoute
   '/oauth/callback': typeof OauthCallbackRoute
   '/oauth/error': typeof OauthErrorRoute
+  '/_authed/$workspaceKey/settings': typeof AuthedWorkspaceKeySettingsRouteWithChildren
+  '/_authed/$workspaceKey/': typeof AuthedWorkspaceKeyIndexRoute
+  '/_authed/$workspaceKey/settings/account': typeof AuthedWorkspaceKeySettingsAccountRoute
+  '/_authed/$workspaceKey/settings/labels': typeof AuthedWorkspaceKeySettingsLabelsRoute
+  '/_authed/$workspaceKey/settings/members': typeof AuthedWorkspaceKeySettingsMembersRoute
+  '/_authed/$workspaceKey/settings/teams': typeof AuthedWorkspaceKeySettingsTeamsRoute
+  '/_authed/$workspaceKey/settings/': typeof AuthedWorkspaceKeySettingsIndexRoute
+  '/_authed/$workspaceKey/settings/team/$teamKey': typeof AuthedWorkspaceKeySettingsTeamTeamKeyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -95,17 +181,33 @@ export interface FileRouteTypes {
     | '/register'
     | '/$workspaceKey'
     | '/items'
+    | '/onboarding'
     | '/oauth/callback'
     | '/oauth/error'
+    | '/$workspaceKey/settings'
+    | '/$workspaceKey/'
+    | '/$workspaceKey/settings/account'
+    | '/$workspaceKey/settings/labels'
+    | '/$workspaceKey/settings/members'
+    | '/$workspaceKey/settings/teams'
+    | '/$workspaceKey/settings/'
+    | '/$workspaceKey/settings/team/$teamKey'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
     | '/register'
-    | '/$workspaceKey'
     | '/items'
+    | '/onboarding'
     | '/oauth/callback'
     | '/oauth/error'
+    | '/$workspaceKey'
+    | '/$workspaceKey/settings/account'
+    | '/$workspaceKey/settings/labels'
+    | '/$workspaceKey/settings/members'
+    | '/$workspaceKey/settings/teams'
+    | '/$workspaceKey/settings'
+    | '/$workspaceKey/settings/team/$teamKey'
   id:
     | '__root__'
     | '/'
@@ -114,8 +216,17 @@ export interface FileRouteTypes {
     | '/register'
     | '/_authed/$workspaceKey'
     | '/_authed/items'
+    | '/_authed/onboarding'
     | '/oauth/callback'
     | '/oauth/error'
+    | '/_authed/$workspaceKey/settings'
+    | '/_authed/$workspaceKey/'
+    | '/_authed/$workspaceKey/settings/account'
+    | '/_authed/$workspaceKey/settings/labels'
+    | '/_authed/$workspaceKey/settings/members'
+    | '/_authed/$workspaceKey/settings/teams'
+    | '/_authed/$workspaceKey/settings/'
+    | '/_authed/$workspaceKey/settings/team/$teamKey'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -171,6 +282,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OauthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed/onboarding': {
+      id: '/_authed/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AuthedOnboardingRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/items': {
       id: '/_authed/items'
       path: '/items'
@@ -185,17 +303,116 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedWorkspaceKeyRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/$workspaceKey/': {
+      id: '/_authed/$workspaceKey/'
+      path: '/'
+      fullPath: '/$workspaceKey/'
+      preLoaderRoute: typeof AuthedWorkspaceKeyIndexRouteImport
+      parentRoute: typeof AuthedWorkspaceKeyRoute
+    }
+    '/_authed/$workspaceKey/settings': {
+      id: '/_authed/$workspaceKey/settings'
+      path: '/settings'
+      fullPath: '/$workspaceKey/settings'
+      preLoaderRoute: typeof AuthedWorkspaceKeySettingsRouteImport
+      parentRoute: typeof AuthedWorkspaceKeyRoute
+    }
+    '/_authed/$workspaceKey/settings/': {
+      id: '/_authed/$workspaceKey/settings/'
+      path: '/'
+      fullPath: '/$workspaceKey/settings/'
+      preLoaderRoute: typeof AuthedWorkspaceKeySettingsIndexRouteImport
+      parentRoute: typeof AuthedWorkspaceKeySettingsRoute
+    }
+    '/_authed/$workspaceKey/settings/teams': {
+      id: '/_authed/$workspaceKey/settings/teams'
+      path: '/teams'
+      fullPath: '/$workspaceKey/settings/teams'
+      preLoaderRoute: typeof AuthedWorkspaceKeySettingsTeamsRouteImport
+      parentRoute: typeof AuthedWorkspaceKeySettingsRoute
+    }
+    '/_authed/$workspaceKey/settings/members': {
+      id: '/_authed/$workspaceKey/settings/members'
+      path: '/members'
+      fullPath: '/$workspaceKey/settings/members'
+      preLoaderRoute: typeof AuthedWorkspaceKeySettingsMembersRouteImport
+      parentRoute: typeof AuthedWorkspaceKeySettingsRoute
+    }
+    '/_authed/$workspaceKey/settings/labels': {
+      id: '/_authed/$workspaceKey/settings/labels'
+      path: '/labels'
+      fullPath: '/$workspaceKey/settings/labels'
+      preLoaderRoute: typeof AuthedWorkspaceKeySettingsLabelsRouteImport
+      parentRoute: typeof AuthedWorkspaceKeySettingsRoute
+    }
+    '/_authed/$workspaceKey/settings/account': {
+      id: '/_authed/$workspaceKey/settings/account'
+      path: '/account'
+      fullPath: '/$workspaceKey/settings/account'
+      preLoaderRoute: typeof AuthedWorkspaceKeySettingsAccountRouteImport
+      parentRoute: typeof AuthedWorkspaceKeySettingsRoute
+    }
+    '/_authed/$workspaceKey/settings/team/$teamKey': {
+      id: '/_authed/$workspaceKey/settings/team/$teamKey'
+      path: '/team/$teamKey'
+      fullPath: '/$workspaceKey/settings/team/$teamKey'
+      preLoaderRoute: typeof AuthedWorkspaceKeySettingsTeamTeamKeyRouteImport
+      parentRoute: typeof AuthedWorkspaceKeySettingsRoute
+    }
   }
 }
 
+interface AuthedWorkspaceKeySettingsRouteChildren {
+  AuthedWorkspaceKeySettingsAccountRoute: typeof AuthedWorkspaceKeySettingsAccountRoute
+  AuthedWorkspaceKeySettingsLabelsRoute: typeof AuthedWorkspaceKeySettingsLabelsRoute
+  AuthedWorkspaceKeySettingsMembersRoute: typeof AuthedWorkspaceKeySettingsMembersRoute
+  AuthedWorkspaceKeySettingsTeamsRoute: typeof AuthedWorkspaceKeySettingsTeamsRoute
+  AuthedWorkspaceKeySettingsIndexRoute: typeof AuthedWorkspaceKeySettingsIndexRoute
+  AuthedWorkspaceKeySettingsTeamTeamKeyRoute: typeof AuthedWorkspaceKeySettingsTeamTeamKeyRoute
+}
+
+const AuthedWorkspaceKeySettingsRouteChildren: AuthedWorkspaceKeySettingsRouteChildren =
+  {
+    AuthedWorkspaceKeySettingsAccountRoute:
+      AuthedWorkspaceKeySettingsAccountRoute,
+    AuthedWorkspaceKeySettingsLabelsRoute:
+      AuthedWorkspaceKeySettingsLabelsRoute,
+    AuthedWorkspaceKeySettingsMembersRoute:
+      AuthedWorkspaceKeySettingsMembersRoute,
+    AuthedWorkspaceKeySettingsTeamsRoute: AuthedWorkspaceKeySettingsTeamsRoute,
+    AuthedWorkspaceKeySettingsIndexRoute: AuthedWorkspaceKeySettingsIndexRoute,
+    AuthedWorkspaceKeySettingsTeamTeamKeyRoute:
+      AuthedWorkspaceKeySettingsTeamTeamKeyRoute,
+  }
+
+const AuthedWorkspaceKeySettingsRouteWithChildren =
+  AuthedWorkspaceKeySettingsRoute._addFileChildren(
+    AuthedWorkspaceKeySettingsRouteChildren,
+  )
+
+interface AuthedWorkspaceKeyRouteChildren {
+  AuthedWorkspaceKeySettingsRoute: typeof AuthedWorkspaceKeySettingsRouteWithChildren
+  AuthedWorkspaceKeyIndexRoute: typeof AuthedWorkspaceKeyIndexRoute
+}
+
+const AuthedWorkspaceKeyRouteChildren: AuthedWorkspaceKeyRouteChildren = {
+  AuthedWorkspaceKeySettingsRoute: AuthedWorkspaceKeySettingsRouteWithChildren,
+  AuthedWorkspaceKeyIndexRoute: AuthedWorkspaceKeyIndexRoute,
+}
+
+const AuthedWorkspaceKeyRouteWithChildren =
+  AuthedWorkspaceKeyRoute._addFileChildren(AuthedWorkspaceKeyRouteChildren)
+
 interface AuthedRouteChildren {
-  AuthedWorkspaceKeyRoute: typeof AuthedWorkspaceKeyRoute
+  AuthedWorkspaceKeyRoute: typeof AuthedWorkspaceKeyRouteWithChildren
   AuthedItemsRoute: typeof AuthedItemsRoute
+  AuthedOnboardingRoute: typeof AuthedOnboardingRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
-  AuthedWorkspaceKeyRoute: AuthedWorkspaceKeyRoute,
+  AuthedWorkspaceKeyRoute: AuthedWorkspaceKeyRouteWithChildren,
   AuthedItemsRoute: AuthedItemsRoute,
+  AuthedOnboardingRoute: AuthedOnboardingRoute,
 }
 
 const AuthedRouteWithChildren =
