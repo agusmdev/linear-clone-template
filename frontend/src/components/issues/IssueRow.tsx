@@ -60,12 +60,12 @@ export function IssueRow({ issue }: { issue: Issue }) {
         >
           {issue.title}
         </span>
-        {issue.labels.length > 0 ? (
-          <IssuePicker
-            issue={issue}
-            kind="labels"
-            align="end"
-            trigger={
+        <IssuePicker
+          issue={issue}
+          kind="labels"
+          align="end"
+          trigger={
+            issue.labels.length > 0 ? (
               <button
                 type="button"
                 aria-label={`Labels: ${issue.labels.map(l => l.name).join(', ')}`}
@@ -81,9 +81,17 @@ export function IssueRow({ issue }: { issue: Issue }) {
                   </span>
                 ))}
               </button>
-            }
-          />
-        ) : null}
+            ) : (
+              // No labels to show: an empty anchor, so L still opens the picker here.
+              <button
+                type="button"
+                aria-label="Labels: none"
+                tabIndex={-1}
+                className="-ml-2 size-0 shrink-0 overflow-hidden outline-none"
+              />
+            )
+          }
+        />
         {project ? (
           <span
             title={project.name}
