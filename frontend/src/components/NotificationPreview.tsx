@@ -106,6 +106,15 @@ export function NotificationPreview({
             </time>
           </div>
 
+          {notification.comment ? (
+            <blockquote
+              aria-label="Comment"
+              className="rounded-lg border border-border-subtle bg-surface px-3.5 py-3"
+            >
+              <RichTextContent html={notification.comment.body} />
+            </blockquote>
+          ) : null}
+
           {ref ? (
             <>
               <h2 className="text-title font-semibold text-foreground">

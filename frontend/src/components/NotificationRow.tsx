@@ -1,4 +1,5 @@
 import { Archive, Mail, MailOpen } from 'lucide-react'
+import { richTextToPlainText } from '@/components/editor'
 import { IconButton } from '@/components/IconButton'
 import { StatusIcon } from '@/components/StatusIcon'
 import { UserAvatar } from '@/components/UserAvatar'
@@ -21,6 +22,12 @@ export function notificationMessage(notification: Notification): string {
         ? `changed status to ${notification.state.name}`
         : 'changed the status'
   }
+}
+
+/** One line of a `commented` notification's comment, else null. */
+export function notificationExcerpt(notification: Notification): string | null {
+  if (!notification.comment) return null
+  return richTextToPlainText(notification.comment.body).replace(/\s+/g, ' ') || null
 }
 
 /** Display name of the notification's actor ("Someone" when the user is gone). */
@@ -46,6 +53,7 @@ export function NotificationRow({
 }: NotificationRowProps) {
   const unread = !notification.read_at
   const actor = notificationActorName(notification)
+  const excerpt = notificationExcerpt(notification)
   const issue = notification.issue
   return (
     <li
@@ -92,6 +100,7 @@ export function NotificationRow({
             ) : null}
             <span className="truncate">
               {actor} {notificationMessage(notification)}
+              {excerpt ? `: "${excerpt}"` : null}
             </span>
           </span>
         </span>

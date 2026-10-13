@@ -8,6 +8,7 @@ from .models import Notification, NotificationType
 from .schemas import (
     MarkAllReadRequest,
     MarkAllReadResponse,
+    NotificationComment,
     NotificationIssueRef,
     NotificationResponse,
     NotificationUpdate,
@@ -18,6 +19,7 @@ __all__ = [
     "MarkAllReadRequest",
     "MarkAllReadResponse",
     "Notification",
+    "NotificationComment",
     "NotificationIssueRef",
     "NotificationResponse",
     "NotificationType",

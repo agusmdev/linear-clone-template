@@ -10,7 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database.base import Base
 from app.database.enums import str_enum
 from app.database.mixins import TimestampMixin
-from app.modules.issues.models import Issue
+from app.modules.issues.models import Comment, Issue
 from app.modules.teams.models import WorkflowState
 from app.user.models import User
 
@@ -48,6 +48,10 @@ class Notification(TimestampMixin, Base):
     state_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("workflow_state.id", ondelete="SET NULL"), index=True, default=None
     )
+    # ``commented``: the new comment (the notification goes with it).
+    comment_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("comment.id", ondelete="CASCADE"), index=True, default=None
+    )
     read_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), default=None
     )
@@ -61,6 +65,7 @@ class Notification(TimestampMixin, Base):
     state: Mapped[WorkflowState | None] = relationship(
         lazy="raise_on_sql", viewonly=True
     )
+    comment: Mapped[Comment | None] = relationship(lazy="raise_on_sql", viewonly=True)
     actor: Mapped[User | None] = relationship(
         foreign_keys=[actor_id], lazy="raise_on_sql", viewonly=True
     )
