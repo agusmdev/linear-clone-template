@@ -48,8 +48,16 @@ export default defineConfig({
   },
 
   projects: [
+    // Opens the main pages once before the parallel workers start (e2e/warmup.spec.ts).
+    {
+      name: 'warmup',
+      testMatch: 'warmup.spec.ts',
+      use: { ...devices['Desktop Chrome'] },
+    },
     {
       name: 'chromium',
+      testIgnore: 'warmup.spec.ts',
+      dependencies: ['warmup'],
       use: { ...devices['Desktop Chrome'] },
     },
   ],
