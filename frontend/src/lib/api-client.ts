@@ -157,6 +157,13 @@ class ApiClient {
     // execute() validates auth/errors; we discard the body (204 No Content returns nothing).
     return this.execute(endpoint, { method: 'DELETE' }).then(() => undefined)
   }
+
+  /** POST to an endpoint that answers 204 No Content. */
+  postNoContent(endpoint: string, data: unknown): Promise<void> {
+    return this.execute(endpoint, { method: 'POST', body: JSON.stringify(data) }).then(
+      () => undefined
+    )
+  }
 }
 
 export const api = new ApiClient()

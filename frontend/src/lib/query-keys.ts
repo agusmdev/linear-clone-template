@@ -31,4 +31,12 @@ export const queryKeys = {
     byIdentifier: (workspaceId: string, identifier: string) =>
       ['issues', 'by-identifier', workspaceId, identifier] as const,
   },
+  /** Sub-resources of one issue. They start with issues.detail(id): invalidating it refreshes them. */
+  issueDetail: {
+    comments: (issueId: string) => ['issues', 'detail', issueId, 'comments'] as const,
+    relations: (issueId: string) => ['issues', 'detail', issueId, 'relations'] as const,
+    activity: (issueId: string) => ['issues', 'detail', issueId, 'activity'] as const,
+    subscribers: (issueId: string) => ['issues', 'detail', issueId, 'subscribers'] as const,
+    subIssues: (issueId: string) => ['issues', 'detail', issueId, 'sub-issues'] as const,
+  },
 }

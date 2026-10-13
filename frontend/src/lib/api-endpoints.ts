@@ -33,6 +33,17 @@ export const API = {
     BY_IDENTIFIER: (workspaceId: string, identifier: string) =>
       `/workspaces/${workspaceId}/issues/by-identifier/${identifier}`,
   },
+  ISSUE_DETAIL: {
+    COMMENTS: (issueId: string) => `/issues/${issueId}/comments`,
+    COMMENT: (commentId: string) => `/comments/${commentId}`,
+    RELATIONS: (issueId: string) => `/issues/${issueId}/relations`,
+    RELATION: (relationId: string) => `/issue-relations/${relationId}`,
+    ACTIVITY: (issueId: string) => `/issues/${issueId}/activity`,
+    SUBSCRIBERS: (issueId: string) => `/issues/${issueId}/subscribers`,
+    /** `userId` may be "me". */
+    SUBSCRIBER: (issueId: string, userId: string) => `/issues/${issueId}/subscribers/${userId}`,
+    SUB_ISSUES: (issueId: string) => `/issues/${issueId}/sub-issues`,
+  },
 } as const
 
 /** Makes `%`, `_` and `\` match themselves in an ILIKE pattern (backslash is Postgres' default escape). */
