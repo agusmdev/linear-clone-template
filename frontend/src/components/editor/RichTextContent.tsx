@@ -40,6 +40,14 @@ export function richTextToPlainText(html: string): string {
 
 const subscribeNever = () => () => undefined
 
+/**
+ * The renderer is read-only: a checklist box must not toggle. Its `<label>` would
+ * still toggle it on a click (or Tab + Space), and the change would never be saved.
+ */
+function disableCheckboxes(html: string): string {
+  return html.replace(/<input\b/g, '<input disabled')
+}
+
 export interface RichTextContentProps {
   /** HTML produced by `RichTextEditor`. Untrusted input is fine: it is sanitized. */
   html: string
@@ -63,7 +71,10 @@ export function RichTextContent({
     () => false
   )
   const safeHtml = useMemo(
-    () => (isClient ? linkifyIssueReferences(sanitizeRichTextHtml(html), renderIssueHref) : null),
+    () =>
+      isClient
+        ? disableCheckboxes(linkifyIssueReferences(sanitizeRichTextHtml(html), renderIssueHref))
+        : null,
     [isClient, html, renderIssueHref]
   )
 

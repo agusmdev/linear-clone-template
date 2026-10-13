@@ -211,8 +211,9 @@
   text-decoration: line-through;
 }
 
-/* The renderer is read-only: its checkboxes are not controls. */
+/* The renderer is read-only: its checkboxes are not controls (RichTextContent disables them). */
 .rte-prose:not(.ProseMirror) input[type='checkbox'] {
+  cursor: default;
   pointer-events: none;
 }
 
