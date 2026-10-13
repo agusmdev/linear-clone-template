@@ -208,6 +208,49 @@ test('edits a project inline and autosaves the description', async ({
   await expect.poll(async () => (await getProject(api, user, project.id))?.target_date).toBeNull()
 })
 
+test('typing a date with the keyboard on the project page saves the full year', async ({
+  authedPage: page,
+  api,
+  user,
+}) => {
+  const workspace = await createWorkspace(api, user)
+  const project = await createProject(api, user, { workspace_id: workspace.id, name: 'Dates' })
+  await page.goto(`/${workspace.url_key}/project/${project.id}`)
+
+  // The date is typed segment by segment (MM DD YYYY). Each year digit makes a
+  // valid date ("0002-11-20", "0026-11-20"): none of them may be saved.
+  await page.getByRole('button', { name: 'Start date: none' }).click()
+  const start = page.getByLabel('Start date', { exact: true })
+  await start.focus()
+  await page.keyboard.type('11202026')
+  await expect(start).toHaveValue('2026-11-20')
+  expect((await getProject(api, user, project.id))?.start_date).toBeNull()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('button', { name: /^Start date: Nov 20(, 2026)?$/ })).toBeVisible()
+
+  // Enter also saves the typed date.
+  await page.getByRole('button', { name: 'Target date: none' }).click()
+  const target = page.getByLabel('Target date', { exact: true })
+  await target.focus()
+  await page.keyboard.type('03152027')
+  await expect(target).toHaveValue('2027-03-15')
+  await target.press('Enter')
+  await expect(page.getByRole('button', { name: 'Target date: Mar 15, 2027' })).toBeVisible()
+
+  await expect
+    .poll(async () => (await getProject(api, user, project.id))?.target_date)
+    .toBe('2027-03-15')
+  expect(await getProject(api, user, project.id)).toMatchObject({
+    start_date: '2026-11-20',
+    target_date: '2027-03-15',
+  })
+
+  // After a reload the chips still show the saved years.
+  await page.reload()
+  await expect(page.getByRole('button', { name: /^Start date: Nov 20(, 2026)?$/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Target date: Mar 15, 2027' })).toBeVisible()
+})
+
 test('shows progress and the issues of a project; New issue opens the create modal', async ({
   authedPage: page,
   api,

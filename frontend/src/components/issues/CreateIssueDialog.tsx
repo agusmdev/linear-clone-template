@@ -14,6 +14,7 @@ import {
 import { RichTextEditor } from '@/components/editor'
 import { Kbd } from '@/components/Kbd'
 import { PriorityIcon, PRIORITY_LABELS } from '@/components/PriorityIcon'
+import { DateInput } from '@/components/DateInput'
 import { PropertyPicker, type PropertyOption } from '@/components/PropertyPicker'
 import { UserAvatar } from '@/components/UserAvatar'
 import { Button } from '@/components/ui/button'
@@ -508,12 +509,11 @@ function DueDatePicker({
             </button>
           ))}
           <div className="my-1 border-t border-border-subtle" />
-          <input
-            type="date"
+          <DateInput
             aria-label="Due date"
-            value={value ?? ''}
-            onChange={event => {
-              if (event.target.value) pick(event.target.value)
+            value={value}
+            onCommit={date => {
+              if (date) pick(date)
             }}
             className={cn(
               'h-8 rounded-md border border-border bg-input px-2 text-ui text-foreground [color-scheme:dark] light:[color-scheme:light]'
