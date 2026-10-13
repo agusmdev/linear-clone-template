@@ -300,16 +300,16 @@ DOC-7 (issue mentions): the client renders `ENG-12` text as a link to
 
 ### Projects (PRJ-1..3)
 
-`Project = {id, workspace_id, name, description, status, lead_id, lead: UserSummary|null, start_date, target_date, color, icon, sort_order, team_ids: string[], issue_count, completed_issue_count, created_at, updated_at}`
-(`status`: planned|started|paused|completed|canceled; counts ignore archived issues; progress = completed / count.)
+`Project = {id, workspace_id, name, description, status, lead_id, lead: UserSummary|null, start_date, target_date, color, icon, sort_order, team_ids: string[], teams: TeamSummary[], issue_count, completed_issue_count, progress: {total, completed, percentage}, created_at, updated_at}`
+(`status`: planned|started|paused|completed|canceled; `description` is HTML. Counts ignore archived and canceled issues; completed = state type `completed`; `progress.total = issue_count`, `progress.completed = completed_issue_count`, `percentage` = 0-100 rounded down, 0 when there are no issues. `teams` by name.)
 
 | Status | Method | Path | Body | Response |
 |---|---|---|---|---|
-| PLANNED | GET | `/workspaces/{workspace_id}/projects?status=` | – | `Project[]` (by `sort_order`) |
-| PLANNED | POST | `/projects` | `{workspace_id, name, description?, status?, lead_id?, start_date?, target_date?, color?, icon?, team_ids?}` | 201 `Project` |
-| PLANNED | GET | `/projects/{project_id}` | – | `Project` |
-| PLANNED | PATCH | `/projects/{project_id}` | any field of POST except `workspace_id`, plus `sort_order` (`team_ids` replaces) | `Project` |
-| PLANNED | DELETE | `/projects/{project_id}` | – | 204 (issues and documents keep existing, `project_id = null`) |
+| IMPLEMENTED | GET | `/workspaces/{workspace_id}/projects?status=&team_id=` | – | `Project[]` (by `sort_order`; `team_id` = projects that have this team) |
+| IMPLEMENTED | POST | `/projects` | `{workspace_id, name, description?, status?, lead_id?, start_date?, target_date?, color?, icon?, team_ids?}` | 201 `Project` (`sort_order` = after the last project; lead must be a member and teams in the workspace, else 400 `invalid_reference`) |
+| IMPLEMENTED | GET | `/projects/{project_id}` | – | `Project` |
+| IMPLEMENTED | PATCH | `/projects/{project_id}` | any field of POST except `workspace_id`, plus `sort_order` (`team_ids` replaces) | `Project` |
+| IMPLEMENTED | DELETE | `/projects/{project_id}` | – | 204 (issues and documents keep existing, `project_id = null`) |
 
 Project issues: `GET /issues?workspace_id=..&project_id=..`. Project documents: `GET /documents?workspace_id=..&project_id=..`.
 
@@ -391,7 +391,7 @@ Issue search matches title, description and identifier (`ENG-12`).
 | `teams` | `team`, `team_member`, `workflow_state` | teams, states |
 | `labels` | `label` | labels |
 | `issues` | `issue`, `issue_label`, `issue_relation`, `issue_subscriber`, `comment`, `issue_activity` | issues, comments, relations, activity, subscribers, sub-issues (`detail_*.py` files) |
-| `projects` | `project`, `project_team` | models only |
+| `projects` | `project`, `project_team` | projects (CRUD, progress) |
 | `cycles` | `cycle` | models only |
 | `documents` | `document` | documents |
 | `notifications` | `notification` | notifications (inbox); `NotificationService.notify_*` = creation, used by `IssueService` |

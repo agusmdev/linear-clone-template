@@ -53,6 +53,10 @@ export function useUpdateIssueDetail(issue: Pick<Issue, 'id' | 'workspace_id' | 
       if ('cycle_id' in data || 'state_id' in data || 'archived' in data) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.cycles.all })
       }
+      // Project progress too.
+      if ('project_id' in data || 'state_id' in data || 'archived' in data) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.projects.all })
+      }
     },
   })
 }

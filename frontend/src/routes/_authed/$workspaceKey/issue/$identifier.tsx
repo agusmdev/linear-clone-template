@@ -41,6 +41,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useCurrentWorkspace } from '@/contexts/WorkspaceContext'
 import { useTeamCycles } from '@/hooks/useCycles'
+import { useProjects } from '@/hooks/useProjects'
 import { useDebounce } from '@/hooks/useDebounce'
 import {
   useComments,
@@ -124,6 +125,7 @@ function IssueDetail({ issue }: { issue: Issue }) {
 
   const statesQuery = useTeamStates(issue.team_id)
   const cyclesQuery = useTeamCycles(issue.team_id)
+  const projectsQuery = useProjects(workspace.id)
   const parentQuery = useIssue(issue.parent_id)
   const subIssuesQuery = useSubIssues(issue.id)
   const relationsQuery = useRelations(issue.id)
@@ -205,6 +207,10 @@ function IssueDetail({ issue }: { issue: Issue }) {
     })
 
   const parent = parentQuery.data
+  const currentProject = projectsQuery.data?.find(project => project.id === issue.project_id)
+  const projectName = !issue.project_id
+    ? null
+    : (currentProject?.name ?? lastValue(activityQuery.data, 'project') ?? 'Project')
   const currentCycle = cyclesQuery.data?.find(cycle => cycle.id === issue.cycle_id)
   const cycleName = !issue.cycle_id
     ? null
@@ -429,9 +435,8 @@ function IssueDetail({ issue }: { issue: Issue }) {
             states={statesQuery.data ?? []}
             members={members}
             labels={labels}
-            projectName={
-              issue.project_id ? (lastValue(activityQuery.data, 'project') ?? 'Project') : null
-            }
+            projectName={projectName}
+            projects={projectsQuery.data}
             cycleName={cycleName}
             cycles={cyclesQuery.data}
             onUpdate={update}

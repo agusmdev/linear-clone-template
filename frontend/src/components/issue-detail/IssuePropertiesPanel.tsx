@@ -7,6 +7,7 @@ import { UserAvatar } from '@/components/UserAvatar'
 import { formatDueDate } from '@/lib/relative-time'
 import { cn } from '@/lib/utils'
 import type { Cycle } from '@/types/cycle'
+import type { Project } from '@/types/project'
 import type { Issue, IssuePriority, UpdateIssueData } from '@/types/issue'
 import type { Label } from '@/types/label'
 import type { WorkflowState } from '@/types/team'
@@ -31,6 +32,8 @@ interface IssuePropertiesPanelProps {
   cycleName: string | null
   /** The team's cycles; without them the cycle row is read-only. */
   cycles?: Cycle[]
+  /** The workspace's projects; without them the project row is read-only. */
+  projects?: Project[]
   onUpdate: (data: UpdateIssueData) => void
   className?: string
 }
@@ -60,6 +63,7 @@ export function IssuePropertiesPanel({
   projectName,
   cycleName,
   cycles,
+  projects,
   onUpdate,
   className,
 }: IssuePropertiesPanelProps) {
@@ -108,6 +112,20 @@ export function IssuePropertiesPanel({
         keywords: [`Cycle ${cycle.number}`],
         group: CYCLE_GROUPS[cycle.status],
       })),
+  ]
+  const projectOptions: PropertyOption[] = [
+    { value: NONE, label: 'No project', icon: <Box className="size-3.5 text-text-tertiary" /> },
+    ...(projects ?? []).map(project => ({
+      value: project.id,
+      label: project.name,
+      icon: (
+        <Box
+          className="size-3.5"
+          style={project.color ? { color: project.color } : undefined}
+          aria-hidden
+        />
+      ),
+    })),
   ]
   const assigneeName = issue.assignee ? issue.assignee.name || issue.assignee.email : null
 
@@ -239,14 +257,34 @@ export function IssuePropertiesPanel({
       </Row>
 
       <Row label="Project">
-        <span className={cn(valueButtonClass, 'cursor-default hover:bg-transparent')}>
-          <Box className="size-3.5 text-text-secondary" />
-          {projectName ? (
-            <span className="truncate">{projectName}</span>
-          ) : (
-            <Placeholder>No project</Placeholder>
-          )}
-        </span>
+        {projects ? (
+          <PropertyPicker
+            label="Project"
+            placeholder="Add to project..."
+            options={projectOptions}
+            value={issue.project_id ?? NONE}
+            onChange={value => onUpdate({ project_id: value === NONE ? null : value })}
+            trigger={
+              <button type="button" aria-label="Change project" className={valueButtonClass}>
+                <Box className="size-3.5 text-text-secondary" />
+                {projectName ? (
+                  <span className="truncate">{projectName}</span>
+                ) : (
+                  <Placeholder>Add to project</Placeholder>
+                )}
+              </button>
+            }
+          />
+        ) : (
+          <span className={cn(valueButtonClass, 'cursor-default hover:bg-transparent')}>
+            <Box className="size-3.5 text-text-secondary" />
+            {projectName ? (
+              <span className="truncate">{projectName}</span>
+            ) : (
+              <Placeholder>No project</Placeholder>
+            )}
+          </span>
+        )}
       </Row>
 
       <Row label="Estimate">

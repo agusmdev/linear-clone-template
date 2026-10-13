@@ -7,6 +7,7 @@ import {
   addWorkspaceMember,
   createComment,
   createCycle,
+  createProject,
   createIssue,
   createRelation,
   createWorkspace,
@@ -123,6 +124,11 @@ test.describe('issue page', () => {
       starts_at: isoDay(-1),
       ends_at: isoDay(6),
     })
+    const project = await createProject(api, user, {
+      workspace_id: workspace.id,
+      name: 'Billing revamp',
+      team_ids: [team.id],
+    })
     await openIssue(page, workspace.url_key, issue.identifier)
     const panel = page.getByRole('complementary', { name: 'Issue properties' })
 
@@ -154,6 +160,12 @@ test.describe('issue page', () => {
     await page.getByRole('option', { name: 'Sprint 1' }).click()
     await expect(panel.getByRole('button', { name: 'Change cycle' })).toContainText('Sprint 1')
 
+    await panel.getByRole('button', { name: 'Change project' }).click()
+    await page.getByRole('option', { name: 'Billing revamp' }).click()
+    await expect(panel.getByRole('button', { name: 'Change project' })).toContainText(
+      'Billing revamp'
+    )
+
     await expect
       .poll(async () => {
         const saved = await getIssue(api, user, issue.id)
@@ -165,9 +177,10 @@ test.describe('issue page', () => {
           saved.estimate,
           saved.due_date,
           saved.cycle_id,
+          saved.project_id,
         ]
       })
-      .toEqual([state('In Progress').id, 2, me.id, [bug.id], 3, '2026-12-24', cycle.id])
+      .toEqual([state('In Progress').id, 2, me.id, [bug.id], 3, '2026-12-24', cycle.id, project.id])
 
     // Readable values in the timeline, not ids.
     const activity = page.getByRole('list', { name: 'Activity' })
@@ -176,6 +189,7 @@ test.describe('issue page', () => {
     await expect(activity.getByText(/added label Bug/)).toBeVisible()
     await expect(activity.getByText(/set the due date to Dec 24/)).toBeVisible()
     await expect(activity.getByText(/added the issue to Sprint 1/)).toBeVisible()
+    await expect(activity.getByText(/moved the issue to project Billing revamp/)).toBeVisible()
 
     await panel.getByLabel('Due date', { exact: true }).hover()
     await panel.getByRole('button', { name: 'Remove due date' }).click()

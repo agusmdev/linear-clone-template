@@ -36,7 +36,7 @@ left sidebar, Inter font, subtle borders, small type 13px).
 | ISS-3 | Issue list view grouped by status, with priority icon, identifier, title, labels, assignee avatar, dates; inline property changes | todo |
 | ISS-4 | Board (kanban) view by status with drag and drop between columns and reorder inside a column | todo |
 | ISS-5 | Filters: status, priority, assignee, label, project, cycle, creator; text search; sort (manual, priority, created, updated, due date); grouping (status, assignee, priority, project, none); display options persisted per view in URL | todo |
-| ISS-6 | Issue detail page: editable title + rich-text description (autosave), properties sidebar (status, priority, assignee, labels, project, cycle, estimate, due date) | done (project and cycle are read-only until the projects/cycles APIs land) |
+| ISS-6 | Issue detail page: editable title + rich-text description (autosave), properties sidebar (status, priority, assignee, labels, project, cycle, estimate, due date) | done |
 | ISS-7 | Sub-issues: create sub-issue, list with progress, parent breadcrumb | done |
 | ISS-8 | Relations: blocks / blocked by / related / duplicate of | done |
 | ISS-9 | Comments: add, edit, delete own comment; markdown/rich text | done |
