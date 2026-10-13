@@ -95,6 +95,12 @@ Bugs found by earlier QA rounds. Do not re-report one unless it still reproduces
 - inbox-search: search matched HTML markup in issue/project descriptions (also the issues-list filter); queries over 200 chars failed
 - create-issue: three quick Cmd+Enter could create a duplicate while the dialog was closing
 
+## Round 5 (all fixed)
+
+- issues-list: keyboard shortcuts stopped working after the context menu or the delete dialog (focus lost)
+- issue-detail: 5-letter team identifiers wrapped and clipped in sub-issue / relation rows; "duplicated by" activity line was not a sentence
+- inbox-search: search only matched the exact phrase (now every word must match, in any order)
+
 ## Known and accepted (not bugs to re-report)
 
 - A tab left open after another admin removes you shows "Workspace <id> not found".
@@ -108,3 +114,6 @@ Bugs found by earlier QA rounds. Do not re-report one unless it still reproduces
 - Pressing Enter several times within one frame in the inline sub-issue input can create duplicates.
 - An issue already related to another issue cannot get a second relation type with that issue.
 - The label picker has no "create label" option (labels are managed in Settings).
+- A card grabbed far from its centre and dropped left of an empty column's centre can land in the next column.
+- A member removed from a workspace stays subscribed to its issues (notifications reappear if re-added).
+- Search shows a generic box instead of a project's own icon.
