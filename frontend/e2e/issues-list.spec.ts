@@ -691,6 +691,79 @@ test.describe('issues list', () => {
     await expect(page).toHaveURL(`/${key}/issue/ENG-1`)
   })
 
+  test('focus goes back to the list after an inline picker closes (ISS-2, ISS-12)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { team, states, key } = await seedWorkspace(api, user)
+    const created = [
+      await createIssue(api, user, { team_id: team.id, title: 'Focus one' }),
+      await createIssue(api, user, { team_id: team.id, title: 'Focus two' }),
+      await createIssue(api, user, { team_id: team.id, title: 'Focus three' }),
+    ]
+    const activeIssue = async (page: Page) => {
+      const domId = await issueList(page).getAttribute('aria-activedescendant')
+      return created.find(issue => domId?.endsWith(issue.id))
+    }
+
+    const page = await loginAs(user)
+    await page.goto(`/${key}/team/ENG/issues`)
+    await expect(row(page, 'Focus three')).toBeVisible()
+    // The list gets focus on load: this test never calls focus() by hand.
+    await expect(issueList(page)).toBeFocused()
+
+    // Keyboard: P, then ArrowDown + Enter picks an option. Focus is on the list again.
+    await page.keyboard.press('j')
+    await expect.poll(async () => (await activeIssue(page))?.id).toBeTruthy()
+    const picked = await activeIssue(page)
+    await page.keyboard.press('p')
+    const priority = page.getByRole('combobox', { name: 'Priority' })
+    await expect(priority).toBeVisible()
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('Enter')
+    await expect(priority).toBeHidden()
+    await expect(issueList(page)).toBeFocused()
+    await expect
+      .poll(async () => (await getIssue(api, user, picked?.id ?? '')).priority)
+      .not.toBe(0)
+
+    // J moves to another row, A opens the assignee picker, Esc closes it.
+    const before = await activeIssue(page)
+    await page.keyboard.press('j')
+    await expect.poll(async () => (await activeIssue(page))?.id).not.toBe(before?.id)
+    const next = await activeIssue(page)
+    await page.keyboard.press('a')
+    const assignee = page.getByRole('combobox', { name: 'Assignee' })
+    await expect(assignee).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(assignee).toBeHidden()
+    await expect(issueList(page)).toBeFocused()
+
+    // Mouse pick in a row: focus goes back to the list too, so S opens a picker
+    // and Enter cannot reopen the row's picker and change a status by accident.
+    await row(page, 'Focus three').getByRole('button', { name: 'Status: Todo' }).click()
+    await page.getByRole('option', { name: 'In Progress' }).click()
+    await expect(page.getByRole('combobox', { name: 'Status' })).toBeHidden()
+    await expect(issueList(page)).toBeFocused()
+    await expect
+      .poll(async () => (await getIssue(api, user, created[2].id)).state.name)
+      .toBe('In Progress')
+    await page.keyboard.press('s')
+    await expect(page.getByRole('combobox', { name: 'Status' })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(issueList(page)).toBeFocused()
+
+    // Enter opens the focused issue (it does not reopen a picker).
+    const focused = await activeIssue(page)
+    expect(focused?.id).toBe(next?.id)
+    await page.keyboard.press('Enter')
+    await expect(page).toHaveURL(`/${key}/issue/${focused?.identifier}`)
+    for (const issue of created.slice(0, 2)) {
+      expect((await getIssue(api, user, issue.id)).state.id).toBe(states.Todo.id)
+    }
+  })
+
   test('my issues shows assigned, created and subscribed issues (ISS-13)', async ({
     api,
     user,
