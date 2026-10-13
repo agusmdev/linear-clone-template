@@ -12,6 +12,7 @@ import {
   createLabel,
   createTeam,
   createWorkspace,
+  devices,
   expect,
   getIssue,
   getMe,
@@ -240,6 +241,9 @@ test.describe('workspace settings', () => {
 
     await page.getByRole('button', { name: 'Delete workspace' }).click()
     const dialog = page.getByRole('alertdialog')
+    // "Type Doomed to confirm" reads as one line (it was split into three).
+    const prompt = dialog.getByText('Type Doomed to confirm')
+    expect(await prompt.evaluate(el => el.getBoundingClientRect().height)).toBeLessThan(24)
     await expect(dialog.getByRole('button', { name: 'Delete workspace' })).toBeDisabled()
     await dialog.getByLabel('Workspace name to confirm').fill('Doomed')
     await dialog.getByRole('button', { name: 'Delete workspace' }).click()
@@ -704,12 +708,38 @@ test.describe('team settings', () => {
     await page.getByRole('menuitem', { name: 'Delete' }).click()
     const dialog = page.getByRole('alertdialog')
     await dialog.getByRole('combobox', { name: 'Move issues to' }).click()
-    await page.getByRole('option', { name: 'Done' }).click()
+    // Each option shows its status icon and name on one line: the icon sits in
+    // the middle of the row (it was on a line of its own above the name).
+    const done = page.getByRole('option', { name: 'Done' })
+    const [row, icon] = await Promise.all([
+      done.boundingBox(),
+      done.locator('svg').first().boundingBox(),
+    ])
+    expect(Math.abs(icon!.y + icon!.height / 2 - (row!.y + row!.height / 2))).toBeLessThan(3)
+    await done.click()
     await dialog.getByRole('button', { name: 'Delete status' }).click()
     await expect(dialog).toHaveCount(0)
 
     await expect(started.getByRole('listitem', { name: 'Testing' })).toHaveCount(0)
     expect((await getIssue(api, user, issue.id)).state.name).toBe('Done')
+  })
+
+  test('the status reorder buttons show without hover on a touch phone', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const page = await loginAs(user, devices['iPhone 13'])
+    const workspace = await createWorkspace(api, user)
+    const [team] = await listTeams(api, user, workspace.id)
+    await page.goto(`/${workspace.url_key}/settings/team/${team.key}`)
+    const started = page.getByRole('list', { name: 'Started statuses', exact: true })
+
+    const up = started.getByRole('button', { name: 'Move In Review up' })
+    await expect(up).toBeVisible()
+    expect(await up.evaluate(el => getComputedStyle(el.parentElement!).opacity)).toBe('1')
+    await up.tap()
+    await expect(started.getByRole('listitem')).toHaveText(['In Review', 'In Progress'])
   })
 
   test('refuses a duplicate status name with an inline error', async ({
