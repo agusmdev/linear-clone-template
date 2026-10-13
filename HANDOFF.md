@@ -2,6 +2,14 @@
 
 Read this file first to continue the work on another computer.
 
+## 0. Paste this on the new computer
+
+Run this in Claude Code, from inside the cloned repo:
+
+```
+/goal Continue the Linear clone in this repo (git@github.com:agusmdev/linear-clone-template, private). Read HANDOFF.md first and follow it. Never ask questions; decide yourself. Use as many parallel agents as possible (worktrees for parallel code changes). Commit to main with one-line Conventional Commit messages and push often. Steps: (1) fetch all fix/r1-* branches; merge the 23 READY branches into main in one batch, then run make check + backend pytest + frontend Playwright once, fix all failures, push; (2) finish the 11 WIP branches (one agent each, own E2E ports, only their own tests), batch-merge, validate, push; (3) rebuild Docker and run browser QA rounds (docs/handoff/qa-loop.workflow.js, start at round 2, fix ROOT/SCRATCH paths) until two rounds in a row find no new confirmed bugs. Done when: QA is dry, make check and make test pass on main, every FEATURES.md item works in a real browser (including register/login with email + password, no email verification, the issue ticketing system and the documents section), and main is pushed.
+```
+
 ## 1. The goal (from the user, word for word)
 
 > use this template in THIS branch: https://github.com/agusmdev/fullstack-ai-template/tree/t3code/f7740e92 to use as initial step to create a full clone of linear. You must not ask any question. Just create a private repository (linear-clone-template) or something like that, and use main to commit, and push constnatly. You must specify all the main features in a document and make progress as fast as possible (so as many agents as possible) the main features that must be present are the ticketing system, and the documents section. You must validate everything.
