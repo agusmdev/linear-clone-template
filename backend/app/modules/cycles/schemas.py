@@ -3,11 +3,23 @@
 import enum
 import uuid
 from datetime import date, datetime
+from typing import Annotated, Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, BeforeValidator, Field
 
 from app.core.optional_model import partial_model
 from app.database.mixins import OrmBaseModel
+
+
+def blank_to_none(value: Any) -> Any:
+    """Trim a name; a blank one becomes ``None`` (the cycle is "Cycle <number>")."""
+    if not isinstance(value, str):
+        return value
+    return value.strip() or None
+
+
+# Ends trimmed; blank = no custom name.
+CycleName = Annotated[str | None, BeforeValidator(blank_to_none)]
 
 
 class CycleStatus(enum.StrEnum):
@@ -17,7 +29,7 @@ class CycleStatus(enum.StrEnum):
 
 
 class CycleBase(BaseModel):
-    name: str | None = Field(default=None, max_length=255)
+    name: CycleName = Field(default=None, max_length=255)
     starts_at: date
     ends_at: date
 

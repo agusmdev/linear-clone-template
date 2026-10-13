@@ -148,7 +148,10 @@ export function CreateIssueDialog({
   const assignee = members.find(m => m.user_id === values.assignee_id)
   const pickedLabels = labels.filter(l => values.label_ids.includes(l.id))
   const project = projects.find(p => p.id === values.project_id)
-  const teamCycles = cycles.filter(c => (!c.team_id || c.team_id === team?.id) && !c.past)
+  // Past cycles are closed: only a prefilled one (New issue on a past cycle's page) stays.
+  const teamCycles = cycles.filter(
+    c => (!c.team_id || c.team_id === team?.id) && (!c.past || c.id === values.cycle_id)
+  )
   const cycle = teamCycles.find(c => c.id === values.cycle_id)
   const parent = [...parentCandidates, pickedParent, defaultParent].find(
     i => i && i.id === values.parent_id

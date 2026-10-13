@@ -358,6 +358,31 @@ test.describe('cycle page', () => {
     expect((await getIssue(api, user, issue.id)).cycle_id).toBe(next.id)
   })
 
+  test('New issue on a past cycle shows the cycle in the modal and files the issue there', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const { workspace, team } = await seedWorkspace(api, user)
+    const past = await createCycle(api, user, team.id, {
+      starts_at: isoDay(-20),
+      ends_at: isoDay(-7),
+    })
+
+    await page.goto(`/${workspace.url_key}/team/${team.key}/cycle/${past.id}`)
+    await expect(page.getByRole('region', { name: 'Cycle summary' })).toContainText('Past')
+    await page.getByRole('main').getByRole('button', { name: 'New issue' }).first().click()
+    const dialog = page.getByRole('dialog', { name: 'New issue' })
+    // Past cycles are not offered, but the prefilled one is shown (not "none").
+    await expect(dialog.getByRole('button', { name: 'Cycle: Cycle 1' })).toBeVisible()
+    await page.keyboard.type('Late fix')
+    await dialog.getByRole('button', { name: /Create issue/ }).click()
+    await expect(dialog).toBeHidden()
+    await expect(
+      page.getByRole('listbox', { name: 'Issues' }).getByRole('option', { name: /Late fix/ })
+    ).toBeVisible()
+  })
+
   test('a missing cycle shows a message', async ({ api, user, authedPage: page }) => {
     const { workspace, team } = await seedWorkspace(api, user)
     await page.goto(

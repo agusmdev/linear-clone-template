@@ -2,8 +2,9 @@
 
 import uuid
 from datetime import date, datetime
+from typing import Annotated
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints
 
 from app.core.optional_model import partial_model
 from app.database.mixins import OrmBaseModel
@@ -15,9 +16,14 @@ NAME_MAX = 255
 DESCRIPTION_MAX = 200_000
 TEAMS_MAX = 50
 
+# Ends trimmed; a blank name is a 422.
+ProjectName = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=NAME_MAX)
+]
+
 
 class ProjectBase(BaseModel):
-    name: str = Field(..., min_length=1, max_length=NAME_MAX)
+    name: ProjectName
     # HTML from the TipTap editor.
     description: str | None = Field(None, max_length=DESCRIPTION_MAX)
     status: ProjectStatus = ProjectStatus.planned

@@ -338,7 +338,7 @@ DOC-7 (issue mentions): the client renders `ENG-12` text as a link to
 ### Projects (PRJ-1..3)
 
 `Project = {id, workspace_id, name, description, status, lead_id, lead: UserSummary|null, start_date, target_date, color, icon, sort_order, team_ids: string[], teams: TeamSummary[], issue_count, completed_issue_count, progress: {total, completed, percentage}, created_at, updated_at}`
-(`status`: planned|started|paused|completed|canceled; `description` is HTML. Counts ignore archived and canceled issues; completed = state type `completed`; `progress.total = issue_count`, `progress.completed = completed_issue_count`, `percentage` = 0-100 rounded down, 0 when there are no issues. `teams` by name.)
+(`status`: planned|started|paused|completed|canceled; `name` is trimmed, blank = 422 `validation_error`; `description` is HTML. Counts ignore archived and canceled issues; completed = state type `completed`; `progress.total = issue_count`, `progress.completed = completed_issue_count`, `percentage` = 0-100 rounded down, 0 when there are no issues. `teams` by name.)
 
 | Status | Method | Path | Body | Response |
 |---|---|---|---|---|
@@ -356,6 +356,7 @@ Project issues: `GET /issues?workspace_id=..&project_id=..`. Project documents: 
 `CycleProgress = {total, completed, percentage, scope: {backlog, unstarted, started, completed, canceled}}`
 
 - `status` from today's date (UTC): `starts_at <= today <= ends_at` = current, `starts_at > today` = upcoming, else past.
+- `name` is trimmed; a blank name is stored as `null` (shown as "Cycle <number>").
 - Dates are inclusive. `ends_at` must be after `starts_at` (else 400 `invalid_cycle_dates`); two cycles of one team never share a day (else 400 `cycle_overlap`).
 - `scope` counts the non-archived issues of the cycle by state type. `total` = `issue_count` = scope without canceled; `completed` = `completed_issue_count`; `percentage` = round(completed * 100 / total), 0 when empty.
 

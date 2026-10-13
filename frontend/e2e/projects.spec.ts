@@ -5,6 +5,7 @@
  */
 import {
   type Page,
+  addFavorite,
   createIssue,
   createProject,
   createWorkspace,
@@ -398,4 +399,46 @@ test('deletes a project after confirmation and keeps its issues', async ({
   // A deleted project's page shows "not found".
   await page.goto(`/${workspace.url_key}/project/${project.id}`)
   await expect(page.getByText('Project not found')).toBeVisible()
+})
+
+test('the sidebar favorite follows a project rename and goes away on delete', async ({
+  authedPage: page,
+  api,
+  user,
+}) => {
+  const workspace = await createWorkspace(api, user)
+  const project = await createProject(api, user, { workspace_id: workspace.id, name: 'Draft' })
+  await addFavorite(api, user, {
+    workspace_id: workspace.id,
+    entity_type: 'project',
+    entity_id: project.id,
+  })
+
+  await page.goto(`/${workspace.url_key}/project/${project.id}`)
+  const favorites = page.getByRole('navigation', { name: 'Main' }).getByTestId('sidebar-favorite')
+  await expect(favorites).toHaveCount(1)
+  await expect(favorites.first()).toHaveText('Draft')
+
+  // Rename: the favorite shows the new name without a reload.
+  const name = page.getByLabel('Project name')
+  await name.fill('Launch plan')
+  await name.press('Enter')
+  await expect(favorites.first()).toHaveText('Launch plan')
+
+  // Delete: the favorite goes away without a reload, and the deleted project
+  // is not fetched again (no 404 in the console).
+  const notFound: string[] = []
+  page.on('response', response => {
+    if (response.status() === 404) notFound.push(response.url())
+  })
+  await page.getByRole('button', { name: 'Project options' }).click()
+  await page.getByRole('menuitem', { name: 'Delete project' }).click()
+  await page
+    .getByRole('alertdialog', { name: 'Delete project?' })
+    .getByRole('button', { name: 'Delete project' })
+    .click()
+  await expect(page).toHaveURL(`/${workspace.url_key}/projects`)
+  await expect(page.getByText('No projects yet')).toBeVisible()
+  await expect(favorites).toHaveCount(0)
+  expect(notFound).toEqual([])
 })

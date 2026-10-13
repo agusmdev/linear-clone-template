@@ -231,6 +231,32 @@ def test_update_project(owner: RegisteredUser, ws: dict[str, Any]) -> None:
     )
 
 
+def test_project_name_is_trimmed_and_never_blank(
+    owner: RegisteredUser, ws: dict[str, Any]
+) -> None:
+    workspace_id = ws["workspace"]["id"]
+    project = create_project(owner.client, workspace_id, "  Launch  ")
+    assert project["name"] == "Launch"
+
+    assert_error(
+        owner.client.post(
+            "/projects", json={"workspace_id": workspace_id, "name": " \t "}
+        ),
+        422,
+        "validation_error",
+    )
+    assert_error(
+        owner.client.patch(f"/projects/{project['id']}", json={"name": "   "}),
+        422,
+        "validation_error",
+    )
+    renamed = owner.client.patch(
+        f"/projects/{project['id']}", json={"name": " Relaunch "}
+    )
+    assert renamed.status_code == 200, renamed.text
+    assert renamed.json()["name"] == "Relaunch"
+
+
 def test_invalid_references(
     owner: RegisteredUser,
     ws: dict[str, Any],
