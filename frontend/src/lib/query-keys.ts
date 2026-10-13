@@ -32,6 +32,11 @@ export const queryKeys = {
     byIdentifier: (workspaceId: string, identifier: string) =>
       ['issues', 'by-identifier', workspaceId, identifier] as const,
   },
+  cycles: {
+    all: ['cycles'] as const,
+    list: (teamId: string) => ['cycles', 'list', teamId] as const,
+    detail: (cycleId: string) => ['cycles', 'detail', cycleId] as const,
+  },
   documents: {
     all: ['documents'] as const,
     lists: () => ['documents', 'list'] as const,

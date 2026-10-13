@@ -34,6 +34,11 @@ export const API = {
     BY_IDENTIFIER: (workspaceId: string, identifier: string) =>
       `/workspaces/${workspaceId}/issues/by-identifier/${identifier}`,
   },
+  CYCLES: {
+    TEAM: (teamId: string) => `/teams/${teamId}/cycles`,
+    DETAIL: (cycleId: string) => `/cycles/${cycleId}`,
+    COMPLETE: (cycleId: string) => `/cycles/${cycleId}/complete`,
+  },
   DOCUMENTS: {
     LIST: '/documents',
     CREATE: '/documents',
