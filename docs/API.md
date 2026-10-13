@@ -236,9 +236,15 @@ with `sort_order` = the mean of the neighbours' values (top: first - 1, bottom: 
 Grouping (status, assignee, priority, project) is done by the client on the returned page; send `size=100` and fetch more pages as needed.
 
 ### Sub-issues (ISS-7)
-No extra endpoints: `GET /issues?workspace_id=..&parent_id=<id>` lists sub-issues;
+`GET /issues?workspace_id=..&parent_id=<id>` lists sub-issues (pages, filters);
 create one with `POST /issues {parent_id}`. Progress = sub-issues whose
-`state.type` is `completed`.
+`state.type` is `completed`. The issue page uses the shortcut below.
+
+`SubIssues = {items: Issue[], total, completed}` (not archived, by `sort_order`; `completed` = state type `completed`)
+
+| Status | Method | Path | Body | Response |
+|---|---|---|---|---|
+| IMPLEMENTED | GET | `/issues/{issue_id}/sub-issues` | – | `SubIssues` |
 
 ### Relations (ISS-8)
 
@@ -247,9 +253,12 @@ create one with `POST /issues {parent_id}`. Progress = sub-issues whose
 
 | Status | Method | Path | Body | Response |
 |---|---|---|---|---|
-| PLANNED | GET | `/issues/{issue_id}/relations` | – | `IssueRelation[]` |
-| PLANNED | POST | `/issues/{issue_id}/relations` | `{related_issue_id, type: "blocks"\|"blocked_by"\|"related"\|"duplicate"}` | 201 `IssueRelation` (`blocked_by` is stored as the other issue `blocks` this one) |
-| PLANNED | DELETE | `/issue-relations/{relation_id}` | – | 204 |
+| IMPLEMENTED | GET | `/issues/{issue_id}/relations` | – | `IssueRelation[]` |
+| IMPLEMENTED | POST | `/issues/{issue_id}/relations` | `{related_issue_id, type: "blocks"\|"blocked_by"\|"related"\|"duplicate"}` | 201 `IssueRelation` (`blocked_by` is stored as the other issue `blocks` this one) |
+| IMPLEMENTED | DELETE | `/issue-relations/{relation_id}` | – | 204 |
+
+Errors: the issue itself or an issue of another workspace → 400 `invalid_reference`;
+the same type already between the two issues (either direction) → 400 `duplicate_item`.
 
 ### Comments (ISS-9)
 
@@ -257,10 +266,10 @@ create one with `POST /issues {parent_id}`. Progress = sub-issues whose
 
 | Status | Method | Path | Body | Response |
 |---|---|---|---|---|
-| PLANNED | GET | `/issues/{issue_id}/comments` | – | `Comment[]` (oldest first) |
-| PLANNED | POST | `/issues/{issue_id}/comments` | `{body}` | 201 `Comment`; activity `commented`; author subscribed; notifies subscribers (`commented`) |
-| PLANNED | PATCH | `/comments/{comment_id}` | `{body}` (author only, else 404) | `Comment` (`edited_at = now`) |
-| PLANNED | DELETE | `/comments/{comment_id}` | – (author only, else 404) | 204 |
+| IMPLEMENTED | GET | `/issues/{issue_id}/comments` | – | `Comment[]` (oldest first) |
+| IMPLEMENTED | POST | `/issues/{issue_id}/comments` | `{body}` | 201 `Comment`; activity `commented`; author subscribed; notifies subscribers (`commented`) |
+| IMPLEMENTED | PATCH | `/comments/{comment_id}` | `{body}` (author only, else 404) | `Comment` (`edited_at = now`) |
+| IMPLEMENTED | DELETE | `/comments/{comment_id}` | – (author only, else 404) | 204 |
 
 ### Activity (ISS-10)
 
@@ -275,7 +284,7 @@ create one with `POST /issues {parent_id}`. Progress = sub-issues whose
 
 | Status | Method | Path | Body | Response |
 |---|---|---|---|---|
-| PLANNED | GET | `/issues/{issue_id}/activity` | – | `IssueActivity[]` (oldest first). The client merges it with comments for the timeline |
+| IMPLEMENTED | GET | `/issues/{issue_id}/activity` | – | `IssueActivity[]` (oldest first). The client merges it with comments for the timeline |
 
 (The rows are already written by the IMPLEMENTED create/update endpoints.)
 
@@ -283,9 +292,9 @@ create one with `POST /issues {parent_id}`. Progress = sub-issues whose
 
 | Status | Method | Path | Body | Response |
 |---|---|---|---|---|
-| PLANNED | GET | `/issues/{issue_id}/subscribers` | – | `UserSummary[]` |
-| PLANNED | POST | `/issues/{issue_id}/subscribers` | `{user_id?}` (default me) | 204 (idempotent) |
-| PLANNED | DELETE | `/issues/{issue_id}/subscribers/{user_id}` | – (`me` allowed) | 204 |
+| IMPLEMENTED | GET | `/issues/{issue_id}/subscribers` | – | `UserSummary[]` |
+| IMPLEMENTED | POST | `/issues/{issue_id}/subscribers` | `{user_id?}` (default me) | 204 (idempotent) |
+| IMPLEMENTED | DELETE | `/issues/{issue_id}/subscribers/{user_id}` | – (`me` allowed) | 204 |
 
 (Creator and assignee are already subscribed automatically by the IMPLEMENTED endpoints.)
 
@@ -416,7 +425,7 @@ team `/<url_key>/team/<identifier>/issues`.)
 | `workspaces` | `workspace`, `workspace_member` | workspaces, members; `WorkspaceService.require_member()` / `require_admin()` / `are_members()` = the access check every module uses |
 | `teams` | `team`, `team_member`, `workflow_state` | teams, states |
 | `labels` | `label` | labels |
-| `issues` | `issue`, `issue_label`, `issue_relation`, `issue_subscriber`, `comment`, `issue_activity` | issues (+ planned relations, comments, activity, subscribers) |
+| `issues` | `issue`, `issue_label`, `issue_relation`, `issue_subscriber`, `comment`, `issue_activity` | issues, comments, relations, activity, subscribers, sub-issues (`detail_*.py` files) |
 | `projects` | `project`, `project_team` | projects (CRUD, progress) |
 | `cycles` | `cycle` | models only |
 | `documents` | `document` | documents |

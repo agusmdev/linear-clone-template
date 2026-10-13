@@ -210,3 +210,16 @@ export interface IssueActivity {
   to_value: string | null
   created_at: string
 }
+
+/** GET /issues/{id}/sub-issues: the sub-issues (not archived) and the progress counts. */
+export interface SubIssues {
+  items: Issue[]
+  total: number
+  /** Sub-issues in a "completed" state. */
+  completed: number
+}
+
+/** POST /issues/{id}/subscribers. Default: the current user. */
+export interface SubscribeData {
+  user_id?: string
+}

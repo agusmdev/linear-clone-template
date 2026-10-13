@@ -38,6 +38,18 @@ import {
 } from '@playwright/test'
 import { AUTH_TOKEN_KEY } from '../src/lib/auth'
 import type { AuthSessionResponse } from '../src/types/auth'
+import type { Comment } from '../src/types/comment'
+import type {
+  BulkUpdateIssuesData,
+  BulkUpdateIssuesResponse,
+  CreateIssueData,
+  CreateIssueRelationData,
+  Issue,
+  IssueActivity,
+  IssueRelation,
+  SubIssues,
+  UpdateIssueData,
+} from '../src/types/issue'
 import type { CreateFavoriteData, Favorite, UpdateFavoriteData } from '../src/types/favorite'
 import type {
   CompleteCycleData,
@@ -46,13 +58,6 @@ import type {
   Cycle,
 } from '../src/types/cycle'
 import type { CreateDocumentData, Document, DocumentSummary } from '../src/types/document'
-import type {
-  BulkUpdateIssuesData,
-  BulkUpdateIssuesResponse,
-  CreateIssueData,
-  Issue,
-  UpdateIssueData,
-} from '../src/types/issue'
 import type { CreateItemData, Item, ItemsResponse } from '../src/types/item'
 import type { CreateLabelData, Label, UpdateLabelData } from '../src/types/label'
 import type { CreateProjectData, Project, UpdateProjectData } from '../src/types/project'
@@ -70,7 +75,7 @@ import type {
   UpdateWorkflowStateData,
   WorkflowState,
 } from '../src/types/team'
-import type { User } from '../src/types/user'
+import type { User, UserSummary } from '../src/types/user'
 import type {
   CreateWorkspaceData,
   Workspace,
@@ -310,6 +315,140 @@ export async function deleteIssue(
 ): Promise<void> {
   const response = await api.delete(`/issues/${issueId}`, { headers: authHeaders(user) })
   await expectOk(response, 'DELETE /issues/{id}')
+}
+
+// --- Issue detail: comments, relations, activity, subscribers, sub-issues ---
+
+export async function createComment(
+  api: APIRequestContext,
+  user: TestUser,
+  issueId: string,
+  body: string
+): Promise<Comment> {
+  const response = await api.post(`/issues/${issueId}/comments`, {
+    data: { body },
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'POST /issues/{id}/comments')
+  return (await response.json()) as Comment
+}
+
+export async function listComments(
+  api: APIRequestContext,
+  user: TestUser,
+  issueId: string
+): Promise<Comment[]> {
+  const response = await api.get(`/issues/${issueId}/comments`, { headers: authHeaders(user) })
+  await expectOk(response, 'GET /issues/{id}/comments')
+  return (await response.json()) as Comment[]
+}
+
+export async function updateComment(
+  api: APIRequestContext,
+  user: TestUser,
+  commentId: string,
+  body: string
+): Promise<Comment> {
+  const response = await api.patch(`/comments/${commentId}`, {
+    data: { body },
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'PATCH /comments/{id}')
+  return (await response.json()) as Comment
+}
+
+export async function createRelation(
+  api: APIRequestContext,
+  user: TestUser,
+  issueId: string,
+  data: CreateIssueRelationData
+): Promise<IssueRelation> {
+  const response = await api.post(`/issues/${issueId}/relations`, {
+    data,
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'POST /issues/{id}/relations')
+  return (await response.json()) as IssueRelation
+}
+
+export async function listRelations(
+  api: APIRequestContext,
+  user: TestUser,
+  issueId: string
+): Promise<IssueRelation[]> {
+  const response = await api.get(`/issues/${issueId}/relations`, { headers: authHeaders(user) })
+  await expectOk(response, 'GET /issues/{id}/relations')
+  return (await response.json()) as IssueRelation[]
+}
+
+export async function deleteRelation(
+  api: APIRequestContext,
+  user: TestUser,
+  relationId: string
+): Promise<void> {
+  const response = await api.delete(`/issue-relations/${relationId}`, {
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'DELETE /issue-relations/{id}')
+}
+
+export async function listActivity(
+  api: APIRequestContext,
+  user: TestUser,
+  issueId: string
+): Promise<IssueActivity[]> {
+  const response = await api.get(`/issues/${issueId}/activity`, { headers: authHeaders(user) })
+  await expectOk(response, 'GET /issues/{id}/activity')
+  return (await response.json()) as IssueActivity[]
+}
+
+export async function listSubscribers(
+  api: APIRequestContext,
+  user: TestUser,
+  issueId: string
+): Promise<UserSummary[]> {
+  const response = await api.get(`/issues/${issueId}/subscribers`, {
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'GET /issues/{id}/subscribers')
+  return (await response.json()) as UserSummary[]
+}
+
+/** POST /issues/{id}/subscribers: subscribes `user` (or `userId`). */
+export async function subscribe(
+  api: APIRequestContext,
+  user: TestUser,
+  issueId: string,
+  userId?: string
+): Promise<void> {
+  const response = await api.post(`/issues/${issueId}/subscribers`, {
+    data: userId ? { user_id: userId } : {},
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'POST /issues/{id}/subscribers')
+}
+
+/** DELETE /issues/{id}/subscribers/{userId}; `userId` may be "me". */
+export async function unsubscribe(
+  api: APIRequestContext,
+  user: TestUser,
+  issueId: string,
+  userId = 'me'
+): Promise<void> {
+  const response = await api.delete(`/issues/${issueId}/subscribers/${userId}`, {
+    headers: authHeaders(user),
+  })
+  await expectOk(response, 'DELETE /issues/{id}/subscribers/{user_id}')
+}
+
+export async function listSubIssues(
+  api: APIRequestContext,
+  user: TestUser,
+  issueId: string
+): Promise<SubIssues> {
+  const response = await api.get(`/issues/${issueId}/sub-issues`, { headers: authHeaders(user) })
+  await expectOk(response, 'GET /issues/{id}/sub-issues')
+  return (await response.json()) as SubIssues
 }
 
 /** POST /issues/bulk-update: the same changes for every issue. */

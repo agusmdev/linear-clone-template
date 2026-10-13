@@ -32,6 +32,7 @@ import { Route as AuthedWorkspaceKeySettingsMembersRouteImport } from './routes/
 import { Route as AuthedWorkspaceKeySettingsLabelsRouteImport } from './routes/_authed/$workspaceKey/settings/labels'
 import { Route as AuthedWorkspaceKeySettingsAccountRouteImport } from './routes/_authed/$workspaceKey/settings/account'
 import { Route as AuthedWorkspaceKeyProjectProjectIdRouteImport } from './routes/_authed/$workspaceKey/project/$projectId'
+import { Route as AuthedWorkspaceKeyIssueIdentifierRouteImport } from './routes/_authed/$workspaceKey/issue/$identifier'
 import { Route as AuthedWorkspaceKeyDocumentDocumentIdRouteImport } from './routes/_authed/$workspaceKey/document/$documentId'
 import { Route as AuthedWorkspaceKeyTeamTeamKeyProjectsRouteImport } from './routes/_authed/$workspaceKey/team/$teamKey/projects'
 import { Route as AuthedWorkspaceKeyTeamTeamKeyIssuesRouteImport } from './routes/_authed/$workspaceKey/team/$teamKey/issues'
@@ -164,6 +165,12 @@ const AuthedWorkspaceKeyProjectProjectIdRoute =
     path: '/project/$projectId',
     getParentRoute: () => AuthedWorkspaceKeyRoute,
   } as any)
+const AuthedWorkspaceKeyIssueIdentifierRoute =
+  AuthedWorkspaceKeyIssueIdentifierRouteImport.update({
+    id: '/issue/$identifier',
+    path: '/issue/$identifier',
+    getParentRoute: () => AuthedWorkspaceKeyRoute,
+  } as any)
 const AuthedWorkspaceKeyDocumentDocumentIdRoute =
   AuthedWorkspaceKeyDocumentDocumentIdRouteImport.update({
     id: '/document/$documentId',
@@ -219,6 +226,7 @@ export interface FileRoutesByFullPath {
   '/$workspaceKey/views': typeof AuthedWorkspaceKeyViewsRoute
   '/$workspaceKey/': typeof AuthedWorkspaceKeyIndexRoute
   '/$workspaceKey/document/$documentId': typeof AuthedWorkspaceKeyDocumentDocumentIdRoute
+  '/$workspaceKey/issue/$identifier': typeof AuthedWorkspaceKeyIssueIdentifierRoute
   '/$workspaceKey/project/$projectId': typeof AuthedWorkspaceKeyProjectProjectIdRoute
   '/$workspaceKey/settings/account': typeof AuthedWorkspaceKeySettingsAccountRoute
   '/$workspaceKey/settings/labels': typeof AuthedWorkspaceKeySettingsLabelsRoute
@@ -247,6 +255,7 @@ export interface FileRoutesByTo {
   '/$workspaceKey/views': typeof AuthedWorkspaceKeyViewsRoute
   '/$workspaceKey': typeof AuthedWorkspaceKeyIndexRoute
   '/$workspaceKey/document/$documentId': typeof AuthedWorkspaceKeyDocumentDocumentIdRoute
+  '/$workspaceKey/issue/$identifier': typeof AuthedWorkspaceKeyIssueIdentifierRoute
   '/$workspaceKey/project/$projectId': typeof AuthedWorkspaceKeyProjectProjectIdRoute
   '/$workspaceKey/settings/account': typeof AuthedWorkspaceKeySettingsAccountRoute
   '/$workspaceKey/settings/labels': typeof AuthedWorkspaceKeySettingsLabelsRoute
@@ -279,6 +288,7 @@ export interface FileRoutesById {
   '/_authed/$workspaceKey/views': typeof AuthedWorkspaceKeyViewsRoute
   '/_authed/$workspaceKey/': typeof AuthedWorkspaceKeyIndexRoute
   '/_authed/$workspaceKey/document/$documentId': typeof AuthedWorkspaceKeyDocumentDocumentIdRoute
+  '/_authed/$workspaceKey/issue/$identifier': typeof AuthedWorkspaceKeyIssueIdentifierRoute
   '/_authed/$workspaceKey/project/$projectId': typeof AuthedWorkspaceKeyProjectProjectIdRoute
   '/_authed/$workspaceKey/settings/account': typeof AuthedWorkspaceKeySettingsAccountRoute
   '/_authed/$workspaceKey/settings/labels': typeof AuthedWorkspaceKeySettingsLabelsRoute
@@ -311,6 +321,7 @@ export interface FileRouteTypes {
     | '/$workspaceKey/views'
     | '/$workspaceKey/'
     | '/$workspaceKey/document/$documentId'
+    | '/$workspaceKey/issue/$identifier'
     | '/$workspaceKey/project/$projectId'
     | '/$workspaceKey/settings/account'
     | '/$workspaceKey/settings/labels'
@@ -339,6 +350,7 @@ export interface FileRouteTypes {
     | '/$workspaceKey/views'
     | '/$workspaceKey'
     | '/$workspaceKey/document/$documentId'
+    | '/$workspaceKey/issue/$identifier'
     | '/$workspaceKey/project/$projectId'
     | '/$workspaceKey/settings/account'
     | '/$workspaceKey/settings/labels'
@@ -370,6 +382,7 @@ export interface FileRouteTypes {
     | '/_authed/$workspaceKey/views'
     | '/_authed/$workspaceKey/'
     | '/_authed/$workspaceKey/document/$documentId'
+    | '/_authed/$workspaceKey/issue/$identifier'
     | '/_authed/$workspaceKey/project/$projectId'
     | '/_authed/$workspaceKey/settings/account'
     | '/_authed/$workspaceKey/settings/labels'
@@ -555,6 +568,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedWorkspaceKeyProjectProjectIdRouteImport
       parentRoute: typeof AuthedWorkspaceKeyRoute
     }
+    '/_authed/$workspaceKey/issue/$identifier': {
+      id: '/_authed/$workspaceKey/issue/$identifier'
+      path: '/issue/$identifier'
+      fullPath: '/$workspaceKey/issue/$identifier'
+      preLoaderRoute: typeof AuthedWorkspaceKeyIssueIdentifierRouteImport
+      parentRoute: typeof AuthedWorkspaceKeyRoute
+    }
     '/_authed/$workspaceKey/document/$documentId': {
       id: '/_authed/$workspaceKey/document/$documentId'
       path: '/document/$documentId'
@@ -638,6 +658,7 @@ interface AuthedWorkspaceKeyRouteChildren {
   AuthedWorkspaceKeyViewsRoute: typeof AuthedWorkspaceKeyViewsRoute
   AuthedWorkspaceKeyIndexRoute: typeof AuthedWorkspaceKeyIndexRoute
   AuthedWorkspaceKeyDocumentDocumentIdRoute: typeof AuthedWorkspaceKeyDocumentDocumentIdRoute
+  AuthedWorkspaceKeyIssueIdentifierRoute: typeof AuthedWorkspaceKeyIssueIdentifierRoute
   AuthedWorkspaceKeyProjectProjectIdRoute: typeof AuthedWorkspaceKeyProjectProjectIdRoute
   AuthedWorkspaceKeyTeamTeamKeyCyclesRoute: typeof AuthedWorkspaceKeyTeamTeamKeyCyclesRoute
   AuthedWorkspaceKeyTeamTeamKeyIssuesRoute: typeof AuthedWorkspaceKeyTeamTeamKeyIssuesRoute
@@ -656,6 +677,8 @@ const AuthedWorkspaceKeyRouteChildren: AuthedWorkspaceKeyRouteChildren = {
   AuthedWorkspaceKeyIndexRoute: AuthedWorkspaceKeyIndexRoute,
   AuthedWorkspaceKeyDocumentDocumentIdRoute:
     AuthedWorkspaceKeyDocumentDocumentIdRoute,
+  AuthedWorkspaceKeyIssueIdentifierRoute:
+    AuthedWorkspaceKeyIssueIdentifierRoute,
   AuthedWorkspaceKeyProjectProjectIdRoute:
     AuthedWorkspaceKeyProjectProjectIdRoute,
   AuthedWorkspaceKeyTeamTeamKeyCyclesRoute:

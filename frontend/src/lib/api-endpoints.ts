@@ -52,6 +52,17 @@ export const API = {
     BULK_UPDATE: '/issues/bulk-update',
     BULK_DELETE: '/issues/bulk-delete',
   },
+  ISSUE_DETAIL: {
+    COMMENTS: (issueId: string) => `/issues/${issueId}/comments`,
+    COMMENT: (commentId: string) => `/comments/${commentId}`,
+    RELATIONS: (issueId: string) => `/issues/${issueId}/relations`,
+    RELATION: (relationId: string) => `/issue-relations/${relationId}`,
+    ACTIVITY: (issueId: string) => `/issues/${issueId}/activity`,
+    SUBSCRIBERS: (issueId: string) => `/issues/${issueId}/subscribers`,
+    /** `userId` may be "me". */
+    SUBSCRIBER: (issueId: string, userId: string) => `/issues/${issueId}/subscribers/${userId}`,
+    SUB_ISSUES: (issueId: string) => `/issues/${issueId}/sub-issues`,
+  },
   SEARCH: {
     WORKSPACE: (workspaceId: string) => `/workspaces/${workspaceId}/search`,
   },
