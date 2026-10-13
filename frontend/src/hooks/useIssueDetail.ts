@@ -58,6 +58,10 @@ export function useUpdateIssueDetail(issue: Pick<Issue, 'id' | 'workspace_id' | 
       if ('project_id' in data || 'state_id' in data || 'archived' in data) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.projects.all })
       }
+      // Sidebar favorites show the issue title.
+      if ('title' in data) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.favorites.all })
+      }
     },
   })
 }
