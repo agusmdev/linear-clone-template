@@ -199,6 +199,7 @@ test.describe('workspace settings', () => {
   }) => {
     const workspace = await createWorkspace(api, user, { name: 'Old Name' })
     const newKey = `renamed-${suffix()}`
+    const failed = recordFailedResponses(page)
     // The general page is the settings index (the trailing slash opens it too).
     await page.goto(`/${workspace.url_key}/settings/`)
 
@@ -210,6 +211,8 @@ test.describe('workspace settings', () => {
     await expect(page.getByLabel('Workspace name')).toHaveValue('New Name')
     const [updated] = await listWorkspaces(api, user)
     expect(updated).toMatchObject({ name: 'New Name', url_key: newKey })
+    // The page shows the old URL key until it navigates: it is not refetched (404).
+    expect(failed).toEqual([])
   })
 
   test('settings refuse a URL that is an app route', async ({ authedPage: page, api, user }) => {
@@ -829,5 +832,54 @@ test.describe('color picker hex field', () => {
     await expect(page).toHaveURL(`/${workspace.url_key}/settings/team/HEX`)
     const created = (await listTeams(api, user, workspace.id)).find(t => t.name === name)
     expect(created?.color).toBe('#abcdef')
+  })
+})
+
+test.describe('inline editors and Esc', () => {
+  test('Esc on the label row buttons cancels the edit and stays in settings', async ({
+    authedPage: page,
+    api,
+    user,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    await page.goto(`/${workspace.url_key}/settings/labels`)
+
+    await page.getByRole('button', { name: 'New label' }).click()
+    await page.getByLabel('Label name').fill('Draft')
+    // Esc in the color popover closes only the popover.
+    await page.getByRole('button', { name: /^Label color/ }).click()
+    await expect(page.getByRole('listbox', { name: 'Label color' })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('listbox', { name: 'Label color' })).toHaveCount(0)
+    await expect(page.getByLabel('Label name')).toHaveValue('Draft')
+    // Esc with the focus on a button of the row cancels the row.
+    await page.getByRole('button', { name: 'Cancel' }).focus()
+    await page.keyboard.press('Escape')
+
+    await expect(page.getByLabel('Label name')).toHaveCount(0)
+    await expect(page).toHaveURL(`/${workspace.url_key}/settings/labels`)
+    // With no editor open, Esc goes back to the app.
+    await page.keyboard.press('Escape')
+    await expect(page).toHaveURL(`/${workspace.url_key}/my-issues`)
+  })
+
+  test('Esc on the status row buttons cancels the edit and stays in settings', async ({
+    authedPage: page,
+    api,
+    user,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const [team] = await listTeams(api, user, workspace.id)
+    await page.goto(`/${workspace.url_key}/settings/team/${team.key}`)
+
+    await page.getByRole('button', { name: 'Add status to Started' }).click()
+    await page.getByLabel('Status name').fill('Draft')
+    await page.getByRole('button', { name: 'Add status', exact: true }).focus()
+    await page.keyboard.press('Escape')
+
+    await expect(page.getByLabel('Status name')).toHaveCount(0)
+    await expect(page).toHaveURL(`/${workspace.url_key}/settings/team/${team.key}`)
+    const states = await listStates(api, user, team.id)
+    expect(states.map(s => s.name)).not.toContain('Draft')
   })
 })

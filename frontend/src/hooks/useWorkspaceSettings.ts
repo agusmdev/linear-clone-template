@@ -75,7 +75,22 @@ export function useUpdateWorkspace(workspaceId: string) {
   return useMutation({
     mutationFn: (data: UpdateWorkspaceData) =>
       api.patch<Workspace>(API.WORKSPACES.DETAIL(workspaceId), data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.workspaces.all }),
+    onSuccess: updated => {
+      // The workspace by its (maybe new) URL key is the PATCH response. The
+      // by-URL-key queries are only marked stale: the page still shows the old
+      // key until it navigates to the new URL, and a refetch of it would 404.
+      queryClient.setQueryData(queryKeys.workspaces.byUrlKey(updated.url_key), updated)
+      const byUrlKey = (query: Query) => query.queryKey[1] === 'by-url-key'
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.workspaces.all,
+        predicate: byUrlKey,
+        refetchType: 'none',
+      })
+      return queryClient.invalidateQueries({
+        queryKey: queryKeys.workspaces.all,
+        predicate: query => !byUrlKey(query),
+      })
+    },
   })
 }
 
