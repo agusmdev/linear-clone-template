@@ -25,7 +25,6 @@
  *   authedPage  A page in its own browser context, already signed in as `user`.
  *   loginAs     (user) => a new signed-in page for any other user.
  */
-import { execFileSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import {
   test as base,
@@ -82,7 +81,7 @@ import type {
   WorkspaceMember,
   WorkspaceRole,
 } from '../src/types/workspace'
-import { BACKEND_URL, DB_CONTAINER, FRONTEND_URL } from './support/stack'
+import { BACKEND_URL, FRONTEND_URL } from './support/stack'
 
 export { expect }
 export type { Locator, Page } from '@playwright/test'
@@ -703,34 +702,15 @@ export async function updateProject(
   return (await response.json()) as Project
 }
 
-/**
- * Adds an existing user to a workspace as a member, straight in the e2e
- * database (docker exec psql). Invites (POST /workspaces/{id}/members) are not
- * implemented on this branch; when they are, use the endpoint instead.
- */
+/** Adds an existing user to the admin's workspace as a member (POST /workspaces/{id}/members). */
 export async function addWorkspaceMember(
   api: APIRequestContext,
+  admin: TestUser,
   workspaceId: string,
   user: TestUser
 ): Promise<User> {
-  const me = await getMe(api, user)
-  if (!/^[0-9a-f-]{36}$/.test(workspaceId)) throw new Error(`Bad workspace id ${workspaceId}`)
-  execFileSync(
-    'docker',
-    [
-      'exec',
-      DB_CONTAINER,
-      'psql',
-      '--username=app',
-      '--dbname=app',
-      '--set=ON_ERROR_STOP=1',
-      '--command',
-      'INSERT INTO workspace_member (id, workspace_id, user_id, role, created_at, updated_at) ' +
-        `VALUES (gen_random_uuid(), '${workspaceId}', '${me.id}', 'member', now(), now())`,
-    ],
-    { stdio: 'pipe' }
-  )
-  return me
+  await inviteMember(api, admin, workspaceId, user.email)
+  return getMe(api, user)
 }
 
 /** GET /notifications?workspace_id=…: my notifications, newest first (archived left out). */

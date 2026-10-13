@@ -327,7 +327,8 @@ test.describe('views page', () => {
       await expect(main.getByRole('link', { name: new RegExp(`^${name}`) })).toBeVisible()
     }
     await main.getByRole('link', { name: /^Engineering · Active/ }).click()
-    await expect(page).toHaveURL(`/${workspace.url_key}/team/ENG/issues?view=active`)
+    await expect(page).toHaveURL(`/${workspace.url_key}/team/ENG/issues?tab=active`)
+    await expect(page.getByRole('tab', { name: 'Active' })).toHaveAttribute('aria-selected', 'true')
   })
 })
 

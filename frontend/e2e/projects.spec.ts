@@ -238,7 +238,9 @@ test('shows progress and the issues of a project; New issue opens the create mod
 
   await page.getByRole('tab', { name: /Issues/ }).click()
   await expect(page).toHaveURL(`/${workspace.url_key}/project/${project.id}?tab=issues`)
-  await expect(page.getByRole('link', { name: /Design endpoints/ })).toBeVisible()
+  // The Issues tab is the shared IssuesView, scoped to the project.
+  const issues = page.getByRole('listbox', { name: 'Issues' })
+  await expect(issues.getByRole('option', { name: /Design endpoints/ })).toBeVisible()
   await expect(page.getByText('Unrelated')).toBeHidden()
 
   await page.evaluate(() => {

@@ -351,7 +351,7 @@ test.describe('issue page', () => {
   }) => {
     const { workspace, team } = await seedWorkspace(api, user)
     const teammate = await registerUser(api)
-    const teammateUser = await addWorkspaceMember(api, workspace.id, teammate)
+    const teammateUser = await addWorkspaceMember(api, user, workspace.id, teammate)
     const issue = await createIssue(api, user, { team_id: team.id, title: 'Shared issue' })
 
     await createComment(api, teammate, issue.id, '<p>Can I take this one?</p>')

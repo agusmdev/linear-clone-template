@@ -27,7 +27,7 @@ type Api = Parameters<typeof createWorkspace>[0]
 async function setUp(api: Api, owner: TestUser) {
   const workspace = await createWorkspace(api, owner, { name: 'Inbox Co' })
   const member = await registerUser(api)
-  const memberUser = await addWorkspaceMember(api, workspace.id, member)
+  const memberUser = await addWorkspaceMember(api, owner, workspace.id, member)
   const [team] = await listTeams(api, owner, workspace.id)
   const states = await listStates(api, owner, team.id)
   return { workspace, member, memberUser, team, states }

@@ -11,8 +11,8 @@ left sidebar, Inter font, subtle borders, small type 13px).
 
 | ID | Feature | Status |
 |---|---|---|
-| AUTH-1 | Register with name, email, password (no email verification; user is signed in at once) | todo |
-| AUTH-2 | Log in with email + password; log out | todo |
+| AUTH-1 | Register with name, email, password (no email verification; user is signed in at once) | done |
+| AUTH-2 | Log in with email + password; log out | done |
 | AUTH-3 | Protected app routes redirect to /login; after login go to the workspace | done |
 
 ## 1. Workspaces, teams, members (P0)
@@ -50,30 +50,30 @@ left sidebar, Inter font, subtle borders, small type 13px).
 
 | ID | Feature | Status |
 |---|---|---|
-| DOC-1 | Documents section in sidebar: list of workspace documents (title, author, updated at, project) with search | todo |
-| DOC-2 | Create document (title + icon) optionally inside a project or team | todo |
-| DOC-3 | Rich-text editor (TipTap): headings, bold/italic/strike/code, lists, checklists, quotes, code blocks, links, horizontal rule; markdown shortcuts; slash command menu | todo |
-| DOC-4 | Autosave with "Saved" indicator; last edited by + time | todo |
-| DOC-5 | Rename, delete document; move document to a project | todo |
-| DOC-6 | Project page shows its documents | todo |
-| DOC-7 | Mention issues in documents by identifier (ENG-12 renders as a link) | todo |
+| DOC-1 | Documents section in sidebar: list of workspace documents (title, author, updated at, project) with search | done |
+| DOC-2 | Create document (title + icon) optionally inside a project or team | done |
+| DOC-3 | Rich-text editor (TipTap): headings, bold/italic/strike/code, lists, checklists, quotes, code blocks, links, horizontal rule; markdown shortcuts; slash command menu | done |
+| DOC-4 | Autosave with "Saved" indicator; last edited by + time | done |
+| DOC-5 | Rename, delete document; move document to a project | done |
+| DOC-6 | Project page shows its documents | done |
+| DOC-7 | Mention issues in documents by identifier (ENG-12 renders as a link) | done |
 
 ## 4. Projects & cycles (P1)
 
 | ID | Feature | Status |
 |---|---|---|
-| PRJ-1 | Projects: create/edit/delete; name, description, status (planned/started/paused/completed/canceled), lead, teams, start + target date, icon/color | todo |
-| PRJ-2 | Project list with progress (% of completed issues) | todo |
-| PRJ-3 | Project detail: overview, issues (list/board), documents | todo |
-| CYC-1 | Cycles per team: create with start/end dates; current/upcoming/past; assign issues; progress | todo |
+| PRJ-1 | Projects: create/edit/delete; name, description, status (planned/started/paused/completed/canceled), lead, teams, start + target date, icon/color | done |
+| PRJ-2 | Project list with progress (% of completed issues) | done |
+| PRJ-3 | Project detail: overview, issues (list/board), documents | done |
+| CYC-1 | Cycles per team: create with start/end dates; current/upcoming/past; assign issues; progress | done |
 
 ## 5. Productivity (P1)
 
 | ID | Feature | Status |
 |---|---|---|
 | UX-1 | Command palette (`Cmd/Ctrl+K`): navigate, create issue, search issues and documents | done |
-| UX-2 | Keyboard shortcuts: `C` create issue, `/` search, `G then I` inbox, `G then M` my issues, `?` shortcuts help; in issue list `J/K` move, `Enter` open, `S` status, `P` priority, `A` assignee | todo |
-| UX-3 | Inbox / notifications: assigned to you, comment on subscribed issue, status change on subscribed issue; mark read / read all; unread badge | todo |
+| UX-2 | Keyboard shortcuts: `C` create issue, `/` search, `G then I` inbox, `G then M` my issues, `?` shortcuts help; in issue list `J/K` move, `Enter` open, `S` status, `P` priority, `A` assignee | done |
+| UX-3 | Inbox / notifications: assigned to you, comment on subscribed issue, status change on subscribed issue; mark read / read all; unread badge | done |
 | UX-4 | Global search page (issues + documents + projects) | done |
 | UX-5 | Favorites in sidebar (issues, projects, documents) | done |
 | UX-6 | Light / dark theme toggle (dark default) | done |

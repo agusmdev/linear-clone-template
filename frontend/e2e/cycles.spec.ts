@@ -272,10 +272,13 @@ test.describe('cycle page', () => {
     await expect(summary.getByTestId('cycle-completed')).toHaveText('1 of 2 completed')
     await expect(summary.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '50')
 
-    const issues = page.getByTestId('cycle-issue-row')
+    // The issues are the shared IssuesView, scoped to the cycle and grouped by status.
+    const issues = page.getByRole('listbox', { name: 'Issues' }).getByRole('option')
     await expect(issues).toHaveCount(2)
-    await expect(page.getByRole('region', { name: 'Todo' })).toContainText('Write the spec')
-    await expect(page.getByRole('region', { name: 'Done' })).toContainText('Ship it')
+    await expect(page.getByRole('group', { name: 'Todo', exact: true })).toContainText(
+      'Write the spec'
+    )
+    await expect(page.getByRole('group', { name: 'Done', exact: true })).toContainText('Ship it')
     await expect(page.getByText('Not in the cycle')).toHaveCount(0)
 
     // "New issue" opens the create-issue modal with the cycle preselected.
@@ -324,7 +327,9 @@ test.describe('cycle page', () => {
     })
 
     await page.goto(`/${workspace.url_key}/team/${team.key}/cycle/${cycle.id}`)
-    await expect(page.getByTestId('cycle-issue-row')).toHaveCount(1)
+    await expect(
+      page.getByRole('listbox', { name: 'Issues' }).getByRole('option', { name: /Carry over/ })
+    ).toBeVisible()
 
     await page.getByRole('button', { name: 'Cycle actions' }).click()
     await page.getByRole('menuitem', { name: 'Edit cycle' }).click()
