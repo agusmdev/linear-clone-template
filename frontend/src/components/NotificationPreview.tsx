@@ -1,5 +1,13 @@
 import { Link } from '@tanstack/react-router'
-import { Archive, ArchiveRestore, ArrowUpRight, Mail, MailOpen, Trash2 } from 'lucide-react'
+import {
+  Archive,
+  ArchiveRestore,
+  ArrowLeft,
+  ArrowUpRight,
+  Mail,
+  MailOpen,
+  Trash2,
+} from 'lucide-react'
 import { RichTextContent } from '@/components/editor'
 import { IconButton } from '@/components/IconButton'
 import { notificationActorName, notificationMessage } from '@/components/NotificationRow'
@@ -23,6 +31,8 @@ interface NotificationPreviewProps {
   onToggleRead: () => void
   onToggleArchive: () => void
   onDelete: () => void
+  /** Back to the list. Phone widths only: there the preview replaces the list. */
+  onBack: () => void
 }
 
 /** Right pane of the inbox: the selected notification's issue. */
@@ -34,6 +44,7 @@ export function NotificationPreview({
   onToggleRead,
   onToggleArchive,
   onDelete,
+  onBack,
 }: NotificationPreviewProps) {
   const ref = notification.issue
   const unread = !notification.read_at
@@ -43,6 +54,12 @@ export function NotificationPreview({
   return (
     <section aria-label="Notification preview" className="flex min-h-0 flex-1 flex-col">
       <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border-subtle px-4">
+        <IconButton
+          label="Back to inbox"
+          icon={<ArrowLeft />}
+          onClick={onBack}
+          className="-ml-1.5 md:hidden"
+        />
         <span className="min-w-0 flex-1 truncate text-ui text-text-secondary">
           {ref ? ref.identifier : 'Deleted issue'}
         </span>
@@ -76,7 +93,7 @@ export function NotificationPreview({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto flex max-w-3xl flex-col gap-5 px-8 py-8">
+        <div className="mx-auto flex max-w-3xl flex-col gap-5 px-4 py-6 md:px-8 md:py-8">
           <div className="flex items-center gap-2 text-mini text-text-secondary">
             <UserAvatar name={notificationActorName(notification)} size="xs" />
             <span>

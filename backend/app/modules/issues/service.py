@@ -308,7 +308,10 @@ class IssueService(BaseService[Issue]):
             )
         if "state_id" in values:
             await self.notification_service.notify_status_changed(
-                workspace_id=issue.workspace_id, issue_id=issue.id, actor_id=user_id
+                workspace_id=issue.workspace_id,
+                issue_id=issue.id,
+                state_id=values["state_id"],
+                actor_id=user_id,
             )
 
     async def _plan_update(

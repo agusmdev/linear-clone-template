@@ -32,6 +32,9 @@ class NotificationResponse(OrmBaseModel):
     archived_at: datetime | None
     created_at: datetime
     issue: NotificationIssueRef | None
+    # ``status_changed``: the state the issue moved to (null for the other
+    # types, or once that state is deleted).
+    state: WorkflowStateSummary | None
     actor: UserSummary | None
 
 

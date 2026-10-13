@@ -11,6 +11,7 @@ from app.database.base import Base
 from app.database.enums import str_enum
 from app.database.mixins import TimestampMixin
 from app.modules.issues.models import Issue
+from app.modules.teams.models import WorkflowState
 from app.user.models import User
 
 
@@ -42,6 +43,11 @@ class Notification(TimestampMixin, Base):
     type: Mapped[NotificationType] = mapped_column(
         str_enum(NotificationType, "notification_type")
     )
+    # ``status_changed``: the state the issue moved to. The issue's current
+    # state can change again later; this one stays what the actor picked.
+    state_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("workflow_state.id", ondelete="SET NULL"), index=True, default=None
+    )
     read_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), default=None
     )
@@ -52,6 +58,9 @@ class Notification(TimestampMixin, Base):
     # Read-only relationships for the response; always loaded explicitly
     # (notifications.repository.LOAD_OPTIONS), never lazily.
     issue: Mapped[Issue | None] = relationship(lazy="raise_on_sql", viewonly=True)
+    state: Mapped[WorkflowState | None] = relationship(
+        lazy="raise_on_sql", viewonly=True
+    )
     actor: Mapped[User | None] = relationship(
         foreign_keys=[actor_id], lazy="raise_on_sql", viewonly=True
     )

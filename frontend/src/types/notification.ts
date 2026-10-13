@@ -1,4 +1,5 @@
 import type { IssueRef } from '@/types/issue'
+import type { WorkflowStateSummary } from '@/types/team'
 import type { UserSummary } from '@/types/user'
 
 export type NotificationType = 'assigned' | 'commented' | 'status_changed' | 'mentioned'
@@ -15,6 +16,8 @@ export interface Notification {
   archived_at: string | null
   created_at: string
   issue: IssueRef | null
+  /** `status_changed`: the state the issue moved to (null for other types or once deleted). */
+  state: WorkflowStateSummary | null
   actor: UserSummary | null
 }
 

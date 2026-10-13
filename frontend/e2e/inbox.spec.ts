@@ -208,4 +208,59 @@ test.describe('inbox', () => {
     await expect(rows(page)).toHaveCount(1)
     await expect(inboxLink(page)).toHaveText('Inbox')
   })
+
+  test('each status notification keeps the status it moved to', async ({
+    api,
+    user: owner,
+    loginAs,
+  }) => {
+    const { workspace, member, memberUser, team, states } = await setUp(api, owner)
+    const inProgress = states.find(s => s.name === 'In Progress')
+    const done = states.find(s => s.name === 'Done')
+    if (!inProgress || !done) throw new Error('Missing default states')
+    const issue = await createIssue(api, owner, {
+      team_id: team.id,
+      title: 'Ship the release',
+      assignee_id: memberUser.id,
+    })
+    await updateIssue(api, owner, issue.id, { state_id: inProgress.id })
+    await updateIssue(api, owner, issue.id, { state_id: done.id })
+
+    const page = await loginAs(member)
+    await page.goto(`/${workspace.url_key}/inbox`)
+    await expect(rows(page)).toHaveCount(3)
+    await expect(rows(page).nth(0)).toContainText('changed status to Done')
+    // Not the issue's current status (Done): the one picked then.
+    await expect(rows(page).nth(1)).toContainText('changed status to In Progress')
+  })
+
+  test('on a phone the preview replaces the list, with a way back', async ({
+    api,
+    user: owner,
+    loginAs,
+  }) => {
+    const { workspace, member, memberUser, team } = await setUp(api, owner)
+    await createIssue(api, owner, {
+      team_id: team.id,
+      title: 'Mobile task',
+      assignee_id: memberUser.id,
+    })
+
+    const page = await loginAs(member)
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto(`/${workspace.url_key}/inbox`)
+    const list = page.getByRole('list', { name: 'Notifications' })
+    const preview = page.getByRole('region', { name: 'Notification preview' })
+    await expect(rows(page)).toHaveCount(1)
+    await expect(page.getByRole('button', { name: 'Back to inbox' })).toHaveCount(0)
+
+    await rows(page).first().getByRole('button').first().click()
+    await expect(preview.getByRole('heading', { name: 'Mobile task' })).toBeVisible()
+    await expect(preview.getByRole('link', { name: 'Open issue' })).toBeVisible()
+    await expect(list).toBeHidden()
+
+    await preview.getByRole('button', { name: 'Back to inbox' }).click()
+    await expect(list).toBeVisible()
+    await expect(preview).toHaveCount(0)
+  })
 })
