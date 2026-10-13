@@ -995,6 +995,102 @@ test.describe('issues list', () => {
     await expect.poll(async () => (await getIssue(api, user, last.id)).state.name).toBe('Backlog')
   })
 
+  test('the whole area of an empty column is a drop target (ISS-4)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { team, key } = await seedWorkspace(api, user)
+    const first = await createIssue(api, user, { team_id: team.id, title: 'Start me' })
+    const second = await createIssue(api, user, { team_id: team.id, title: 'Review me' })
+
+    const page = await loginAs(user)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto(`/${key}/team/ENG/issues?layout=board`)
+    const board = page.getByRole('region', { name: 'Issue board' })
+
+    // Release well off the column's centre, on both sides: the pointer decides the column.
+    // The second drop scrolls the board first so In Review is fully in view.
+    const drops = [
+      { card: 'ENG-1', column: 'In Progress', offset: -50, scroll: 0, issue: first },
+      { card: 'ENG-2', column: 'In Review', offset: 90, scroll: 400, issue: second },
+    ]
+    for (const drop of drops) {
+      await board.evaluate((element, left) => element.scrollTo({ left }), drop.scroll)
+      await expect.poll(() => board.evaluate(element => element.scrollLeft)).toBe(drop.scroll)
+      const card = board.locator(`[data-issue-card="${drop.card}"]`)
+      const target = board.getByRole('region', { name: drop.column })
+      await expect(card).toBeVisible()
+      const boardBox = await board.boundingBox()
+      const from = await card.boundingBox()
+      const to = await target.boundingBox()
+      if (!boardBox || !from || !to) throw new Error('board not laid out')
+      // The middle of the card's visible part.
+      const x = (Math.max(from.x, boardBox.x) + from.x + from.width) / 2
+      const y = from.y + from.height / 2
+      await page.mouse.move(x, y)
+      await page.mouse.down()
+      await page.mouse.move(x + 10, y, { steps: 5 })
+      await page.mouse.move(to.x + to.width / 2 + drop.offset, y, { steps: 15 })
+      await page.mouse.up()
+
+      await expect(target).toContainText(drop.issue.title)
+      await expect
+        .poll(async () => (await getIssue(api, user, drop.issue.id)).state.name)
+        .toBe(drop.column)
+    }
+  })
+
+  test('reordering in the leftmost column of a scrolled board stays in that column (ISS-4)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { team, states, key } = await seedWorkspace(api, user)
+    await createIssue(api, user, {
+      team_id: team.id,
+      title: 'Backlog card',
+      state_id: states.Backlog.id,
+    })
+    const upperIssue = await createIssue(api, user, { team_id: team.id, title: 'Upper card' })
+    const lower = await createIssue(api, user, { team_id: team.id, title: 'Lower card' })
+
+    const page = await loginAs(user)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto(`/${key}/team/ENG/issues?layout=board`)
+    const board = page.getByRole('region', { name: 'Issue board' })
+    const todo = board.getByRole('region', { name: 'Todo' })
+    await expect(todo).toContainText('Lower card')
+
+    // Todo becomes the leftmost, partly visible column.
+    await board.evaluate(element => element.scrollTo({ left: 400 }))
+    await expect.poll(() => board.evaluate(element => element.scrollLeft)).toBe(400)
+
+    const boardBox = await board.boundingBox()
+    const upper = await board.locator('[data-issue-card="ENG-2"]').boundingBox()
+    const from = await board.locator('[data-issue-card="ENG-3"]').boundingBox()
+    if (!boardBox || !upper || !from) throw new Error('board not laid out')
+    // The middle of the card's visible part, with a few pixels of sideways hand drift.
+    const x = (Math.max(from.x, boardBox.x) + from.x + from.width) / 2
+    const y = from.y + from.height / 2
+    await page.mouse.move(x, y)
+    await page.mouse.down()
+    await page.mouse.move(x, y - 10, { steps: 5 })
+    // Many small steps keep the drag going long enough for auto-scroll to kick in.
+    await page.mouse.move(x - 4, upper.y + 4, { steps: 200 })
+    await page.mouse.up()
+
+    await expect(todo.locator('[data-issue-card]').first()).toHaveAttribute(
+      'data-issue-card',
+      'ENG-3'
+    )
+    expect(await board.evaluate(element => element.scrollLeft)).toBe(400)
+    await expect
+      .poll(async () => (await getIssue(api, user, lower.id)).sort_order)
+      .toBeLessThan(upperIssue.sort_order)
+    expect((await getIssue(api, user, lower.id)).state.name).toBe('Todo')
+  })
+
   test('selects rows and runs bulk actions (ISS-14)', async ({ api, user, loginAs }) => {
     const { workspace, team, key } = await seedWorkspace(api, user)
     const one = await createIssue(api, user, { team_id: team.id, title: 'Bulk one' })
