@@ -591,7 +591,7 @@ function WorkflowSection({ team, canManage }: { team: Team; canManage: boolean }
                           {state.name}
                         </span>
                         {canManage ? (
-                          <div className="flex items-center gap-0.5 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100">
+                          <div className="flex items-center gap-0.5 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100">
                             <IconButton
                               label={`Move ${state.name} up`}
                               icon={<ArrowUp />}
