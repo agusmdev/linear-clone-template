@@ -84,6 +84,17 @@ Bugs found by earlier QA rounds. Do not re-report one unless it still reproduces
 - inbox-search: mark all read also counted archived notifications
 - e2e: the first test on a cold Vite server rendered a blank page (now a warm-up project runs first)
 
+## Round 4 (all fixed)
+
+- auth: sign-in and "/" opened the oldest workspace instead of the last used one
+- settings: Delete status dialog options wrapped icon and name; Delete workspace prompt split in 3 lines; reorder buttons invisible on touch
+- issues-list: drag to the top/bottom of a column or into an empty column could tie sort_order and land in the wrong place
+- issue-detail: long label overflowed its chip; inline sub-issue ignored the parent's project and cycle; long activity values overflowed
+- documents: search page and Cmd+K showed a generic glyph instead of the document's emoji
+- projects-cycles: a project URL under another workspace loaded there; inline project name had no length limit
+- inbox-search: search matched HTML markup in issue/project descriptions (also the issues-list filter); queries over 200 chars failed
+- create-issue: three quick Cmd+Enter could create a duplicate while the dialog was closing
+
 ## Known and accepted (not bugs to re-report)
 
 - A tab left open after another admin removes you shows "Workspace <id> not found".
@@ -93,3 +104,7 @@ Bugs found by earlier QA rounds. Do not re-report one unless it still reproduces
 - An anonymous visit to `/my-issues` (no workspace in the URL) ends at `/login?redirect=/my-issues/my-issues`.
 - Label clicks less than ~150 ms apart in the issue panel can drop one.
 - Very long passwords and names up to the schema limits are accepted.
+- Clicking Move down again before the previous workflow-state move saved can reorder wrongly.
+- Pressing Enter several times within one frame in the inline sub-issue input can create duplicates.
+- An issue already related to another issue cannot get a second relation type with that issue.
+- The label picker has no "create label" option (labels are managed in Settings).
