@@ -2,6 +2,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { Command } from 'cmdk'
 import { useState, type KeyboardEvent } from 'react'
 
+import { useReturnFocus } from '@/hooks/useReturnFocus'
 import { cn } from '@/lib/utils'
 
 import { Kbd } from './Kbd'
@@ -107,6 +108,7 @@ export function CommandPalette({
   const [pages, setPages] = useState<CommandItemData[]>([])
   const [search, setSearch] = useState('')
   const [wasOpen, setWasOpen] = useState(open)
+  const returnFocus = useReturnFocus(open)
 
   // Reset the pages and the search text each time the palette closes.
   if (open !== wasOpen) {
@@ -153,6 +155,7 @@ export function CommandPalette({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50" />
         <DialogPrimitive.Content
+          {...returnFocus}
           onEscapeKeyDown={event => {
             if (pages.length > 0) {
               event.preventDefault()

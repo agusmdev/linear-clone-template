@@ -1388,6 +1388,105 @@ test.describe('issues list', () => {
     await expect(issueList(page)).toHaveAttribute('aria-activedescendant', /.+/)
   })
 
+  test('focus goes back to the list after the help, the command menu, the create modal and a bulk action (ISS-12)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { workspace, team, key } = await seedWorkspace(api, user)
+    await createIssue(api, user, { team_id: team.id, title: 'Overlay one' })
+    const two = await createIssue(api, user, { team_id: team.id, title: 'Overlay two' })
+    await createIssue(api, user, { team_id: team.id, title: 'Overlay three' })
+    const active = (page: Page) => issueList(page).getAttribute('aria-activedescendant')
+    // J (or K on the last row) must move the highlight: the list has the keyboard.
+    const expectListKeys = async (page: Page) => {
+      await expect(issueList(page)).toBeFocused()
+      const before = await active(page)
+      const last = await issueList(page).getByRole('option').last().getAttribute('id')
+      await page.keyboard.press(before === last ? 'k' : 'j')
+      await expect.poll(() => active(page)).not.toBe(before)
+    }
+
+    const page = await loginAs(user)
+    await page.goto(`/${key}/team/ENG/issues`)
+    await expect(row(page, 'Overlay three')).toBeVisible()
+    await expect(issueList(page)).toBeFocused()
+    await page.keyboard.press('j')
+    await expect.poll(() => active(page)).toBeTruthy()
+
+    // Each overlay opened by its shortcut and closed with Esc: J still moves the highlight.
+    const overlays = [
+      { open: '?', dialog: page.getByRole('dialog', { name: 'Keyboard shortcuts' }) },
+      { open: 'ControlOrMeta+k', dialog: page.getByRole('dialog', { name: 'Command menu' }) },
+      { open: 'c', dialog: page.getByRole('dialog', { name: 'New issue' }) },
+    ]
+    for (const { open, dialog } of overlays) {
+      await test.step(`after ${open}`, async () => {
+        await page.keyboard.press(open)
+        await expect(dialog).toBeVisible()
+        await page.keyboard.press('Escape')
+        await expect(dialog).toBeHidden()
+        await expectListKeys(page)
+      })
+    }
+
+    // An issue created with Ctrl+Enter: the list has the keyboard again and S opens a picker.
+    await page.keyboard.press('c')
+    const modal = page.getByRole('dialog', { name: 'New issue' })
+    await modal.getByLabel('Issue title').fill('Overlay four')
+    await page.keyboard.press('ControlOrMeta+Enter')
+    await expect(modal).toBeHidden()
+    await expect(row(page, 'Overlay four')).toBeVisible()
+    await expect(issueList(page)).toBeFocused()
+    await page.keyboard.press('s')
+    await expect(page.getByRole('combobox', { name: 'Status' })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(issueList(page)).toBeFocused()
+
+    // A bulk action from the bar: focus goes back to the list, not the bar's button.
+    await row(page, 'Overlay two').getByRole('checkbox', { name: 'Select row' }).click()
+    const bar = page.getByRole('toolbar', { name: 'Bulk actions' })
+    await bar.getByRole('button', { name: 'Priority' }).click()
+    await page.getByRole('option', { name: 'High' }).click()
+    await expect.poll(async () => (await getIssue(api, user, two.id)).priority).toBe(2)
+    await expectListKeys(page)
+    await bar.getByRole('button', { name: 'Archive' }).click()
+    await expect(bar).toBeHidden()
+    await expect.poll(async () => (await listIssues(api, user, workspace.id)).total).toBe(3)
+    await expectListKeys(page)
+  })
+
+  test('G then P and G then S navigate while a row is highlighted (UX-2)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { team, key } = await seedWorkspace(api, user)
+    const issue = await createIssue(api, user, { team_id: team.id, title: 'Sequence row' })
+
+    const page = await loginAs(user)
+    for (const [second, path] of [
+      ['p', 'projects'],
+      ['s', 'settings'],
+    ]) {
+      await page.goto(`/${key}/team/ENG/issues`)
+      await expect(row(page, 'Sequence row')).toBeVisible()
+      await expect(issueList(page)).toBeFocused()
+      await page.keyboard.press('j')
+      await expect(issueList(page)).toHaveAttribute('aria-activedescendant', new RegExp(issue.id))
+      await page.keyboard.press('g')
+      await page.keyboard.press(second)
+      await expect(page).toHaveURL(new RegExp(`/${key}/${path}`))
+      await expect(page.getByRole('combobox')).toHaveCount(0)
+    }
+    // P alone still opens the priority picker of the highlighted row.
+    await page.goto(`/${key}/team/ENG/issues`)
+    await expect(issueList(page)).toBeFocused()
+    await page.keyboard.press('j')
+    await page.keyboard.press('p')
+    await expect(page.getByRole('combobox', { name: 'Priority' })).toBeVisible()
+  })
+
   test('my issues shows assigned, created and subscribed issues (ISS-13)', async ({
     api,
     user,

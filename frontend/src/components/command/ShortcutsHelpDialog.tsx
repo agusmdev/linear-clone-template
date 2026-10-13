@@ -1,6 +1,7 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { XIcon } from 'lucide-react'
 
+import { useReturnFocus } from '@/hooks/useReturnFocus'
 import { cn } from '@/lib/utils'
 
 import { Kbd } from './Kbd'
@@ -23,11 +24,13 @@ export function ShortcutsHelpDialog({
   title = 'Keyboard shortcuts',
   className,
 }: ShortcutsHelpDialogProps) {
+  const returnFocus = useReturnFocus(open)
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50" />
         <DialogPrimitive.Content
+          {...returnFocus}
           className={cn(
             'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:zoom-in-[0.98] fixed top-[12vh] left-1/2 z-50 flex max-h-[76vh] w-[calc(100%-2rem)] max-w-[520px] -translate-x-1/2 flex-col overflow-hidden rounded-lg border border-[var(--color-border,#2a2b2e)] bg-[var(--color-popover,#1c1d1f)] text-[13px] text-[var(--color-foreground,#f7f8f8)] shadow-2xl outline-none',
             className

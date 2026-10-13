@@ -22,6 +22,7 @@ useShortcut(keys, handler, { enabled, scope, allowInInputs, preventDefault })
 - Sequences: each step must come within 1 s (`SEQUENCE_TIMEOUT_MS`).
 - When several shortcuts match, the newest registration wins.
 - `useShortcutScope(scope, active?)` activates a scope while the component is mounted (e.g. `"issue-list"` for `j`/`k`).
+- `useShortcutSequencePending()` returns a function that is true while the first keys of a sequence (`g` of `g p`) wait for the next key. A component with its own key handling (the issue list, where `p` opens a picker) leaves that key to the sequence then.
 - `<ShortcutsProvider disabled>` turns everything off.
 
 ## `CommandPalette`

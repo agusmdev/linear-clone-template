@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { Archive, CircleDot, Layers, SignalHigh, Tag, Trash2, UserRound } from 'lucide-react'
+import { useShortcutSequencePending } from '@/components/command'
 import { BulkActionBar, GroupedList, KanbanBoard, type MoveEvent } from '@/components/board'
 import { EmptyState } from '@/components/EmptyState'
 import { PropertyPicker, type PropertyOption } from '@/components/PropertyPicker'
@@ -112,6 +113,7 @@ export function IssuesView({
   const query = useIssueList(queryParams)
   const issues = useMemo(() => query.data ?? [], [query.data])
   const actions = useIssueActions()
+  const sequencePending = useShortcutSequencePending()
 
   const scopeTeams = params.team_id ? ws.teams.filter(t => t.id === params.team_id) : ws.teams
   const scopeTeamIds = scopeTeams.map(t => t.id)
@@ -236,6 +238,8 @@ export function IssuesView({
       return
     }
     if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return
+    // "g p" / "g s": the key completes a global navigation shortcut, not a picker.
+    if (sequencePending()) return
     const kind = PICKER_KEYS[event.key.toLowerCase()]
     if (kind && issue && (kind !== 'labels' || issue.labels.length > 0)) {
       event.preventDefault()
@@ -410,6 +414,7 @@ export function IssuesView({
             label="Status"
             placeholder="Change status..."
             side="top"
+            onCloseAutoFocus={onPickerCloseAutoFocus}
             options={statusOptions(bulkStates)}
             value={null}
             onChange={stateId => actions.setState(selected, stateId)}
@@ -424,6 +429,7 @@ export function IssuesView({
             label="Priority"
             placeholder="Set priority to..."
             side="top"
+            onCloseAutoFocus={onPickerCloseAutoFocus}
             options={priorityOptions()}
             value={null}
             onChange={value => actions.setPriority(selected, Number(value) as IssuePriority)}
@@ -438,6 +444,7 @@ export function IssuesView({
             label="Assignee"
             placeholder="Assign to..."
             side="top"
+            onCloseAutoFocus={onPickerCloseAutoFocus}
             options={assigneeOptions(ws.members, { meId: ws.me.id })}
             value={null}
             onChange={value => actions.setAssignee(selected, value === NONE ? null : value)}
@@ -452,6 +459,7 @@ export function IssuesView({
             label="Add label"
             placeholder="Add label..."
             side="top"
+            onCloseAutoFocus={onPickerCloseAutoFocus}
             options={labelOptions(ws.labels)}
             value={null}
             onChange={labelId => actions.addLabels(selected, [labelId])}
@@ -469,6 +477,8 @@ export function IssuesView({
             onClick={() => {
               actions.archiveIssues(selected)
               clearSelection()
+              // The bar (and this button) goes away: keep J/K working on the list.
+              listbox()?.focus({ preventScroll: true })
             }}
           >
             <Archive className="size-3.5" />
