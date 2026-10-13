@@ -17,6 +17,7 @@ import { useCurrentWorkspace } from '@/contexts/WorkspaceContext'
 import { cycleTiming, cycleTitle, formatRange } from '@/features/cycles/cycle-dates'
 import { cycleFormToPayload } from '@/features/cycles/cycle-schemas'
 import { useCompleteCycle, useCycle, useDeleteCycle, useUpdateCycle } from '@/hooks/useCycles'
+import { usePageIssueDefaults } from '@/hooks/usePageIssueDefaults'
 import { toastApiError } from '@/lib/error-handler'
 import { openCreateIssue } from '@/lib/issue-events'
 import type { Cycle, CycleStatus } from '@/types/cycle'
@@ -109,6 +110,8 @@ function CycleDetail({
   const updateCycle = useUpdateCycle()
   const deleteCycle = useDeleteCycle()
   const completeCycle = useCompleteCycle()
+  // `C` creates an issue in this cycle, like "New issue".
+  usePageIssueDefaults({ teamId, cycleId: cycle.id })
 
   const params = useMemo<IssuesParams>(
     () => ({ workspace_id: workspaceId, team_id: teamId, cycle_id: cycle.id }),
