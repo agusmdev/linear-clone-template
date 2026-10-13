@@ -100,7 +100,7 @@ export function ProjectLeadPicker({ members, value, onChange, className }: LeadP
           aria-label={lead ? `Lead: ${lead.name || lead.email}` : 'Lead: none'}
         >
           <UserAvatar name={lead ? lead.name || lead.email : null} size="xs" />
-          {lead ? lead.name || lead.email : 'Lead'}
+          <span className="max-w-48 truncate">{lead ? lead.name || lead.email : 'Lead'}</span>
         </Button>
       }
     />
