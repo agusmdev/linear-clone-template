@@ -2,8 +2,9 @@
 
 import uuid
 from datetime import date, datetime
+from typing import Annotated
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, StringConstraints, model_validator
 
 from app.core.optional_model import partial_model
 from app.database.mixins import OrmBaseModel
@@ -15,12 +16,17 @@ TITLE_MAX = 500
 DESCRIPTION_MAX = 200_000
 LABELS_MAX = 50
 
+# Leading and trailing whitespace is removed; a blank title is a 422.
+IssueTitle = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=TITLE_MAX)
+]
+
 
 class IssueCreate(BaseModel):
     """Create an issue. ``state_id`` defaults to the team's first unstarted state (Todo)."""
 
     team_id: uuid.UUID
-    title: str = Field(..., min_length=1, max_length=TITLE_MAX)
+    title: IssueTitle
     # HTML from the TipTap editor.
     description: str | None = Field(None, max_length=DESCRIPTION_MAX)
     state_id: uuid.UUID | None = None
@@ -38,7 +44,7 @@ class IssueCreate(BaseModel):
 
 
 class IssueUpdateFields(BaseModel):
-    title: str = Field(..., min_length=1, max_length=TITLE_MAX)
+    title: IssueTitle
     description: str | None = Field(None, max_length=DESCRIPTION_MAX)
     state_id: uuid.UUID
     priority: int = Field(..., ge=0, le=4)

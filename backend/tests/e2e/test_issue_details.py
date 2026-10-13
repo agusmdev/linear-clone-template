@@ -179,9 +179,23 @@ def test_only_the_author_edits_or_deletes_a_comment(
 def test_comment_validation(owner: RegisteredUser, ws: dict[str, Any]) -> None:
     issue = create_issue(owner.client, ws["team"]["id"])
 
-    for body in ({}, {"body": ""}, {"body": "x" * 100_001}):
-        response = owner.client.post(f"/issues/{issue['id']}/comments", json=body)
+    blank_bodies = ("   ", "<p></p>", "<p> &nbsp; </p>", "<p><br></p>\n")
+    payloads = [{}, {"body": ""}, {"body": "x" * 100_001}]
+    payloads += [{"body": body} for body in blank_bodies]
+    for payload in payloads:
+        response = owner.client.post(f"/issues/{issue['id']}/comments", json=payload)
         assert_error(response, 422, "validation_error")
+
+    created = owner.client.post(
+        f"/issues/{issue['id']}/comments", json={"body": "<p>Real text</p>"}
+    )
+    assert created.status_code == 201, created.text
+    comment_path = f"/comments/{created.json()['id']}"
+    for body in blank_bodies:
+        response = owner.client.patch(comment_path, json={"body": body})
+        assert_error(response, 422, "validation_error")
+    comments = owner.client.get(f"/issues/{issue['id']}/comments").json()
+    assert [comment["body"] for comment in comments] == ["<p>Real text</p>"]
 
 
 # --- Relations ------------------------------------------------------------------

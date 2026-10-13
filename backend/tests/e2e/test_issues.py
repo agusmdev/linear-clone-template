@@ -217,6 +217,8 @@ def test_create_in_a_state_sets_its_timestamp(
     [
         ({}, "title"),
         ({"title": ""}, "title"),
+        ({"title": "   "}, "title"),
+        ({"title": " \t\n "}, "title"),
         ({"title": "x" * 501}, "title"),
         ({"title": "ok", "priority": 5}, "priority"),
         ({"title": "ok", "priority": -1}, "priority"),
@@ -234,6 +236,21 @@ def test_create_issue_validates_the_payload(
 
     body = assert_error(response, 422, "validation_error")
     assert [issue["loc"][:2] for issue in body["detail"]] == [["body", field]]
+
+
+def test_title_whitespace_is_trimmed(owner: RegisteredUser, ws: dict[str, Any]) -> None:
+    issue = create_issue(owner.client, ws["team"]["id"], "  Padded title  ")
+    assert issue["title"] == "Padded title"
+
+    response = owner.client.patch(
+        f"/issues/{issue['id']}", json={"title": "\tRenamed \n"}
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["title"] == "Renamed"
+    blank = owner.client.patch(f"/issues/{issue['id']}", json={"title": "   "})
+    assert_error(blank, 422, "validation_error")
+    assert owner.client.get(f"/issues/{issue['id']}").json()["title"] == "Renamed"
 
 
 def test_create_issue_refuses_references_outside_the_workspace(
@@ -513,6 +530,7 @@ def test_update_parent_and_archive(
     [
         {"title": None},
         {"title": ""},
+        {"title": "   "},
         {"state_id": None},
         {"priority": None},
         {"priority": 9},

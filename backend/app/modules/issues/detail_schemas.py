@@ -1,10 +1,12 @@
 """Schemas of the issue detail resources: comments, relations, activity, subscribers."""
 
 import enum
+import re
 import uuid
 from datetime import datetime
+from typing import Annotated
 
-from pydantic import BaseModel, Field
+from pydantic import AfterValidator, BaseModel, Field
 
 from app.database.mixins import OrmBaseModel
 from app.modules.issues.models import IssueActivityAction, IssueRelationType
@@ -27,20 +29,35 @@ class IssueRef(OrmBaseModel):
 # --- Comments ----------------------------------------------------------------
 
 
-class CommentBase(BaseModel):
-    # HTML from the TipTap editor.
-    body: str = Field(..., min_length=1, max_length=COMMENT_BODY_MAX)
+_HTML_TAG = re.compile(r"<[^>]*>")
 
 
-class CommentCreate(CommentBase):
-    pass
+def _require_text(body: str) -> str:
+    """Refuse HTML with no visible text (e.g. "   " or "<p></p>")."""
+    text = _HTML_TAG.sub("", body).replace("&nbsp;", " ")
+    if not text.strip():
+        raise ValueError("Comment body cannot be empty")
+    return body
 
 
-class CommentUpdate(CommentBase):
-    pass
+# HTML from the TipTap editor. It must have visible text.
+CommentBody = Annotated[
+    str,
+    Field(min_length=1, max_length=COMMENT_BODY_MAX),
+    AfterValidator(_require_text),
+]
 
 
-class CommentResponse(CommentBase, OrmBaseModel):
+class CommentCreate(BaseModel):
+    body: CommentBody
+
+
+class CommentUpdate(BaseModel):
+    body: CommentBody
+
+
+class CommentResponse(OrmBaseModel):
+    body: str
     id: uuid.UUID
     issue_id: uuid.UUID
     user_id: uuid.UUID | None
