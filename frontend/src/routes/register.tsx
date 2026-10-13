@@ -6,6 +6,7 @@ import { Form } from '@/components/ui/form'
 import { AuthFormShell } from '@/components/AuthFormShell'
 import { EmailField, NameField, PasswordField } from '@/components/AuthFormFields'
 import { API } from '@/lib/api-endpoints'
+import { ApiError } from '@/lib/api-client'
 import { useAuthSubmit } from '@/hooks/useAuthSubmit'
 import { useHydrated } from '@/hooks/useHydrated'
 import {
@@ -15,22 +16,33 @@ import {
   type RegisterPayload,
 } from '@/features/auth/auth-schemas'
 
+const EMAIL_TAKEN = 'An account with this email already exists'
+
 export const Route = createFileRoute('/register')({
   component: Register,
 })
 
 function Register() {
   const hydrated = useHydrated()
-  const { submit, isLoading } = useAuthSubmit<RegisterPayload>(
-    API.AUTH.REGISTER,
-    'Account created successfully',
-    'Registration failed'
-  )
-
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: { name: '', email: '', password: '', confirmPassword: '' },
   })
+
+  const { submit, isLoading } = useAuthSubmit<RegisterPayload>(
+    API.AUTH.REGISTER,
+    'Account created successfully',
+    'Registration failed',
+    {
+      // The email is the only unique field: show the clash under it, not in a toast.
+      handleError: error => {
+        if (!(error instanceof ApiError) || error.code !== 'duplicate_item') return false
+        form.setError('email', { type: 'server', message: EMAIL_TAKEN })
+        return true
+      },
+    }
+  )
+  const emailTaken = form.formState.errors.email?.type === 'server'
 
   // Inert until hydrated, and while the request runs.
   const disabled = isLoading || !hydrated
@@ -61,6 +73,14 @@ function Register() {
         >
           <NameField control={form.control} name="name" disabled={disabled} />
           <EmailField control={form.control} name="email" disabled={disabled} />
+          {emailTaken && (
+            <p className="text-ui text-text-secondary">
+              Is it yours?{' '}
+              <Link to="/login" className="text-foreground underline-offset-4 hover:underline">
+                Sign in instead
+              </Link>
+            </p>
+          )}
           <PasswordField
             control={form.control}
             name="password"

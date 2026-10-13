@@ -35,11 +35,14 @@ const logoutButton = (page: Page) => page.getByRole('button', { name: 'Logout' }
 const onboardingHeading = (page: Page) =>
   page.getByRole('heading', { name: 'Create a new workspace' })
 const loginLink = (page: Page) => page.getByRole('link', { name: 'Login', exact: true })
+const signInInstead = (page: Page) => page.getByRole('link', { name: 'Sign in instead' })
 const sessionExpiredToast = (page: Page) =>
   page.locator('[data-sonner-toast]').filter({ hasText: SESSION_EXPIRED })
 
 // Fixed text the app shows when the backend rejects the session (src/lib/api-client.ts).
 const SESSION_EXPIRED = 'Your session has expired. Please sign in again.'
+// The backend's detail for a taken email (app/user/auth/exceptions.py), shown under Email.
+const EMAIL_TAKEN = 'An account with this email already exists'
 
 test('the home page offers sign-in and registration to anonymous users', async ({ page }) => {
   await page.goto('/')
@@ -78,21 +81,42 @@ test.describe('register', () => {
     expect((await me.json()).display_name).toBe('Ada Lovelace')
   })
 
-  test('shows the backend error when the email is already registered', async ({ page, user }) => {
+  test('shows a clear error under Email when the email is already registered', async ({
+    page,
+    user,
+  }) => {
     await page.goto('/register')
     await fillRegisterForm(page, user.email, PASSWORD)
     const responsePromise = page.waitForResponse(r => r.url().endsWith('/auth/register'))
     await page.getByRole('button', { name: 'Create account' }).click()
 
-    // Pins today's backend contract for a duplicate: 400 with error_code 'duplicate_item'.
+    // Backend contract for a taken email: 400 duplicate_item with a readable detail.
     const response = await responsePromise
     expect(response.status()).toBe(400)
-    const { detail, error_code } = await response.json()
-    expect(error_code).toBe('duplicate_item')
-    await expect(errorToast(page)).toContainText('Registration failed')
-    await expect(errorToast(page)).toContainText(detail)
+    expect(await response.json()).toEqual({
+      detail: EMAIL_TAKEN,
+      error_code: 'duplicate_item',
+    })
+    // The message shows inline under Email (not the raw model wording, not a toast).
+    const emailField = page.getByLabel('Email')
+    await expect(emailField).toHaveAttribute('aria-invalid', 'true')
+    await expect(page.getByText(EMAIL_TAKEN)).toBeVisible()
+    await expect(page.getByText(/Duplicate entry/)).toHaveCount(0)
+    await expect(errorToast(page)).toHaveCount(0)
+    await expect(signInInstead(page)).toBeVisible()
     await expect(page).toHaveURL('/register')
-    await expect(loginLink(page)).toBeVisible()
+
+    // Editing the email clears the error and its sign-in link.
+    await emailField.fill(uniqueEmail('register-retry'))
+    await expect(page.getByText(EMAIL_TAKEN)).toHaveCount(0)
+    await expect(signInInstead(page)).toHaveCount(0)
+
+    // A second clash shows the link again, and it leads to sign-in.
+    await emailField.fill(user.email)
+    await page.getByRole('button', { name: 'Create account' }).click()
+    await expect(page.getByText(EMAIL_TAKEN)).toBeVisible()
+    await signInInstead(page).click()
+    await expect(page).toHaveURL('/login')
   })
 
   test('validates the form in the browser before calling the backend', async ({ page }) => {

@@ -5,8 +5,13 @@ from datetime import UTC, datetime
 
 from pydantic import BaseModel
 
+from app.repositories.exceptions import DuplicateError
 from app.services.base_crud_service import BaseService
-from app.user.auth.exceptions import AuthenticationError, InvalidPasswordError
+from app.user.auth.exceptions import (
+    AuthenticationError,
+    EmailAlreadyRegisteredError,
+    InvalidPasswordError,
+)
 from app.user.auth.repository import (
     EmailVerificationTokenRepository,
     PasswordResetTokenRepository,
@@ -59,7 +64,11 @@ class UserService(BaseService[User]):
         return await self.find_or_create("email", normalize_email(email), create_fields)
 
     async def register(self, user: UserRegister) -> UserResponse:
-        created_user = await self.create(user)
+        try:
+            created_user = await self.create(user)
+        except DuplicateError as err:
+            # The only unique column a new user can clash on is the email.
+            raise EmailAlreadyRegisteredError() from err
         return UserResponse.model_validate(created_user)
 
     async def authenticate(self, email: str, password: str) -> User:
@@ -94,7 +103,10 @@ class UserService(BaseService[User]):
             if current is not None and current.email != values["email"]:
                 values["email_verified_at"] = None
                 email_changed = True
-        result = await self.repo.update(entity_id, values)
+        try:
+            result = await self.repo.update(entity_id, values)
+        except DuplicateError as err:
+            raise EmailAlreadyRegisteredError() from err
         if email_changed:
             await self.email_verification_repo.invalidate_user_tokens(entity_id)
             await self.password_reset_repo.invalidate_user_tokens(entity_id)
