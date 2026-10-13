@@ -231,3 +231,10 @@ Menus share `menuContentClass` / `menuItemClass` (exported from `ui/dropdown-men
 - Group header in a list: `h-9 bg-surface-hover/50 px-4 text-ui font-medium` + `StatusIcon` + count in `text-text-tertiary`.
 - Label chip: `<Badge><span className="size-2 rounded-full" style={{ backgroundColor: label.color }} />{label.name}</Badge>`.
 - Loading: `Skeleton` rows with the same height as the real rows.
+
+## 8. Issues (`components/issues/`)
+
+- `IssuesView` (`components/issues/IssuesView.tsx`): the shared issue list / board. Props: `params: IssuesParams` (the base query, e.g. `{ workspace_id, team_id }`), `defaultLayout?: 'list' | 'board'`, `groupBy?: 'status' | 'assignee' | 'priority' | 'project' | 'none'`, `emptyState?`, `createDefaults?` (defaults of the create modal from group "+" buttons), `hiddenFilters?`, `toolbarActions?`. It renders its own toolbar (filters, search, Display options) and keeps the view state in the URL (`?layout=board&group=priority&order=created&subs=hide&completed=hide&status=<ids>&priority=urgent,high&assignee=me,none&label=<ids>&q=text`). Must be used under `routes/_authed/$workspaceKey/`.
+- Keyboard in the list: `J`/`K` move, `Enter` opens, `X` selects, `S`/`P`/`A`/`L` open the status / priority / assignee / labels picker of the focused row, `Cmd+Backspace` deletes (with confirm). Right-click a row or card for the context menu.
+- Create issue from anywhere: `openCreateIssue({ teamId?, stateId?, projectId?, cycleId?, parentId?, assigneeId? })` from `@/lib/issue-events` (= `window.dispatchEvent(new CustomEvent('linear:create-issue', { detail }))`). The modal (`CreateIssueHost`) is mounted once in the workspace layout and also opens on the `C` key.
+- Property changes: `useIssueActions()` (`hooks/useIssueActions.ts`) = optimistic PATCH for one issue, `POST /issues/bulk-update` for many.
