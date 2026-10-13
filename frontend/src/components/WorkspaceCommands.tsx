@@ -27,6 +27,7 @@ import {
   type CommandItemData,
   type ShortcutHelpGroup,
 } from '@/components/command'
+import { CreateProjectDialog } from '@/components/CreateProjectDialog'
 import { StatusIcon } from '@/components/StatusIcon'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -94,7 +95,7 @@ const SEARCH_DEBOUNCE_MS = 200
  * Render it once inside WorkspaceContext and a <ShortcutsProvider>.
  */
 export function WorkspaceCommands() {
-  const { workspace, teams, path } = useCurrentWorkspace()
+  const { workspace, teams, members, path } = useCurrentWorkspace()
   const navigate = useNavigate()
   const { logout } = useAuth()
   const { theme, toggleTheme } = useTheme()
@@ -103,6 +104,7 @@ export function WorkspaceCommands() {
 
   const [open, setOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [createProjectOpen, setCreateProjectOpen] = useState(false)
   const [query, setQuery] = useState('')
   const debouncedQuery = useDebounce(query, SEARCH_DEBOUNCE_MS)
   const searchQuery = useSearch(workspace.id, { q: open ? debouncedQuery : '', limit: 5 })
@@ -119,7 +121,6 @@ export function WorkspaceCommands() {
     // Already on the search page: the input is mounted, focus it.
     window.dispatchEvent(new CustomEvent(FOCUS_SEARCH_EVENT))
   }
-  const goNew = (subPath: string) => navigate({ href: `${path(subPath)}?new=1` })
   const signOut = async () => {
     await logout()
     navigate({ to: '/login' })
@@ -162,7 +163,7 @@ export function WorkspaceCommands() {
             label: 'Create new project',
             icon: <FolderPlus />,
             keywords: ['new project'],
-            onSelect: () => goNew('/projects'),
+            onSelect: () => setCreateProjectOpen(true),
           },
         ],
       },
@@ -288,7 +289,7 @@ export function WorkspaceCommands() {
       ],
     })
     return result
-    // go/goNew/goSearch/signOut only close over navigate, path and logout.
+    // go/goSearch/signOut only close over navigate, path and logout.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [favoritesQuery.data, teams, theme, toggleTheme, path, navigate, newDocument])
 
@@ -346,6 +347,14 @@ export function WorkspaceCommands() {
         loading={!!query.trim() && (searchQuery.isFetching || query !== debouncedQuery)}
       />
       <ShortcutsHelpDialog open={helpOpen} onOpenChange={setHelpOpen} groups={SHORTCUT_HELP} />
+      <CreateProjectDialog
+        open={createProjectOpen}
+        onOpenChange={setCreateProjectOpen}
+        workspaceId={workspace.id}
+        teams={teams}
+        members={members}
+        onCreated={project => navigate({ to: path(`/project/${project.id}`) as '/' })}
+      />
     </>
   )
 }

@@ -126,6 +126,17 @@ def create_issue(
     return response.json()
 
 
+def create_project(
+    client: httpx.Client, workspace_id: str, name: str = "Project", **extra: Any
+) -> dict[str, Any]:
+    """Create a project through POST /projects and return the response body."""
+    response = client.post(
+        "/projects", json={"workspace_id": workspace_id, "name": name, **extra}
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
 def create_document(
     client: httpx.Client, workspace_id: str, title: str = "Doc", **extra: Any
 ) -> dict[str, Any]:

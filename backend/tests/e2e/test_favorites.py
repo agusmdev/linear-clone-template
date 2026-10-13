@@ -1,8 +1,4 @@
-"""Favorites: list (mine, resolved names), add, reorder, remove.
-
-Projects are inserted with SQL: their endpoints belong to another feature
-(when they exist, seed through them instead).
-"""
+"""Favorites: list (mine, resolved names), add, reorder, remove."""
 
 from __future__ import annotations
 
@@ -15,6 +11,7 @@ from tests.e2e.helpers import (
     assert_error,
     create_document,
     create_issue,
+    create_project,
     create_workspace,
     join_workspace,
     workspace_team,
@@ -39,17 +36,6 @@ FAVORITE_FIELDS = {
     "color",
     "created_at",
 }
-
-
-def insert_project(db: Database, workspace_id: str, name: str) -> str:
-    project_id = str(uuid.uuid4())
-    db.execute(
-        "INSERT INTO project (id, workspace_id, name, status, color, icon, "
-        "sort_order, created_at, updated_at) VALUES "
-        "(%s, %s, %s, 'planned', '#26b5ce', 'rocket', 0, now(), now())",
-        (project_id, workspace_id, name),
-    )
-    return project_id
 
 
 @pytest.fixture
@@ -88,12 +74,14 @@ def list_favorites(user: RegisteredUser, workspace_id: str) -> list[dict[str, An
 
 
 def test_add_and_list_every_entity_type(
-    owner: RegisteredUser, ws: dict[str, Any], db: Database
+    owner: RegisteredUser, ws: dict[str, Any]
 ) -> None:
     workspace_id = ws["workspace"]["id"]
     team = ws["team"]
     issue = create_issue(owner.client, team["id"], "Fix login")
-    project_id = insert_project(db, workspace_id, "Launch")
+    project_id = create_project(
+        owner.client, workspace_id, "Launch", color="#26b5ce", icon="rocket"
+    )["id"]
     document_id = create_document(owner.client, workspace_id, "Spec")["id"]
 
     fav_issue = add(owner, workspace_id, "issue", issue["id"])

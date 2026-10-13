@@ -131,6 +131,30 @@ test.describe('command palette', () => {
     expect(page.url()).toContain(doc.id)
   })
 
+  test('create new project opens the project dialog; search finds the project', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    await page.goto(`/${workspace.url_key}/views`)
+    await expect(page.getByRole('heading', { level: 1, name: 'Views' })).toBeVisible()
+    await page.keyboard.press('ControlOrMeta+k')
+    await palette(page).getByRole('combobox').fill('create new project')
+    await page.keyboard.press('Enter')
+    const dialog = page.getByRole('dialog', { name: 'New project' })
+    await expect(dialog).toBeVisible()
+    await dialog.getByLabel('Project name').fill('Moonshot')
+    await dialog.getByRole('button', { name: 'Create project' }).click()
+    await expect(page).toHaveURL(new RegExp(`/${workspace.url_key}/project/[0-9a-f-]{36}$`))
+    const [project] = (await searchWorkspace(api, user, workspace.id, 'moonshot')).projects
+    expect(page.url()).toContain(project.id)
+
+    await page.keyboard.press('ControlOrMeta+k')
+    await palette(page).getByRole('combobox').fill('moon')
+    await expect(palette(page).getByRole('option', { name: 'Moonshot' })).toBeVisible()
+  })
+
   test('log out from the palette signs the user out', async ({ api, user, authedPage: page }) => {
     const workspace = await createWorkspace(api, user)
     await page.goto(`/${workspace.url_key}/views`)

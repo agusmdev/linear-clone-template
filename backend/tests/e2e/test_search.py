@@ -1,12 +1,7 @@
-"""Search: GET /workspaces/{id}/search over issues, documents and projects.
-
-Projects are inserted with SQL: their endpoints belong to another feature
-(when they exist, seed through them instead).
-"""
+"""Search: GET /workspaces/{id}/search over issues, documents and projects."""
 
 from __future__ import annotations
 
-import uuid
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -15,6 +10,7 @@ from tests.e2e.helpers import (
     assert_error,
     create_document,
     create_issue,
+    create_project,
     create_workspace,
     workspace_team,
 )
@@ -23,20 +19,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from tests.e2e.helpers import RegisteredUser
-    from tests.e2e.stack import Database
-
-
-def insert_project(
-    db: Database, workspace_id: str, name: str, description: str | None = None
-) -> str:
-    project_id = str(uuid.uuid4())
-    db.execute(
-        "INSERT INTO project (id, workspace_id, name, description, status, color, "
-        "icon, sort_order, created_at, updated_at) VALUES "
-        "(%s, %s, %s, %s, 'started', '#5e6ad2', NULL, 0, now(), now())",
-        (project_id, workspace_id, name, description),
-    )
-    return project_id
 
 
 @pytest.fixture
@@ -60,7 +42,7 @@ def search(owner: RegisteredUser, workspace_id: str, **params: Any) -> dict[str,
 
 
 def test_search_finds_issues_documents_and_projects(
-    owner: RegisteredUser, ws: dict[str, Any], db: Database
+    owner: RegisteredUser, ws: dict[str, Any]
 ) -> None:
     workspace_id = ws["workspace"]["id"]
     team = ws["team"]
@@ -71,7 +53,9 @@ def test_search_finds_issues_documents_and_projects(
     )
     document_id = create_document(owner.client, workspace_id, "Rocket design doc")["id"]
     create_document(owner.client, workspace_id, "Notes", content="<p>about rockets</p>")
-    project_id = insert_project(db, workspace_id, "Rocket program")
+    project_id = create_project(
+        owner.client, workspace_id, "Rocket program", status="started", color="#5e6ad2"
+    )["id"]
 
     body = search(owner, workspace_id, q="rocket")
 
@@ -122,12 +106,12 @@ def test_search_by_identifier_ranks_exact_match_first(
 
 
 def test_search_types_limit_and_empty_query(
-    owner: RegisteredUser, ws: dict[str, Any], db: Database
+    owner: RegisteredUser, ws: dict[str, Any]
 ) -> None:
     workspace_id = ws["workspace"]["id"]
     for n in range(4):
         create_issue(owner.client, ws["team"]["id"], f"Alpha {n}")
-    insert_project(db, workspace_id, "Alpha project")
+    create_project(owner.client, workspace_id, "Alpha project")
 
     only_projects = search(owner, workspace_id, q="alpha", types="project")
     assert only_projects["issues"] == []
