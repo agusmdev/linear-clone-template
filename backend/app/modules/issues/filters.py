@@ -14,8 +14,8 @@ from sqlalchemy import or_, select
 from sqlalchemy.sql import Select
 
 from app.core.filters import ModelFilter
+from app.core.text_search import like_pattern
 from app.modules.issues.models import Issue, IssueLabel, IssueSubscriber
-from app.modules.search.filters import like_pattern
 from app.modules.teams.models import WorkflowState, WorkflowStateType
 
 ME = "me"
