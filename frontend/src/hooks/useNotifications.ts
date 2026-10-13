@@ -36,7 +36,9 @@ export function useUnreadNotificationCount(workspaceId: string | undefined) {
   return useQuery({
     queryKey: queryKeys.notifications.unreadCount(workspaceId ?? ''),
     queryFn: () =>
-      api.get<UnreadNotificationCount>(API.NOTIFICATIONS.UNREAD_COUNT(workspaceId ?? '')),
+      api.get<UnreadNotificationCount>(
+        `${API.NOTIFICATIONS.UNREAD_COUNT}?workspace_id=${workspaceId ?? ''}`
+      ),
     enabled: !!workspaceId,
     refetchInterval: UNREAD_COUNT_POLL_MS,
   })

@@ -36,8 +36,7 @@ export const API = {
   },
   NOTIFICATIONS: {
     LIST: '/notifications',
-    UNREAD_COUNT: (workspaceId: string) =>
-      `/notifications/unread-count?workspace_id=${workspaceId}`,
+    UNREAD_COUNT: '/notifications/unread-count',
     MARK_ALL_READ: '/notifications/mark-all-read',
     DETAIL: (id: string) => `/notifications/${id}`,
   },

@@ -116,7 +116,7 @@ test.describe('inbox', () => {
     // Mark all as read empties the unread list.
     await page.getByRole('button', { name: 'Mark all as read' }).click()
     await expect(page.getByText('No unread notifications')).toBeVisible()
-    expect(await getUnreadNotificationCount(api, member, workspace.id)).toBe(0)
+    await expect.poll(() => getUnreadNotificationCount(api, member, workspace.id)).toBe(0)
     await expect(inboxLink(page)).toHaveText('Inbox')
 
     await page.getByRole('button', { name: 'Show all notifications' }).click()
@@ -150,8 +150,13 @@ test.describe('inbox', () => {
     await rows(page).nth(1).getByRole('button', { name: 'Archive' }).click()
     await expect(rows(page)).toHaveCount(1)
     await expect(rows(page).first()).toContainText('Second task')
-    const archived = await listNotifications(api, member, workspace.id, '&include_archived=true')
-    expect(archived.find(n => n.issue_id === first.id)?.archived_at).not.toBeNull()
+    // The UI updates at once; the server write follows.
+    await expect
+      .poll(async () => {
+        const all = await listNotifications(api, member, workspace.id, '&include_archived=true')
+        return all.find(n => n.issue_id === first.id)?.archived_at ?? null
+      })
+      .not.toBeNull()
     await page.getByRole('button', { name: 'Undo' }).click()
     await expect(rows(page)).toHaveCount(2)
 
@@ -167,8 +172,14 @@ test.describe('inbox', () => {
     const preview = page.getByRole('region', { name: 'Notification preview' })
     await preview.getByRole('button', { name: 'Delete notification' }).click()
     await expect(page.getByText('No notifications', { exact: true })).toBeVisible()
+    await expect
+      .poll(async () =>
+        (await listNotifications(api, member, workspace.id, '&include_archived=true')).map(
+          n => n.issue?.title
+        )
+      )
+      .toEqual(['Second task'])
     const left = await listNotifications(api, member, workspace.id, '&include_archived=true')
-    expect(left.map(n => n.issue?.title)).toEqual(['Second task'])
 
     // Restore the archived one through the API, then open its issue with Enter.
     const restored = await updateNotification(api, member, left[0].id, { archived: false })
