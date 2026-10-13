@@ -5,10 +5,10 @@ import {
   PROJECT_STATUS_LABELS,
   PROJECT_STATUS_ORDER,
 } from '@/components/ProjectStatusIcon'
+import { DateInput } from '@/components/DateInput'
 import { PropertyPicker } from '@/components/PropertyPicker'
 import { UserAvatar } from '@/components/UserAvatar'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import type { ProjectStatus } from '@/types/project'
@@ -186,14 +186,17 @@ export function ProjectDatePicker({ label, value, onChange, className }: DatePic
         <label htmlFor={id} className="text-mini text-text-secondary">
           {label}
         </label>
-        <Input
+        <DateInput
           id={id}
-          type="date"
-          value={value ?? ''}
-          onChange={event => {
-            // An unfinished date gives "": wait for a full date (Clear empties it).
-            if (event.target.value) onChange(event.target.value)
+          value={value}
+          onCommit={date => {
+            // The native control can only clear via "Clear" below.
+            if (date) onChange(date)
           }}
+          onKeyDown={event => {
+            if (event.key === 'Enter') setOpen(false)
+          }}
+          className="h-8 w-full rounded-md border border-border bg-input px-2.5 text-ui text-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:outline-none"
         />
         {value ? (
           <Button

@@ -18,33 +18,33 @@ The theme class is on `<html>`: `dark` (default) or `light`. Tailwind variants: 
 
 ### Colors (Tailwind names)
 
-| Token | Use | Dark | Light |
-|---|---|---|---|
-| `bg-background` / `bg-sidebar` | App canvas, sidebar | `#08090a` | `#f4f5f8` |
-| `bg-surface` (= `bg-card`) | Main content panel, cards | `#0f1011` | `#ffffff` |
-| `bg-popover` | Menus, popovers, dialogs | `#1c1d1f` | `#ffffff` |
-| `bg-surface-hover` | Hover on rows, nav items, ghost buttons | `#1c1d1f` | `#eceef2` |
-| `bg-surface-active` | Selected row / nav item, open trigger | `#232427` | `#e4e6eb` |
-| `bg-input` | Text inputs | `#141516` | `#ffffff` |
-| `border-border` | Controls, popovers | `#2a2b2e` | `#e0e2e7` |
-| `border-border-subtle` | Row and section dividers | `#1f2023` | `#eceef2` |
-| `text-foreground` / `text-text-primary` | Main text | `#f7f8f8` | `#1b1c1f` |
-| `text-text-secondary` (= `text-muted-foreground`) | Secondary text, icons | `#8a8f98` | `#6b6f76` |
-| `text-text-tertiary` | Placeholders, identifiers, hints | `#62666d` | `#9a9da3` |
-| `bg-primary` / `text-primary` | Accent indigo | `#5e6ad2` | `#5e6ad2` |
-| `text-destructive` | Errors, delete | `#eb5757` | `#d93f3f` |
-| `status-backlog/unstarted/started/review/completed/canceled` | Default workflow state colors | see css | see css |
-| `priority-urgent`, `priority-icon`, `priority-icon-empty` | PriorityIcon | see css | see css |
+| Token                                                        | Use                                     | Dark      | Light     |
+| ------------------------------------------------------------ | --------------------------------------- | --------- | --------- |
+| `bg-background` / `bg-sidebar`                               | App canvas, sidebar                     | `#08090a` | `#f4f5f8` |
+| `bg-surface` (= `bg-card`)                                   | Main content panel, cards               | `#0f1011` | `#ffffff` |
+| `bg-popover`                                                 | Menus, popovers, dialogs                | `#1c1d1f` | `#ffffff` |
+| `bg-surface-hover`                                           | Hover on rows, nav items, ghost buttons | `#1c1d1f` | `#eceef2` |
+| `bg-surface-active`                                          | Selected row / nav item, open trigger   | `#232427` | `#e4e6eb` |
+| `bg-input`                                                   | Text inputs                             | `#141516` | `#ffffff` |
+| `border-border`                                              | Controls, popovers                      | `#2a2b2e` | `#e0e2e7` |
+| `border-border-subtle`                                       | Row and section dividers                | `#1f2023` | `#eceef2` |
+| `text-foreground` / `text-text-primary`                      | Main text                               | `#f7f8f8` | `#1b1c1f` |
+| `text-text-secondary` (= `text-muted-foreground`)            | Secondary text, icons                   | `#8a8f98` | `#6b6f76` |
+| `text-text-tertiary`                                         | Placeholders, identifiers, hints        | `#62666d` | `#9a9da3` |
+| `bg-primary` / `text-primary`                                | Accent indigo                           | `#5e6ad2` | `#5e6ad2` |
+| `text-destructive`                                           | Errors, delete                          | `#eb5757` | `#d93f3f` |
+| `status-backlog/unstarted/started/review/completed/canceled` | Default workflow state colors           | see css   | see css   |
+| `priority-urgent`, `priority-icon`, `priority-icon-empty`    | PriorityIcon                            | see css   | see css   |
 
 Shadow: `shadow-popover` (menus, dialogs). Radius: `--radius` = 6px (`rounded-md`); `rounded-lg` = 8px; `rounded-xl` = 12px.
 
 ### Type
 
-| Class | Size | Use |
-|---|---|---|
-| `text-micro` | 11px | Counters, `Kbd`, captions |
-| `text-mini` | 12px | Labels, metadata, tabs |
-| `text-ui` | 13px | Default (body is 13px) |
+| Class        | Size | Use                                            |
+| ------------ | ---- | ---------------------------------------------- |
+| `text-micro` | 11px | Counters, `Kbd`, captions                      |
+| `text-mini`  | 12px | Labels, metadata, tabs                         |
+| `text-ui`    | 13px | Default (body is 13px)                         |
 | `text-title` | 17px | Big headings inside content (e.g. issue title) |
 
 Font: Inter (Google Fonts link in `__root.tsx`), `font-sans`. Mono: JetBrains Mono, `font-mono`.
@@ -80,50 +80,50 @@ function WorkspaceLayout() {
 
 ### `AppShell` (`components/AppShell.tsx`)
 
-| Prop | Type | Notes |
-|---|---|---|
-| `sidebar` | `ReactNode` | Usually `<Sidebar />`. 240px column on `md+`; a left `Sheet` on small screens (opened by an "Open menu" IconButton). |
-| `header?` | `ReactNode` | Top of the main panel, usually `<PageHeader />`. Pages may also render `PageHeader` as the first child instead. |
-| `children` | `ReactNode` | Content. It scrolls inside the rounded main panel (`<main>`). |
+| Prop       | Type        | Notes                                                                                                                |
+| ---------- | ----------- | -------------------------------------------------------------------------------------------------------------------- |
+| `sidebar`  | `ReactNode` | Usually `<Sidebar />`. 240px column on `md+`; a left `Sheet` on small screens (opened by an "Open menu" IconButton). |
+| `header?`  | `ReactNode` | Top of the main panel, usually `<PageHeader />`. Pages may also render `PageHeader` as the first child instead.      |
+| `children` | `ReactNode` | Content. It scrolls inside the rounded main panel (`<main>`).                                                        |
 
 ### `Sidebar` (`components/Sidebar.tsx`)
 
-| Prop | Type | Notes |
-|---|---|---|
-| `workspaceSwitcher?` | `ReactNode` | Top-left slot: `<WorkspaceSwitcher />`. |
-| `actions?` | `ReactNode` | Top-right slot: e.g. search + "New issue" `IconButton`s. |
-| `inboxTo`, `myIssuesTo` | `string` | Paths of the first two items. |
-| `inboxCount?` | `number` | Unread badge on Inbox (hidden when 0). |
-| `projectsTo`, `documentsTo`, `viewsTo` | `string` | "Workspace" section. |
-| `favorites?` | `SidebarLink[]` | "Favorites" section, hidden when empty. |
-| `onFavoriteMove?` | `(from, to) => void` | Makes favorite rows drag-and-drop reorderable. |
-| `teams` | `SidebarTeam[]` | "Your teams" section. Each team is collapsible with Issues, Cycles, Projects (+ `extraLinks`). |
-| `footer?` | `ReactNode` | Bottom slot (theme toggle, help, user menu). |
+| Prop                                   | Type                 | Notes                                                                                          |
+| -------------------------------------- | -------------------- | ---------------------------------------------------------------------------------------------- |
+| `workspaceSwitcher?`                   | `ReactNode`          | Top-left slot: `<WorkspaceSwitcher />`.                                                        |
+| `actions?`                             | `ReactNode`          | Top-right slot: e.g. search + "New issue" `IconButton`s.                                       |
+| `inboxTo`, `myIssuesTo`                | `string`             | Paths of the first two items.                                                                  |
+| `inboxCount?`                          | `number`             | Unread badge on Inbox (hidden when 0).                                                         |
+| `projectsTo`, `documentsTo`, `viewsTo` | `string`             | "Workspace" section.                                                                           |
+| `favorites?`                           | `SidebarLink[]`      | "Favorites" section, hidden when empty.                                                        |
+| `onFavoriteMove?`                      | `(from, to) => void` | Makes favorite rows drag-and-drop reorderable.                                                 |
+| `teams`                                | `SidebarTeam[]`      | "Your teams" section. Each team is collapsible with Issues, Cycles, Projects (+ `extraLinks`). |
+| `footer?`                              | `ReactNode`          | Bottom slot (theme toggle, help, user menu).                                                   |
 
 `SidebarLink = { label, to, icon?, badge? }`. `SidebarTeam = { id, name, key?, color?, issuesTo, cyclesTo, projectsTo, extraLinks? }`.
 A link is active (`aria-current="page"`, `bg-surface-active`) when the URL starts with its `to`. Paths are plain strings, so dynamic routes work. `SidebarNavLink` is exported for custom rows.
 
 ### `WorkspaceSwitcher` (`components/WorkspaceSwitcher.tsx`)
 
-| Prop | Type | Notes |
-|---|---|---|
-| `current` | `{ id, name }` | Shown in the trigger (aria-label `Workspace: <name>`). |
-| `workspaces` | `{ id, name }[]` | Listed with a check on the current one. |
-| `onSelect` | `(ws) => void` | Called on pick. |
-| `userEmail?` | `string` | Menu heading. |
-| `children?` | `ReactNode` | Extra `DropdownMenuItem`s (Settings, Create workspace, Log out). |
+| Prop         | Type             | Notes                                                            |
+| ------------ | ---------------- | ---------------------------------------------------------------- |
+| `current`    | `{ id, name }`   | Shown in the trigger (aria-label `Workspace: <name>`).           |
+| `workspaces` | `{ id, name }[]` | Listed with a check on the current one.                          |
+| `onSelect`   | `(ws) => void`   | Called on pick.                                                  |
+| `userEmail?` | `string`         | Menu heading.                                                    |
+| `children?`  | `ReactNode`      | Extra `DropdownMenuItem`s (Settings, Create workspace, Log out). |
 
 `WorkspaceLogo({ name, size?: 'sm' | 'md' | 'lg' })` is exported too (onboarding, settings).
 
 ### `PageHeader` (`components/PageHeader.tsx`)
 
-| Prop | Type | Notes |
-|---|---|---|
-| `title` | `ReactNode` | The page `<h1>` (tests can use `getByRole('heading', { level: 1 })`). |
-| `breadcrumbs?` | `{ label, to?, icon? }[]` | Shown before the title with `›` separators. |
-| `icon?` | `ReactNode` | Before the title. |
-| `actions?` | `ReactNode` | Right side. |
-| `children?` | `ReactNode` | Second row (tabs, filter bar, display options). |
+| Prop           | Type                      | Notes                                                                 |
+| -------------- | ------------------------- | --------------------------------------------------------------------- |
+| `title`        | `ReactNode`               | The page `<h1>` (tests can use `getByRole('heading', { level: 1 })`). |
+| `breadcrumbs?` | `{ label, to?, icon? }[]` | Shown before the title with `›` separators.                           |
+| `icon?`        | `ReactNode`               | Before the title.                                                     |
+| `actions?`     | `ReactNode`               | Right side.                                                           |
+| `children?`    | `ReactNode`               | Second row (tabs, filter bar, display options).                       |
 
 ## 5. Linear components
 
@@ -131,13 +131,13 @@ A link is active (`aria-current="page"`, `bg-surface-active`) when the URL start
 
 `<StatusIcon type="started" color={state.color} progress={0.5} size={14} label="In Progress" />`
 
-| Prop | Type | Default |
-|---|---|---|
-| `type` | `'backlog' \| 'unstarted' \| 'started' \| 'completed' \| 'canceled'` (`StatusType` = `WorkflowStateType` from `@/types/team`) | — |
-| `color?` | CSS color | theme color of the type |
-| `progress?` | `0..1`, fill of `started` (e.g. 0.75 for "In Review") | `0.5` |
-| `size?` | px | `14` |
-| `label?` | accessible name; without it the icon is decorative | — |
+| Prop        | Type                                                                                                                          | Default                 |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| `type`      | `'backlog' \| 'unstarted' \| 'started' \| 'completed' \| 'canceled'` (`StatusType` = `WorkflowStateType` from `@/types/team`) | —                       |
+| `color?`    | CSS color                                                                                                                     | theme color of the type |
+| `progress?` | `0..1`, fill of `started` (e.g. 0.75 for "In Review")                                                                         | `0.5`                   |
+| `size?`     | px                                                                                                                            | `14`                    |
+| `label?`    | accessible name; without it the icon is decorative                                                                            | —                       |
 
 Shapes: backlog = dashed ring, unstarted = empty ring, started = ring + pie, completed = filled + check, canceled = filled + cross.
 
@@ -149,12 +149,12 @@ Shapes: backlog = dashed ring, unstarted = empty ring, started = ring + pie, com
 
 `<UserAvatar name={user.display_name || user.email} size="sm" />`
 
-| Prop | Type | Default |
-|---|---|---|
-| `name?` | `string \| null` — null/undefined renders the dashed "Unassigned" circle | — |
-| `src?` | image URL; falls back to initials | — |
-| `size?` | `'xs' 16 \| 'sm' 20 \| 'md' 24 \| 'lg' 32 \| 'xl' 48` | `'md'` |
-| `online?` | presence dot | — |
+| Prop      | Type                                                                     | Default |
+| --------- | ------------------------------------------------------------------------ | ------- |
+| `name?`   | `string \| null` — null/undefined renders the dashed "Unassigned" circle | —       |
+| `src?`    | image URL; falls back to initials                                        | —       |
+| `size?`   | `'xs' 16 \| 'sm' 20 \| 'md' 24 \| 'lg' 32 \| 'xl' 48`                    | `'md'`  |
+| `online?` | presence dot                                                             | —       |
 
 Initials on a stable per-name color. Helpers `initialsOf(name)` and `colorFor(name)` are exported. Accessible name = the name (or "Unassigned").
 
@@ -166,16 +166,16 @@ Initials on a stable per-name color. Helpers `initialsOf(name)` and `colorFor(na
 
 `<IconButton label="New issue" icon={<SquarePen />} shortcut="C" onClick={...} />`
 
-| Prop | Type | Default |
-|---|---|---|
-| `label` | accessible name and tooltip text (required) | — |
-| `icon` | element | — |
-| `shortcut?` | shown as `Kbd` in the tooltip | — |
-| `size?` | `'sm' 24px \| 'md' 28px \| 'lg' 32px` | `'md'` |
-| `variant?` | `'ghost' \| 'outline'` | `'ghost'` |
-| `active?` | pressed look | — |
-| `tooltip?` | `false` drops the tooltip | `true` |
-| `tooltipSide?` | `'top' \| 'right' \| 'bottom' \| 'left'` | `'bottom'` |
+| Prop           | Type                                        | Default    |
+| -------------- | ------------------------------------------- | ---------- |
+| `label`        | accessible name and tooltip text (required) | —          |
+| `icon`         | element                                     | —          |
+| `shortcut?`    | shown as `Kbd` in the tooltip               | —          |
+| `size?`        | `'sm' 24px \| 'md' 28px \| 'lg' 32px`       | `'md'`     |
+| `variant?`     | `'ghost' \| 'outline'`                      | `'ghost'`  |
+| `active?`      | pressed look                                | —          |
+| `tooltip?`     | `false` drops the tooltip                   | `true`     |
+| `tooltipSide?` | `'top' \| 'right' \| 'bottom' \| 'left'`    | `'bottom'` |
 
 Plus every `<button>` prop. It works as a Radix `asChild` trigger: `<DropdownMenuTrigger asChild><IconButton .../></DropdownMenuTrigger>`. It shows the open look when the trigger has `data-state="open"`. `TooltipProvider` is already in `__root.tsx`.
 
@@ -213,30 +213,40 @@ The one picker for status, priority, assignee, labels, project, cycle. A popover
 <PropertyPicker multiple label="Labels" options={labelOptions} value={labelIds} onChange={setLabelIds} trigger={...} />
 ```
 
-| Prop | Type | Notes |
-|---|---|---|
-| `options` | `PropertyOption<V>[]` | `{ value, label, icon?, keywords?, shortcut?, group?, disabled? }` |
-| `value` / `onChange` | single: `V \| null` / `(v: V) => void`; with `multiple`: `V[]` / `(v: V[]) => void` | Single closes on pick and shows a check on the current value. Multi shows checkboxes and stays open. |
-| `trigger` | `ReactNode` | A button; rendered with `PopoverTrigger asChild`. |
-| `label?` | `string` | Accessible name of the list. |
-| `placeholder?`, `emptyText?` | `string` | `'Search...'`, `'No results'` |
-| `open?`, `onOpenChange?` | controlled open, for shortcuts (`S`, `P`, `A`) | |
-| `align?`, `side?`, `contentClassName?` | popover placement / width (default `w-64`) | |
-| `footer?` | `ReactNode` | Extra `CommandItem`s under a separator (e.g. "Create label"). Give them `forceMount` so the search does not hide them. |
+| Prop                                   | Type                                                                                | Notes                                                                                                                  |
+| -------------------------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `options`                              | `PropertyOption<V>[]`                                                               | `{ value, label, icon?, keywords?, shortcut?, group?, disabled? }`                                                     |
+| `value` / `onChange`                   | single: `V \| null` / `(v: V) => void`; with `multiple`: `V[]` / `(v: V[]) => void` | Single closes on pick and shows a check on the current value. Multi shows checkboxes and stays open.                   |
+| `trigger`                              | `ReactNode`                                                                         | A button; rendered with `PopoverTrigger asChild`.                                                                      |
+| `label?`                               | `string`                                                                            | Accessible name of the list.                                                                                           |
+| `placeholder?`, `emptyText?`           | `string`                                                                            | `'Search...'`, `'No results'`                                                                                          |
+| `open?`, `onOpenChange?`               | controlled open, for shortcuts (`S`, `P`, `A`)                                      |                                                                                                                        |
+| `align?`, `side?`, `contentClassName?` | popover placement / width (default `w-64`)                                          |                                                                                                                        |
+| `footer?`                              | `ReactNode`                                                                         | Extra `CommandItem`s under a separator (e.g. "Create label"). Give them `forceMount` so the search does not hide them. |
 
 `shortcut` keys pick an option while the search box is empty (Linear's number keys). "No assignee" / "No project" are normal options with a special value (e.g. `'none'`): map it in the page.
 
 ### Settings components (WS-1..WS-7)
 
-| Component | File | Use |
-|---|---|---|
-| `SettingsSidebar({ backTo, sections })` | `components/SettingsSidebar.tsx` | Replaces the app sidebar under `/<ws>/settings` ("Back to app" + grouped links; `exact` for index pages). Sections come from `settingsSections(base, teams)` in `features/workspaces/settings-nav.tsx` |
-| `SettingsPage({ title, description?, actions?, children })` | `components/SettingsPage.tsx` | Centered 680px column with a 24px title (an h2: the `PageHeader` holds the h1) |
-| `SettingsSection({ title?, description?, actions?, children })`, `SettingsCard`, `SettingsRow({ label, description?, children })` | `components/SettingsPage.tsx` | A titled group; a bordered box whose children get subtle dividers; a "label + control" row |
-| `ColorPicker({ value, onChange, label, trigger?, disabled? })` | `components/ColorPicker.tsx` | Palette popover (Linear's 10 colors, `COLOR_PALETTE`) + hex field. Default trigger: a swatch button named `"<label>: <hex>"` |
-| `ConfirmDialog({ open, onOpenChange, title, description?, confirmLabel, onConfirm, pending?, canConfirm?, destructive?, children? })` | `components/ConfirmDialog.tsx` | Confirmation for delete / remove / leave; `children` adds a field (type-to-confirm, a target select) |
-| `CreateTeamDialog({ open, onOpenChange, onSubmit, pending? })` | `components/CreateTeamDialog.tsx` | Team name, key (follows the name until edited), color |
-| `TeamBadge({ team, size? })` | `features/workspaces/settings-nav.tsx` | Square with the team key on the team color |
+| Component                                                                                                                             | File                                   | Use                                                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `SettingsSidebar({ backTo, sections })`                                                                                               | `components/SettingsSidebar.tsx`       | Replaces the app sidebar under `/<ws>/settings` ("Back to app" + grouped links; `exact` for index pages). Sections come from `settingsSections(base, teams)` in `features/workspaces/settings-nav.tsx` |
+| `SettingsPage({ title, description?, actions?, children })`                                                                           | `components/SettingsPage.tsx`          | Centered 680px column with a 24px title (an h2: the `PageHeader` holds the h1)                                                                                                                         |
+| `SettingsSection({ title?, description?, actions?, children })`, `SettingsCard`, `SettingsRow({ label, description?, children })`     | `components/SettingsPage.tsx`          | A titled group; a bordered box whose children get subtle dividers; a "label + control" row                                                                                                             |
+| `ColorPicker({ value, onChange, label, trigger?, disabled? })`                                                                        | `components/ColorPicker.tsx`           | Palette popover (Linear's 10 colors, `COLOR_PALETTE`) + hex field. Default trigger: a swatch button named `"<label>: <hex>"`                                                                           |
+| `ConfirmDialog({ open, onOpenChange, title, description?, confirmLabel, onConfirm, pending?, canConfirm?, destructive?, children? })` | `components/ConfirmDialog.tsx`         | Confirmation for delete / remove / leave; `children` adds a field (type-to-confirm, a target select)                                                                                                   |
+| `CreateTeamDialog({ open, onOpenChange, onSubmit, pending? })`                                                                        | `components/CreateTeamDialog.tsx`      | Team name, key (follows the name until edited), color                                                                                                                                                  |
+| `TeamBadge({ team, size? })`                                                                                                          | `features/workspaces/settings-nav.tsx` | Square with the team key on the team color                                                                                                                                                             |
+
+### `DateInput` (`components/DateInput.tsx`)
+
+A native `<input type="date">` for every date that saves on its own (project start/target date, issue due date). Use it instead of a raw date input: a typed date is a draft until Enter, blur or unmount (each typed year digit is already a valid date, e.g. `0002-11-20`); a calendar pick or paste commits at once.
+
+| Prop       | Type                             | Notes                                             |
+| ---------- | -------------------------------- | ------------------------------------------------- |
+| `value`    | `string \| null`                 | Saved `YYYY-MM-DD`.                               |
+| `onCommit` | `(date: string \| null) => void` | Called once with the finished date.               |
+| other      | input props                      | `id`, `aria-label`, `className`, `onKeyDown`, ... |
 
 ## 6. shadcn/ui primitives (`components/ui/`)
 

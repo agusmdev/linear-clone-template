@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { Box, CalendarDays, Plus, RefreshCcw, Triangle, X } from 'lucide-react'
+import { DateInput } from '@/components/DateInput'
 import { PriorityIcon, PRIORITY_LABELS, PRIORITY_ORDER } from '@/components/PriorityIcon'
 import { PropertyPicker, type PropertyOption } from '@/components/PropertyPicker'
 import { StatusIcon } from '@/components/StatusIcon'
@@ -352,11 +353,10 @@ function DueDateField({
         ) : (
           <Placeholder>Set due date</Placeholder>
         )}
-        <input
+        <DateInput
           ref={inputRef}
-          type="date"
           aria-label="Due date"
-          value={value ?? ''}
+          value={value}
           onClick={() => {
             try {
               inputRef.current?.showPicker?.()
@@ -364,10 +364,7 @@ function DueDateField({
               // Not allowed here (e.g. in a cross-origin frame): the native control still works.
             }
           }}
-          onChange={event => {
-            const next = event.target.value || null
-            if (next !== value) onChange(next)
-          }}
+          onCommit={onChange}
           className="absolute inset-0 cursor-pointer opacity-0"
         />
       </label>

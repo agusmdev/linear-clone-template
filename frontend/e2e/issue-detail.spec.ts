@@ -202,6 +202,32 @@ test.describe('issue page', () => {
     })
   })
 
+  test('a due date typed with the keyboard saves the full year', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const { workspace, team } = await seedWorkspace(api, user)
+    const issue = await createIssue(api, user, { team_id: team.id, title: 'Typed date' })
+    await openIssue(page, workspace.url_key, issue.identifier)
+    const panel = page.getByRole('complementary', { name: 'Issue properties' })
+
+    // Each year digit makes a valid date ("0002-08-09", ...): none may be saved.
+    const due = panel.getByLabel('Due date', { exact: true })
+    await due.focus()
+    await page.keyboard.type('08092027')
+    await expect(due).toHaveValue('2027-08-09')
+    expect((await getIssue(api, user, issue.id)).due_date).toBeNull()
+    await due.press('Enter')
+
+    await expect.poll(async () => (await getIssue(api, user, issue.id)).due_date).toBe('2027-08-09')
+    await page.reload()
+    await expect(panel).toContainText('Aug 9')
+    await expect(panel.getByLabel('Due date', { exact: true })).toHaveValue('2027-08-09')
+    const rows = await listActivity(api, user, issue.id)
+    expect(rows.filter(r => r.field === 'due_date')).toHaveLength(1)
+  })
+
   test('creates sub-issues inline and shows progress and the parent link', async ({
     api,
     user,
