@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { withLocalStatus } from '@/features/cycles/cycle-dates'
 import { api } from '@/lib/api-client'
 import { API } from '@/lib/api-endpoints'
 import { queryKeys } from '@/lib/query-keys'
@@ -10,11 +11,17 @@ import type {
   UpdateCycleData,
 } from '@/types/cycle'
 
+/** GET /teams/{id}/cycles, each with `status` from the user's local date. */
+export async function fetchTeamCycles(teamId: string): Promise<Cycle[]> {
+  const cycles = await api.get<Cycle[]>(API.CYCLES.TEAM(teamId))
+  return cycles.map(withLocalStatus)
+}
+
 /** The cycles of a team, by start date (GET /teams/{id}/cycles). */
 export function useTeamCycles(teamId: string | undefined) {
   return useQuery({
     queryKey: queryKeys.cycles.list(teamId ?? ''),
-    queryFn: () => api.get<Cycle[]>(API.CYCLES.TEAM(teamId ?? '')),
+    queryFn: () => fetchTeamCycles(teamId ?? ''),
     enabled: !!teamId,
   })
 }
@@ -22,7 +29,7 @@ export function useTeamCycles(teamId: string | undefined) {
 export function useCycle(cycleId: string) {
   return useQuery({
     queryKey: queryKeys.cycles.detail(cycleId),
-    queryFn: () => api.get<Cycle>(API.CYCLES.DETAIL(cycleId)),
+    queryFn: async () => withLocalStatus(await api.get<Cycle>(API.CYCLES.DETAIL(cycleId))),
     retry: false,
   })
 }
@@ -43,7 +50,7 @@ export function useUpdateCycle() {
     mutationFn: ({ cycleId, data }: { cycleId: string; data: UpdateCycleData }) =>
       api.patch<Cycle>(API.CYCLES.DETAIL(cycleId), data),
     onSuccess: cycle => {
-      queryClient.setQueryData(queryKeys.cycles.detail(cycle.id), cycle)
+      queryClient.setQueryData(queryKeys.cycles.detail(cycle.id), withLocalStatus(cycle))
       queryClient.invalidateQueries({ queryKey: queryKeys.cycles.all })
     },
   })

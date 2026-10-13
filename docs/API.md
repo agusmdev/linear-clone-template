@@ -359,7 +359,7 @@ Project issues: `GET /issues?workspace_id=..&project_id=..`. Project documents: 
 `Cycle = {id, team_id, number, name, starts_at, ends_at, status: "current"|"upcoming"|"past", issue_count, completed_issue_count, progress: CycleProgress, created_at, updated_at}`
 `CycleProgress = {total, completed, percentage, scope: {backlog, unstarted, started, completed, canceled}}`
 
-- `status` from today's date (UTC): `starts_at <= today <= ends_at` = current, `starts_at > today` = upcoming, else past.
+- `status` from today's date (UTC): `starts_at <= today <= ends_at` = current, `starts_at > today` = upcoming, else past. The frontend recomputes it from the user's local date (`cycleStatus` in `frontend/src/features/cycles/cycle-dates.ts`).
 - `name` is trimmed; a blank name is stored as `null` (shown as "Cycle <number>").
 - Dates are inclusive. `ends_at` must be after `starts_at` (else 400 `invalid_cycle_dates`); two cycles of one team never share a day (else 400 `cycle_overlap`).
 - `scope` counts the non-archived issues of the cycle by state type. `total` = `issue_count` = scope without canceled; `completed` = `completed_issue_count`; `percentage` = round(completed * 100 / total), 0 when empty.
