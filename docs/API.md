@@ -210,7 +210,6 @@ with `sort_order` = the mean of the neighbours' values (top: first - 1, bottom: 
 - A parent cannot be the issue itself or one of its sub-issues (400 `invalid_reference`).
 - One `IssueActivity` row per changed field (see Activity). `sort_order` changes are not logged. Unchanged values write nothing.
 - A `parent_id` change also writes a `sub_issue` row on the old and on the new parent.
-- DELETE (one or bulk): sub-issues that stay get a `parent` row (to `null`), a parent that stays gets a `sub_issue` row (to `null`).
 - A new assignee is subscribed.
 
 **GET /issues query** (`workspace_id` required):
@@ -294,7 +293,7 @@ the same type already between the two issues (either direction) → 400 `duplica
 |---|---|---|---|---|
 | IMPLEMENTED | GET | `/issues/{issue_id}/activity` | – | `IssueActivity[]` (oldest first). The client merges it with comments for the timeline |
 
-(The rows are already written by the IMPLEMENTED create/update/delete and relation endpoints.)
+(The rows are already written by the IMPLEMENTED create/update and relation endpoints.)
 
 ### Subscribers (ISS-11)
 

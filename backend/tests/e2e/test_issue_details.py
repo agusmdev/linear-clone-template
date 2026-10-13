@@ -424,37 +424,16 @@ def test_sub_issue_changes_are_logged_on_parent_and_child(
         ("sub_issue", None, child["identifier"])
     ]
 
-    # Deleting the parent logs on the child; deleting a child logs on the parent.
-    second = create_issue(owner.client, team_id, "Child B", parent_id=other["id"])
-    assert owner.client.delete(f"/issues/{second['id']}").status_code == 204
-    assert _changes(owner.client, other["id"])[-1] == (
-        "sub_issue",
-        second["identifier"],
-        None,
-    )
-    assert owner.client.delete(f"/issues/{other['id']}").status_code == 204
+    # Clearing the parent logs on the child and on the old parent.
+    response = owner.client.patch(f"/issues/{child['id']}", json={"parent_id": None})
+    assert response.status_code == 200, response.text
     assert _changes(owner.client, child["id"])[-1] == (
         "parent",
         other["identifier"],
         None,
     )
-
-
-def test_bulk_delete_logs_on_the_issues_that_stay(
-    owner: RegisteredUser, ws: dict[str, Any]
-) -> None:
-    team_id = ws["team"]["id"]
-    parent = create_issue(owner.client, team_id, "Parent")
-    child = create_issue(owner.client, team_id, "Child", parent_id=parent["id"])
-    grandchild = create_issue(owner.client, team_id, "Leaf", parent_id=child["id"])
-
-    response = owner.client.post(
-        "/issues/bulk-delete", json={"issue_ids": [parent["id"], child["id"]]}
-    )
-
-    assert response.status_code == 204
-    assert _changes(owner.client, grandchild["id"])[-1] == (
-        "parent",
+    assert _changes(owner.client, other["id"])[-1] == (
+        "sub_issue",
         child["identifier"],
         None,
     )

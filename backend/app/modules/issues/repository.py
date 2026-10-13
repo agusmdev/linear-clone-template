@@ -91,26 +91,12 @@ class IssueRepository(SQLAlchemyRepository[Issue]):
         self, issue_id: uuid.UUID, activities: list[dict[str, Any]]
     ) -> None:
         """Insert activity rows on ``issue_id``, or on the row's own ``issue_id``
-        (e.g. the parent of a new sub-issue)."""
+        (e.g. the old or new parent of a sub-issue)."""
         if activities:
             await self._session.execute(
                 insert(IssueActivity),
                 [{"issue_id": issue_id, **activity} for activity in activities],
             )
-
-    @SQLAlchemyRepository.translate_commit_errors
-    async def add_activities(self, activities: list[dict[str, Any]]) -> None:
-        """Insert activity rows that each name their ``issue_id``: one commit."""
-        if activities:
-            await self._session.execute(insert(IssueActivity), activities)
-            await self._session.commit()
-
-    async def children_of(self, issue_ids: list[uuid.UUID]) -> list[Issue]:
-        """The sub-issues of these issues, with their embedded relationships."""
-        if not issue_ids:
-            return []
-        query = self.select_full().where(Issue.parent_id.in_(issue_ids))
-        return list((await self._session.execute(query)).scalars())
 
     @SQLAlchemyRepository.translate_commit_errors
     async def create_issue(
@@ -120,20 +106,23 @@ class IssueRepository(SQLAlchemyRepository[Issue]):
         label_ids: set[uuid.UUID],
         subscriber_ids: set[uuid.UUID],
         activities: list[dict[str, Any]],
+        parent_activity: dict[str, Any] | None = None,
     ) -> Issue:
         """Insert an issue with the team's next number, in one commit.
 
         The ``UPDATE team ... RETURNING issue_counter`` locks the team row
         until the commit, so concurrent creates get distinct numbers.
+        ``parent_activity`` (a row on the parent) gets the new identifier as
+        ``to_value``.
         """
-        number = (
+        number, team_key = (
             await self._session.execute(
                 update(Team)
                 .where(Team.id == values["team_id"])
                 .values(issue_counter=Team.issue_counter + 1)
-                .returning(Team.issue_counter)
+                .returning(Team.issue_counter, Team.key)
             )
-        ).scalar_one()
+        ).one()
         issue_id = (
             await self._session.execute(
                 insert(Issue).values(**values, number=number).returning(Issue.id)
@@ -146,6 +135,11 @@ class IssueRepository(SQLAlchemyRepository[Issue]):
             )
         await self._add_subscribers(issue_id, subscriber_ids)
         await self._add_activities(issue_id, activities)
+        if parent_activity is not None:
+            # Same format as ``Issue.identifier``.
+            await self._add_activities(
+                issue_id, [{**parent_activity, "to_value": f"{team_key}-{number}"}]
+            )
         await self._session.commit()
         return await self._get_full_or_404(issue_id)
 
@@ -196,15 +190,7 @@ class IssueRepository(SQLAlchemyRepository[Issue]):
         return [found[issue_id] for issue_id in issue_ids if issue_id in found]
 
     @SQLAlchemyRepository.translate_commit_errors
-    async def delete_many(
-        self,
-        issue_ids: list[uuid.UUID],
-        *,
-        activities: list[dict[str, Any]] | None = None,
-    ) -> None:
-        """Delete the issues and log ``activities`` (on other issues): one commit."""
-        if activities:
-            await self._session.execute(insert(IssueActivity), activities)
+    async def delete_many(self, issue_ids: list[uuid.UUID]) -> None:
         await self._session.execute(delete(Issue).where(Issue.id.in_(issue_ids)))
         await self._session.commit()
 

@@ -266,20 +266,12 @@ class IssueService(BaseService[Issue]):
             label_ids=label_ids,
             subscriber_ids=subscribers,
             activities=activities,
+            parent_activity=(
+                None
+                if data.parent_id is None
+                else _change(user_id, "sub_issue", None, None, issue_id=data.parent_id)
+            ),
         )
-        if data.parent_id is not None:
-            # The number (so the identifier) exists only after the insert.
-            await self.repo.add_activities(
-                [
-                    _change(
-                        user_id,
-                        "sub_issue",
-                        None,
-                        issue.identifier,
-                        issue_id=data.parent_id,
-                    )
-                ]
-            )
         await self.notification_service.notify_assigned(
             workspace_id=workspace_id,
             issue_id=issue.id,
@@ -454,37 +446,9 @@ class IssueService(BaseService[Issue]):
         }
 
     async def delete_issue(self, issue_id: uuid.UUID, *, user_id: uuid.UUID) -> None:
-        issue = await self.get_for_member(issue_id, user_id=user_id)
-        await self._delete_issues([issue], user_id=user_id)
+        await self.get_for_member(issue_id, user_id=user_id)
+        await self.repo.delete(issue_id)
         self._log_entity(issue_id)
-
-    async def _delete_issues(self, issues: list[Issue], *, user_id: uuid.UUID) -> None:
-        """Delete the issues; their sub-issues and parents that stay log it."""
-        deleted = {issue.id: issue for issue in issues}
-        activities: list[dict[str, Any]] = [
-            _change(
-                user_id,
-                "sub_issue",
-                issue.identifier,
-                None,
-                issue_id=issue.parent_id,
-            )
-            for issue in issues
-            if issue.parent_id is not None and issue.parent_id not in deleted
-        ]
-        for child in await self.repo.children_of(list(deleted)):
-            if child.id in deleted or child.parent_id is None:
-                continue
-            activities.append(
-                _change(
-                    user_id,
-                    "parent",
-                    deleted[child.parent_id].identifier,
-                    None,
-                    issue_id=child.id,
-                )
-            )
-        await self.repo.delete_many(list(deleted), activities=activities)
 
     # --- bulk --------------------------------------------------------------
 
@@ -542,5 +506,5 @@ class IssueService(BaseService[Issue]):
         self, issue_ids: list[uuid.UUID], *, user_id: uuid.UUID
     ) -> None:
         issues = await self._issues_for_member(issue_ids, user_id=user_id)
-        await self._delete_issues(issues, user_id=user_id)
+        await self.repo.delete_many([issue.id for issue in issues])
         log_entities("issue", [issue.id for issue in issues])
