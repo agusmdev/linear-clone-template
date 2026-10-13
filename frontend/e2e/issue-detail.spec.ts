@@ -528,6 +528,36 @@ test.describe('issue page', () => {
     expect(await line.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
   })
 
+  test('a long title shows every line after the window gets narrower', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const { workspace, team } = await seedWorkspace(api, user)
+    const issue = await createIssue(api, user, {
+      team_id: team.id,
+      title: 'Main issue with a fairly long title that goes on and on to test wrapping behaviour',
+    })
+    await openIssue(page, workspace.url_key, issue.identifier)
+    const title = page.getByRole('textbox', { name: 'Issue title' })
+    await expect(title).toHaveValue(issue.title)
+
+    // The textarea hides its overflow: its height must follow the new number of lines.
+    const fits = () =>
+      title.evaluate(el => {
+        const shown = el.clientHeight
+        const height = el.style.height
+        el.style.height = '0px'
+        const needed = el.scrollHeight
+        el.style.height = height
+        return shown >= needed
+      })
+    for (const width of [1024, 390]) {
+      await page.setViewportSize({ width, height: 900 })
+      await expect.poll(fits).toBe(true)
+    }
+  })
+
   test('the add-relation menu works with the keyboard alone', async ({
     api,
     user,
