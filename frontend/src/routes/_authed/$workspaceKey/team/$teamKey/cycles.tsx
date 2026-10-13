@@ -65,6 +65,8 @@ function TeamCyclesPage() {
   }
 
   const nextNumber = cycles.reduce((max, c) => Math.max(max, c.number), 0) + 1
+  // "New cycle" stays disabled until the cycles load: its default dates come from them.
+  // "New cycle" stays disabled until the cycles load: its default dates come from them.
   const openCreate = () => setDialog({ kind: 'create' })
 
   const createDefaults: CycleFormData = { name: '', ...nextCycleDates(cycles) }
@@ -83,7 +85,7 @@ function TeamCyclesPage() {
         breadcrumbs={[{ label: team.name, to: path(`/team/${team.key}/issues`) }]}
         title="Cycles"
         actions={
-          <Button size="sm" onClick={openCreate}>
+          <Button size="sm" onClick={openCreate} disabled={!cyclesQuery.isSuccess}>
             <Plus />
             New cycle
           </Button>
@@ -119,7 +121,7 @@ function TeamCyclesPage() {
           title="No cycles"
           description="Cycles help your team work in focused periods."
           action={
-            <Button size="sm" onClick={openCreate}>
+            <Button size="sm" onClick={openCreate} disabled={!cyclesQuery.isSuccess}>
               Create cycle
             </Button>
           }
