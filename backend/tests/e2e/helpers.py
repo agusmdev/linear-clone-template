@@ -254,3 +254,15 @@ def _wait_until_server_connections_are_idle(db: Database) -> None:
     ):
         assert time.monotonic() < deadline, "the server's connections stay busy"
         time.sleep(0.01)
+
+
+def create_cycle(
+    client: httpx.Client, team_id: str, starts_at: str, ends_at: str, **extra: Any
+) -> dict[str, Any]:
+    """Create a cycle through POST /teams/{team_id}/cycles and return the body."""
+    response = client.post(
+        f"/teams/{team_id}/cycles",
+        json={"starts_at": starts_at, "ends_at": ends_at, **extra},
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
