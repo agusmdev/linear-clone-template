@@ -4,6 +4,7 @@
  * commands, autosave, issue links, copy link, delete).
  */
 import {
+  authHeaders,
   createDocument,
   createIssue,
   createProject,
@@ -11,11 +12,34 @@ import {
   expect,
   fetchDocument,
   listDocuments,
+  inviteMember,
   listTeams,
+  registerUser,
   test,
 } from './fixtures'
 
 test.describe('documents list', () => {
+  test('shows the author, not the last editor (DOC-1)', async ({ api, user, authedPage: page }) => {
+    const workspace = await createWorkspace(api, user)
+    const doc = await createDocument(api, user, { workspace_id: workspace.id, title: 'Shared doc' })
+    const editor = await registerUser(api)
+    await inviteMember(api, user, workspace.id, editor.email)
+    const response = await api.patch(`/documents/${doc.id}`, {
+      data: { content: '<p>Edited by someone else</p>' },
+      headers: authHeaders(editor),
+    })
+    expect(response.ok()).toBe(true)
+
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await page.goto(`/${workspace.url_key}/documents`)
+    const row = page
+      .getByRole('list', { name: 'Documents' })
+      .getByRole('link', { name: /Shared doc/ })
+    await expect(row.getByTitle('Author')).toHaveText(doc.creator!.name || doc.creator!.email)
+    await expect(row.locator('time')).toHaveAttribute('title', /^Edited by /)
+    await expect(row).not.toContainText(editor.email)
+  })
+
   test('lists the workspace documents, newest edit first, and searches title and content', async ({
     api,
     user,

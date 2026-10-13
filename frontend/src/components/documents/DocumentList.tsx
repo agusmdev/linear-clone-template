@@ -108,8 +108,12 @@ export function DocumentList({ params, search, emptyState }: DocumentListProps) 
 
 function DocumentRow({ document }: { document: DocumentSummary }) {
   const { path } = useCurrentWorkspace()
-  const editor = document.last_edited_by ?? document.creator
+  // The row names the author (DOC-1); the last editor is in the time's tooltip.
+  const author = document.creator
+  const authorName = author ? author.name || author.email : null
+  const editor = document.last_edited_by
   const editorName = editor ? editor.name || editor.email : null
+  const updated = new Date(document.updated_at).toLocaleString()
   return (
     <li>
       <Link
@@ -124,11 +128,13 @@ function DocumentRow({ document }: { document: DocumentSummary }) {
           </Badge>
         ) : null}
         <span className="flex shrink-0 items-center gap-2 text-mini text-text-tertiary">
-          {editorName ? <UserAvatar name={editorName} size="xs" /> : null}
-          <span className="hidden md:inline">{editorName}</span>
+          {authorName ? <UserAvatar name={authorName} size="xs" /> : null}
+          <span className="hidden md:inline" title="Author">
+            {authorName}
+          </span>
           <time
             dateTime={document.updated_at}
-            title={new Date(document.updated_at).toLocaleString()}
+            title={editorName ? `Edited by ${editorName}, ${updated}` : updated}
           >
             {formatRelativeTime(document.updated_at)}
           </time>
