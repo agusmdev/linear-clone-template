@@ -365,6 +365,11 @@ test.describe('search page', () => {
     await page.getByRole('tab', { name: /Issues/ }).click()
     await expect(results).toHaveCount(2)
 
+    // Every word matches, in any order, and each one is highlighted.
+    await input.fill('launch rocket')
+    await expect(results).toHaveCount(1)
+    await expect(results.first().locator('mark')).toHaveText(['Rocket', 'launch'])
+
     // A new query updates the results and the URL.
     await input.fill('launch')
     await expect(results).toHaveCount(1)

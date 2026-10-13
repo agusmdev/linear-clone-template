@@ -108,26 +108,24 @@ function toSections(results: SearchResults, path: (p: string) => string): Result
   ]
 }
 
-/** Wraps case-insensitive matches of `query` in <mark>. */
+/** Wraps case-insensitive matches of each word of `query` in <mark>. */
 function Highlight({ text, query }: { text: string; query: string }) {
-  const needle = query.trim().toLowerCase()
-  if (!needle) return text
-  const parts: ReactNode[] = []
-  const lower = text.toLowerCase()
-  let start = 0
-  let index = lower.indexOf(needle)
-  while (index !== -1) {
-    if (index > start) parts.push(text.slice(start, index))
-    parts.push(
+  const words = query.trim().split(/\s+/).filter(Boolean)
+  if (words.length === 0) return text
+  const escaped = words.map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  // Longest first, so "log" does not cut a "login" match short.
+  escaped.sort((a, b) => b.length - a.length)
+  const pattern = new RegExp(`(${escaped.join('|')})`, 'gi')
+  // split() with one capture group: the matches are at the odd indexes.
+  return text.split(pattern).map((part, index) =>
+    index % 2 === 1 ? (
       <mark key={index} className="rounded-[2px] bg-primary/25 text-foreground">
-        {text.slice(index, index + needle.length)}
+        {part}
       </mark>
+    ) : (
+      part
     )
-    start = index + needle.length
-    index = lower.indexOf(needle, start)
-  }
-  if (start < text.length) parts.push(text.slice(start))
-  return parts
+  )
 }
 
 function SearchPage() {

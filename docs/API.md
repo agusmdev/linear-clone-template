@@ -414,9 +414,10 @@ issue is created with an assignee). Other features (comments, mentions) call
 | IMPLEMENTED | GET | `/workspaces/{workspace_id}/search?q=&types=issue,document,project&limit=10` | – | `{issues: (IssueRef & {team: TeamSummary})[], documents: {id, title, icon, project_id}[], projects: {id, name, icon, color, status}[]}` |
 
 Issue search matches title, description and identifier (`ENG-12`, or the bare
-number `12`); an exact identifier match comes first, then the newest updated;
+number `12`). Every word of `q` must match (in any order; one word may be in the
+title and another in the description), so `redirect login` finds "Fix login redirect"; an exact identifier match comes first, then the newest updated;
 archived issues are left out. Documents match title or content, projects name
-or description. Descriptions and content match their visible text only (not the
+or description, word by word in the same way. Descriptions and content match their visible text only (not the
 HTML markup; `a & b` matches the stored `a &amp; b`). `limit` (1..50) is per type. An empty `q` returns empty lists; `q` is at most
 200 characters (longer: 422 `validation_error`).
 `%` and `_` match literally.
