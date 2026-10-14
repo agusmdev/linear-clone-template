@@ -1075,4 +1075,45 @@ test.describe('inline editors and Esc', () => {
     const states = await listStates(api, user, team.id)
     expect(states.map(s => s.name)).not.toContain('Draft')
   })
+
+  test('after a refused save, the field keeps the focus and Esc does not leave settings', async ({
+    authedPage: page,
+    api,
+    user,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const [team] = await listTeams(api, user, workspace.id)
+    const base = `/${workspace.url_key}/settings`
+
+    // Status: a taken name, submitted with the mouse (the button turns disabled).
+    await page.goto(`${base}/team/${team.key}`)
+    await page.getByRole('button', { name: 'Add status to Started' }).click()
+    await page.getByLabel('Status name').fill('Done')
+    await page.getByRole('button', { name: 'Add status', exact: true }).click()
+    await expect(page.getByRole('alert')).toHaveText('A status with this name already exists')
+    await expect(page.getByLabel('Status name')).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(page.getByLabel('Status name')).toHaveCount(0)
+    await expect(page).toHaveURL(`${base}/team/${team.key}`)
+
+    // Label: a taken name (any case).
+    await page.goto(`${base}/labels`)
+    await page.getByRole('button', { name: 'New label' }).click()
+    await page.getByLabel('Label name').fill('bug')
+    await page.getByRole('button', { name: 'Create label' }).click()
+    await expect(page.getByRole('alert')).toHaveText('A label with this name already exists')
+    await expect(page.getByLabel('Label name')).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(page).toHaveURL(`${base}/labels`)
+
+    // Invite: an email without an account.
+    await page.goto(`${base}/members`)
+    const email = page.getByPlaceholder('email@example.com')
+    await email.fill(`nobody-${randomUUID()}@example.com`)
+    await page.getByRole('button', { name: 'Invite' }).click()
+    await expect(page.getByText('No account uses this email')).toBeVisible()
+    await expect(email).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(page).toHaveURL(`${base}/members`)
+  })
 })

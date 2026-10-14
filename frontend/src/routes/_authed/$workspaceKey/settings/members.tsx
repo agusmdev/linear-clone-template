@@ -250,13 +250,17 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
       form.reset({ email: '', role: data.role })
     } catch (error) {
       if (error instanceof ApiError && error.code === 'user_not_found') {
-        form.setError('email', {
-          message: 'No account uses this email. Ask them to sign up first.',
-        })
+        // Focus the field again (the disabled Invite button dropped it), so Esc
+        // does not leave Settings.
+        form.setError(
+          'email',
+          { message: 'No account uses this email. Ask them to sign up first.' },
+          { shouldFocus: true }
+        )
         return
       }
       if (error instanceof ApiError && error.code === 'duplicate_item') {
-        form.setError('email', { message: 'This user is already a member' })
+        form.setError('email', { message: 'This user is already a member' }, { shouldFocus: true })
         return
       }
       toastApiError(error, 'Could not invite the member')

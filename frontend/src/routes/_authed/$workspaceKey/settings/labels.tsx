@@ -246,6 +246,9 @@ function LabelEditor({
     try {
       await onSubmit(parsed.data.name, parsed.data.color)
     } catch (err) {
+      // The disabled submit button dropped the focus: give it back to the name,
+      // so the user can fix it and Esc cancels the row instead of leaving Settings.
+      inputRef.current?.focus()
       if (err instanceof ApiError && err.code === 'duplicate_item') {
         setError('A label with this name already exists')
       } else {

@@ -212,7 +212,11 @@ function GeneralSection({ team, canManage }: { team: Team; canManage: boolean })
       }
     } catch (error) {
       if (error instanceof ApiError && error.code === 'duplicate_item') {
-        form.setError('key', { message: 'Another team already uses this key' })
+        form.setError(
+          'key',
+          { message: 'Another team already uses this key' },
+          { shouldFocus: true }
+        )
         return
       }
       toastApiError(error, 'Could not update the team')
@@ -701,6 +705,9 @@ function StateEditor({
     try {
       await onSubmit(trimmed, color)
     } catch (err) {
+      // The disabled submit button dropped the focus: give it back to the name,
+      // so the user can fix it and Esc cancels the row instead of leaving Settings.
+      inputRef.current?.focus()
       if (err instanceof ApiError && err.code === 'duplicate_item') {
         setError('A status with this name already exists')
         return
