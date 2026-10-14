@@ -15,7 +15,8 @@ export function SettingsPage({ title, description, actions, children }: Settings
   return (
     <div className="mx-auto w-full max-w-[680px] px-6 py-10 sm:py-14">
       <div className="mb-8 flex items-end justify-between gap-4">
-        <div className="min-w-0">
+        {/* A long unbroken name (team, workspace) wraps instead of overflowing. */}
+        <div className="min-w-0 [overflow-wrap:anywhere]">
           <h2 className="text-[24px] leading-tight font-semibold tracking-[-0.01em] text-foreground">
             {title}
           </h2>
