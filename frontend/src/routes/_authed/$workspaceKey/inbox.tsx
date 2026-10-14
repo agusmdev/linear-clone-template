@@ -18,6 +18,7 @@ import {
   useRefreshNotificationIssue,
   useUpdateNotification,
 } from '@/hooks/useNotifications'
+import { ApiError } from '@/lib/api-client'
 import { toastApiError } from '@/lib/error-handler'
 import { cn } from '@/lib/utils'
 import type { Notification, UpdateNotificationData } from '@/types/notification'
@@ -69,10 +70,22 @@ function InboxPage() {
     size: PAGE_SIZE,
   })
   const items = listQuery.data?.items ?? []
-  const selected =
-    items.find(n => n.id === selectedId) ?? (sticky?.id === selectedId ? sticky : null)
-  const issueQuery = useNotificationIssue(selected?.issue_id)
+  // A teammate deleted the selected notification's issue (or comment), and the
+  // notification with it: the preview closes instead of showing a stale copy.
+  // The full list leaves out only archived notifications; the unread list also
+  // drops read ones on purpose, so only the full list tells a deleted one apart.
+  const missingFromList =
+    !unreadOnly &&
+    listQuery.isSuccess &&
+    !listQuery.isPlaceholderData &&
+    !items.some(n => n.id === selectedId)
+  const candidate =
+    items.find(n => n.id === selectedId) ??
+    (sticky?.id === selectedId && !missingFromList ? sticky : null)
+  const issueQuery = useNotificationIssue(candidate?.issue_id)
   const refreshIssue = useRefreshNotificationIssue()
+  const issueDeleted = issueQuery.error instanceof ApiError && issueQuery.error.status === 404
+  const selected = issueDeleted ? null : candidate
 
   const update = useUpdateNotification()
   const markAllRead = useMarkAllNotificationsRead()
@@ -81,7 +94,16 @@ function InboxPage() {
   const issueHref = (n: Notification) => (n.issue ? path(`/issue/${n.issue.identifier}`) : null)
 
   function change(n: Notification, data: UpdateNotificationData, failure: string) {
-    update.mutate({ id: n.id, data }, { onError: error => toastApiError(error, failure) })
+    update.mutate(
+      { id: n.id, data },
+      {
+        onError: error =>
+          // Deleted elsewhere (with its issue or comment): the refetch drops it.
+          error instanceof ApiError && error.status === 404
+            ? toast('This notification was deleted')
+            : toastApiError(error, failure),
+      }
+    )
   }
 
   function select(n: Notification) {
@@ -128,7 +150,11 @@ function InboxPage() {
   function deleteNotification(n: Notification) {
     selectNeighbour(n)
     remove.mutate(n.id, {
-      onError: error => toastApiError(error, 'Could not delete the notification'),
+      onError: error => {
+        // Already deleted elsewhere: nothing left to delete.
+        if (!(error instanceof ApiError && error.status === 404))
+          toastApiError(error, 'Could not delete the notification')
+      },
     })
   }
 

@@ -8,6 +8,7 @@ import {
   createComment,
   createIssue,
   createWorkspace,
+  deleteIssue,
   expect,
   getUnreadNotificationCount,
   listNotifications,
@@ -345,6 +346,11 @@ test.describe('inbox', () => {
     const preview = page.getByRole('region', { name: 'Notification preview' })
     await expect(rows(page)).toHaveCount(1)
     await expect(page.getByRole('button', { name: 'Back to inbox' })).toHaveCount(0)
+    // The sidebar (and its Inbox badge) is behind the menu: the menu button shows the unread dot.
+    await expect(
+      page.getByRole('button', { name: 'Open menu (1 unread notifications)' })
+    ).toBeVisible()
+    await expect(page.getByTestId('menu-unread-dot')).toBeVisible()
 
     await rows(page).first().getByRole('button').first().click()
     await expect(preview.getByRole('heading', { name: 'Mobile task' })).toBeVisible()
@@ -354,6 +360,44 @@ test.describe('inbox', () => {
     await preview.getByRole('button', { name: 'Back to inbox' }).click()
     await expect(list).toBeVisible()
     await expect(preview).toHaveCount(0)
+    // Opening it read it: no dot left.
+    await expect(page.getByRole('button', { name: 'Open menu', exact: true })).toBeVisible()
+    await expect(page.getByTestId('menu-unread-dot')).toHaveCount(0)
+  })
+
+  test('a teammate deleting the issue closes its preview instead of failing on it', async ({
+    api,
+    user: owner,
+    loginAs,
+  }) => {
+    const { workspace, member, memberUser, team } = await setUp(api, owner)
+    await createIssue(api, owner, {
+      team_id: team.id,
+      title: 'Kept task',
+      assignee_id: memberUser.id,
+    })
+    const doomed = await createIssue(api, owner, {
+      team_id: team.id,
+      title: 'Doomed task',
+      assignee_id: memberUser.id,
+    })
+
+    const page = await loginAs(member)
+    await page.goto(`/${workspace.url_key}/inbox`)
+    await expect(rows(page)).toHaveCount(2)
+    const preview = page.getByRole('region', { name: 'Notification preview' })
+    await rows(page).filter({ hasText: 'Doomed task' }).getByRole('button').first().click()
+    await expect(preview.getByRole('heading', { name: 'Doomed task' })).toBeVisible()
+
+    // Deleting the issue deletes its notifications too.
+    await deleteIssue(api, owner, doomed.id)
+    await page.keyboard.press('u')
+    await expect(page.getByText('This notification was deleted')).toBeVisible()
+    await expect(page.getByText(/not found/)).toHaveCount(0)
+    await expect(preview).toHaveCount(0)
+    await expect(page.getByText('No notification selected')).toBeVisible()
+    await expect(rows(page)).toHaveCount(1)
+    await expect(rows(page).first()).toContainText('Kept task')
   })
 
   test('Enter opens the selected notification only from its own row, not from other buttons', async ({
