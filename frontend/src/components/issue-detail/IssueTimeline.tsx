@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { describeActivity, foldActivity } from '@/components/issue-detail/activity-text'
+import { isBlankHtml } from '@/lib/html'
 import { formatDateTime, formatRelativeTime } from '@/lib/relative-time'
 import type { Comment } from '@/types/comment'
 import type { IssueActivity } from '@/types/issue'
@@ -42,15 +43,6 @@ interface IssueTimelineProps extends IssueLinkProps {
 type Entry =
   | { kind: 'activity'; at: string; activity: IssueActivity }
   | { kind: 'comment'; at: string; comment: Comment }
-
-function isEmptyHtml(html: string): boolean {
-  return (
-    html
-      .replace(/<[^>]*>/g, '')
-      .replace(/&nbsp;/g, ' ')
-      .trim() === ''
-  )
-}
 
 function TimeAgo({ iso }: { iso: string }) {
   return (
@@ -109,7 +101,7 @@ function CommentCard({
   const author = comment.user ? comment.user.name || comment.user.email : 'Deleted user'
 
   const save = async () => {
-    if (isEmptyHtml(draft) || saving) return
+    if (isBlankHtml(draft) || saving) return
     setSaving(true)
     try {
       await onEdit(draft)
@@ -189,7 +181,7 @@ function CommentCard({
               <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
                 Cancel
               </Button>
-              <Button size="sm" disabled={isEmptyHtml(draft) || saving} onClick={() => void save()}>
+              <Button size="sm" disabled={isBlankHtml(draft) || saving} onClick={() => void save()}>
                 Save
               </Button>
             </div>
@@ -266,7 +258,7 @@ export function CommentComposer({
   const [body, setBody] = React.useState('')
   // A new editor after each send: the editor ignores outside value changes while focused.
   const [round, setRound] = React.useState(0)
-  const empty = isEmptyHtml(body)
+  const empty = isBlankHtml(body)
 
   const send = async () => {
     if (empty || submitting) return

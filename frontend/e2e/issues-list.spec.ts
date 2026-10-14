@@ -353,6 +353,41 @@ test.describe('issues list', () => {
     expect(created?.description).toBe('<p>desc text</p>')
   })
 
+  test('a description of only empty lines is not a draft and is not saved (ISS-1)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { workspace, key } = await seedWorkspace(api, user)
+    const page = await loginAs(user)
+    await page.goto(`/${key}/team/ENG/issues`)
+    await expect(page.getByText('No issues yet')).toBeVisible()
+
+    const dialog = page.getByRole('dialog', { name: 'New issue' })
+    const description = dialog.getByRole('textbox', { name: 'Issue description' })
+    await page.locator('body').click()
+    await page.keyboard.press('c')
+    await description.click()
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('Enter')
+    await page.keyboard.type('   ')
+    // Nothing visible was typed: Escape closes without the draft prompt.
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+    await expect(page.getByRole('alertdialog', { name: 'Save issue as draft?' })).toBeHidden()
+
+    // An issue created with only empty lines has no description.
+    await page.keyboard.press('c')
+    await dialog.getByLabel('Issue title').fill('Empty lines only')
+    await description.click()
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('ControlOrMeta+Enter')
+    await expect(page.getByText('Created ENG-1')).toBeVisible()
+    const [issue] = (await listIssues(api, user, workspace.id)).items
+    expect(issue).toMatchObject({ title: 'Empty lines only', description: null })
+  })
+
   test('closing the modal with text typed asks to save a draft (ISS-1)', async ({
     api,
     user,

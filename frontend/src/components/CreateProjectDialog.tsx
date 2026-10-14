@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { RichTextEditor } from '@/components/editor'
@@ -86,7 +87,12 @@ export function CreateProjectDialog({
     onOpenChange(next)
   }
 
+  // Blocks a second submit (Enter or Cmd+Enter pressed again) while the create
+  // request is in flight: `isPending` only changes after a re-render.
+  const inFlight = useRef(false)
   const onSubmit = async (data: ProjectFormData) => {
+    if (inFlight.current) return
+    inFlight.current = true
     try {
       const project = await createProject.mutateAsync(projectFormToPayload(workspaceId, data))
       form.reset(emptyForm(defaultTeamId))
@@ -94,8 +100,11 @@ export function CreateProjectDialog({
       onCreated?.(project)
     } catch (error) {
       toastApiError(error, 'Could not create project')
+    } finally {
+      inFlight.current = false
     }
   }
+  const submit = form.handleSubmit(onSubmit)
 
   const icon = useWatch({ control: form.control, name: 'icon' })
   const color = useWatch({ control: form.control, name: 'color' })
@@ -109,6 +118,13 @@ export function CreateProjectDialog({
         onOpenAutoFocus={event => {
           event.preventDefault()
           form.setFocus('name')
+        }}
+        onKeyDown={event => {
+          // Cmd/Ctrl+Enter creates the project from any field (Enter only works in the name).
+          if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+            event.preventDefault()
+            void submit()
+          }
         }}
       >
         <DialogHeader>
@@ -124,7 +140,7 @@ export function CreateProjectDialog({
             method="post"
             action="#"
             noValidate
-            onSubmit={form.handleSubmit(onSubmit)}
+            onSubmit={submit}
             className="flex flex-col gap-3"
           >
             <ProjectIconPicker

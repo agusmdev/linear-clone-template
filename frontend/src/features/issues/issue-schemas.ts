@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { isBlankHtml } from '@/lib/html'
 import type { CreateIssueData, IssuePriority } from '@/types/issue'
 
 /** Titles are one line: line breaks (and the spaces around them) become one space. */
@@ -31,7 +32,7 @@ export const createIssueSchema = z.object({
 
 export type CreateIssueFormData = z.infer<typeof createIssueSchema>
 
-/** Form values -> POST /issues body. Empty values are left out (server defaults). */
+/** Form values -> POST /issues body. Empty values (a description of only empty lines too) are left out (server defaults). */
 export function createIssueFormToPayload(data: CreateIssueFormData): CreateIssueData {
   const payload: CreateIssueData = {
     team_id: data.team_id,
@@ -39,7 +40,7 @@ export function createIssueFormToPayload(data: CreateIssueFormData): CreateIssue
     priority: data.priority as IssuePriority,
     label_ids: data.label_ids,
   }
-  if (data.description.trim()) payload.description = data.description
+  if (!isBlankHtml(data.description)) payload.description = data.description
   if (data.state_id) payload.state_id = data.state_id
   if (data.assignee_id) payload.assignee_id = data.assignee_id
   if (data.project_id) payload.project_id = data.project_id
