@@ -10,6 +10,12 @@ import { formatShortDate, isOverdue, LabelDot, ProjectIcon, StateIcon } from './
 const pickerButton =
   'flex shrink-0 items-center justify-center rounded-md outline-none hover:bg-surface-active focus-visible:ring-2 focus-visible:ring-ring/60 data-[state=open]:bg-surface-active'
 
+/** Labels a list row shows one by one; more collapse into one "N labels" chip. */
+const MAX_ROW_LABELS = 2
+
+const labelChip =
+  'inline-flex h-5 max-w-40 min-w-0 items-center gap-1.5 rounded-full border border-border px-2 text-micro whitespace-nowrap text-text-secondary hover:bg-surface-hover'
+
 /** One issue in the list layout (Linear's row anatomy). */
 export function IssueRow({ issue }: { issue: Issue }) {
   const view = useIssueView()
@@ -69,17 +75,27 @@ export function IssueRow({ issue }: { issue: Issue }) {
               <button
                 type="button"
                 aria-label={`Labels: ${issue.labels.map(l => l.name).join(', ')}`}
-                className="hidden max-w-64 shrink items-center gap-1 overflow-hidden rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/60 md:flex"
+                className="hidden max-w-64 min-w-0 shrink items-center gap-1 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/60 md:flex"
               >
-                {issue.labels.map(label => (
-                  <span
-                    key={label.id}
-                    className="inline-flex h-5 shrink-0 items-center gap-1.5 rounded-full border border-border px-2 text-micro text-text-secondary hover:bg-surface-hover"
-                  >
-                    <LabelDot color={label.color} />
-                    {label.name}
+                {/* Like Linear: more than two labels collapse into one "N labels" chip,
+                    so no chip is cut off and no label is hidden without a hint. */}
+                {issue.labels.length > MAX_ROW_LABELS ? (
+                  <span className={labelChip}>
+                    <span className="flex shrink-0 -space-x-0.5">
+                      {issue.labels.slice(0, 3).map(label => (
+                        <LabelDot key={label.id} color={label.color} />
+                      ))}
+                    </span>
+                    {issue.labels.length} labels
                   </span>
-                ))}
+                ) : (
+                  issue.labels.map(label => (
+                    <span key={label.id} title={label.name} className={labelChip}>
+                      <LabelDot color={label.color} />
+                      <span className="truncate">{label.name}</span>
+                    </span>
+                  ))
+                )}
               </button>
             ) : (
               // No labels to show: an empty anchor, so L still opens the picker here.

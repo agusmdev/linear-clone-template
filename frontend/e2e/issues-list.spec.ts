@@ -10,6 +10,7 @@ import {
   bulkDeleteIssues,
   bulkUpdateIssues,
   createIssue,
+  createLabel,
   createProject,
   createTeam,
   createWorkspace,
@@ -71,6 +72,54 @@ test.describe('issues list', () => {
     // Not cut off with an ellipsis, and on one line.
     expect(await identifier.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
     expect(await identifier.evaluate(el => el.getBoundingClientRect().height)).toBeLessThan(24)
+  })
+
+  test('a row with many labels shows one "N labels" chip, and long label names end with an ellipsis (ISS-3)', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const { workspace, team, labels, key } = await seedWorkspace(api, user)
+    const extra = []
+    for (const name of ['Frontend regression area', 'Needs design review', 'Customer reported']) {
+      extra.push(await createLabel(api, user, workspace.id, { name, color: '#4ea7fc' }))
+    }
+    const longA = await createLabel(api, user, workspace.id, {
+      name: 'Extremely long label name for the platform team',
+      color: '#eb5757',
+    })
+    const longB = await createLabel(api, user, workspace.id, {
+      name: 'Another quite long label name for the row',
+      color: '#bb87fc',
+    })
+    await createIssue(api, user, {
+      team_id: team.id,
+      title: 'Many labels',
+      label_ids: [labels.Bug.id, labels.Feature.id, ...extra.map(l => l.id)],
+    })
+    await createIssue(api, user, {
+      team_id: team.id,
+      title: 'Two long labels',
+      label_ids: [longA.id, longB.id],
+    })
+
+    await page.setViewportSize({ width: 1100, height: 800 })
+    await page.goto(`/${key}/team/${team.key}/issues`)
+
+    // Five labels: one chip that names the count, no chip cut off by the row.
+    const many = row(page, 'Many labels').getByRole('button', { name: /^Labels: / })
+    await expect(many).toHaveText('5 labels')
+    expect(await many.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+
+    // Two long labels: both chips fit the row, each name ends with an ellipsis.
+    const two = row(page, 'Two long labels').getByRole('button', { name: /^Labels: / })
+    expect(await two.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+    for (const name of [longA.name, longB.name]) {
+      const text = two.getByText(name, { exact: true })
+      await expect(text).toBeVisible()
+      expect(await text.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true)
+      expect(await text.evaluate(el => getComputedStyle(el).textOverflow)).toBe('ellipsis')
+    }
   })
 
   test('creates an issue with properties from the modal (ISS-1)', async ({
