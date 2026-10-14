@@ -365,6 +365,35 @@ test.describe('inbox', () => {
     await expect(page.getByTestId('menu-unread-dot')).toHaveCount(0)
   })
 
+  test('a long unbroken issue title wraps in the preview and keeps its buttons on a phone', async ({
+    api,
+    user: owner,
+    loginAs,
+  }) => {
+    const { workspace, member, memberUser, team } = await setUp(api, owner)
+    const title = `Crash${'x'.repeat(150)}`
+    await createIssue(api, owner, { team_id: team.id, title, assignee_id: memberUser.id })
+
+    const page = await loginAs(member)
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto(`/${workspace.url_key}/inbox`)
+    await rows(page).first().getByRole('button').first().click()
+    const preview = page.getByRole('region', { name: 'Notification preview' })
+    const heading = preview.getByRole('heading', { name: title })
+    await expect(heading).toBeVisible()
+
+    // The title wraps instead of widening the pane past the screen.
+    const box = await heading.boundingBox()
+    expect(box && box.x + box.width).toBeLessThanOrEqual(390)
+    for (const control of [
+      preview.getByRole('button', { name: 'Mark as unread' }),
+      preview.getByRole('button', { name: 'Archive' }),
+      preview.getByRole('button', { name: 'Delete notification' }),
+      preview.getByRole('link', { name: 'Open issue' }),
+    ])
+      await expect(control).toBeInViewport({ ratio: 1 })
+  })
+
   test('a teammate deleting the issue closes its preview instead of failing on it', async ({
     api,
     user: owner,

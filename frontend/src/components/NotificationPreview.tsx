@@ -52,7 +52,7 @@ export function NotificationPreview({
   const state = issue?.state ?? ref?.state
   const assigneeName = issue?.assignee ? issue.assignee.name || issue.assignee.email : null
   return (
-    <section aria-label="Notification preview" className="flex min-h-0 flex-1 flex-col">
+    <section aria-label="Notification preview" className="flex min-h-0 min-w-0 flex-1 flex-col">
       <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border-subtle px-4">
         <IconButton
           label="Back to inbox"
@@ -117,7 +117,7 @@ export function NotificationPreview({
 
           {ref ? (
             <>
-              <h2 className="text-title font-semibold text-foreground">
+              <h2 className="text-title font-semibold [overflow-wrap:anywhere] text-foreground">
                 {issue?.title ?? ref.title}
               </h2>
 
