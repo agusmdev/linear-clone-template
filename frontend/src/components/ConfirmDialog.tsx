@@ -41,7 +41,9 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+      {/* Long unbroken names (a team, label or member) wrap instead of widening
+          the dialog and pushing its buttons out of view. */}
+      <AlertDialogContent className="[overflow-wrap:anywhere]">
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           {description ? <AlertDialogDescription>{description}</AlertDialogDescription> : null}

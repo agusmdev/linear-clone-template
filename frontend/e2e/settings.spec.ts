@@ -496,6 +496,29 @@ test.describe('teams', () => {
     expect(await name.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
   })
 
+  test('a long unbroken team name wraps in the page title and the delete dialog', async ({
+    authedPage: page,
+    api,
+    user,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const name = 'Verylongunbrokenname'.repeat(6)
+    await createTeam(api, user, workspace.id, { name, key: 'LONG' })
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto(`/${workspace.url_key}/settings/team/LONG`)
+
+    const title = page.getByRole('heading', { level: 2, name })
+    await expect(title).toBeVisible()
+    expect(await title.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+
+    await page.getByRole('button', { name: 'Delete team' }).click()
+    const dialog = page.getByRole('alertdialog')
+    // The name wrapped: the dialog stays on screen and its buttons stay visible.
+    expect(await dialog.evaluate(el => el.getBoundingClientRect().right <= innerWidth)).toBe(true)
+    await expect(dialog.getByRole('button', { name: 'Delete team' })).toBeInViewport()
+    await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeInViewport()
+  })
+
   test('a taken team key is reported in the dialog', async ({ authedPage: page, api, user }) => {
     const workspace = await createWorkspace(api, user)
     await page.goto(`/${workspace.url_key}/settings/teams`)
