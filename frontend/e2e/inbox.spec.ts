@@ -355,4 +355,48 @@ test.describe('inbox', () => {
     await expect(list).toBeVisible()
     await expect(preview).toHaveCount(0)
   })
+
+  test('Enter opens the selected notification only from its own row, not from other buttons', async ({
+    api,
+    user: owner,
+    loginAs,
+  }) => {
+    const { workspace, memberUser, member, team } = await setUp(api, owner)
+    await createIssue(api, owner, {
+      team_id: team.id,
+      title: 'Older task',
+      assignee_id: memberUser.id,
+    })
+    const newer = await createIssue(api, owner, {
+      team_id: team.id,
+      title: 'Newer task',
+      assignee_id: memberUser.id,
+    })
+
+    const page = await loginAs(member)
+    await page.goto(`/${workspace.url_key}/inbox`)
+    await expect(rows(page)).toHaveCount(2)
+    await rows(page).nth(0).getByRole('button').first().click()
+    const preview = page.getByRole('region', { name: 'Notification preview' })
+    await expect(preview.getByRole('heading', { name: 'Newer task' })).toBeVisible()
+
+    // Enter on a focused preview button clicks that button.
+    await preview.getByRole('button', { name: 'Mark as unread' }).focus()
+    await page.keyboard.press('Enter')
+    await expect(rows(page).nth(0).getByRole('img', { name: 'Unread' })).toHaveCount(1)
+    await expect(page).toHaveURL(new RegExp(`/${workspace.url_key}/inbox$`))
+
+    // Enter on another focused row selects that row instead of opening the selected one.
+    await rows(page).nth(1).getByRole('button').first().focus()
+    await page.keyboard.press('Enter')
+    await expect(rows(page).nth(1)).toHaveAttribute('data-selected', 'true')
+    await expect(preview.getByRole('heading', { name: 'Older task' })).toBeVisible()
+    await expect(page).toHaveURL(new RegExp(`/${workspace.url_key}/inbox$`))
+
+    // Focus follows K, so Enter then opens the newly selected notification.
+    await page.keyboard.press('k')
+    await expect(rows(page).nth(0)).toHaveAttribute('data-selected', 'true')
+    await page.keyboard.press('Enter')
+    await expect(page).toHaveURL(new RegExp(`/${workspace.url_key}/issue/${newer.identifier}$`))
+  })
 })

@@ -40,10 +40,18 @@ function isTyping(target: EventTarget | null): boolean {
   )
 }
 
+/** The notification id of the row that holds `element`, else null. */
+function rowIdOf(element: Element | null): string | null {
+  return element?.closest('[data-notification-id]')?.getAttribute('data-notification-id') ?? null
+}
+
 function scrollRowIntoView(id: string) {
-  document
-    .querySelector(`[data-notification-id="${CSS.escape(id)}"]`)
-    ?.scrollIntoView({ block: 'nearest' })
+  const row = document.querySelector(`[data-notification-id="${CSS.escape(id)}"]`)
+  row?.scrollIntoView({ block: 'nearest' })
+  // Keyboard focus on a row follows the selection, so Enter opens the selected one.
+  if (rowIdOf(document.activeElement) !== null) {
+    row?.querySelector<HTMLElement>('button')?.focus({ preventScroll: true })
+  }
 }
 
 function InboxPage() {
@@ -183,6 +191,14 @@ function InboxPage() {
         case 'Enter':
         case 'o':
         case 'O': {
+          // Enter on a focused button or link clicks it (Archive, another row, a sidebar
+          // link); only the selected row's own button opens the issue.
+          const control =
+            event.key === 'Enter' && event.target instanceof Element
+              ? event.target.closest('a, button, [role="button"]')
+              : null
+          const rowId = control?.parentElement?.getAttribute('data-notification-id')
+          if (control && rowId !== current?.id) return
           const href = current ? issueHref(current) : null
           if (href) {
             event.preventDefault()
