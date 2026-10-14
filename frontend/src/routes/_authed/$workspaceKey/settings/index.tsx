@@ -60,7 +60,7 @@ function WorkspaceGeneralSettings() {
       }
     } catch (error) {
       if (error instanceof ApiError && error.code === 'duplicate_item') {
-        form.setError('url_key', { message: 'This URL is already taken' })
+        form.setError('url_key', { message: 'This URL is already taken' }, { shouldFocus: true })
         return
       }
       toastApiError(error, 'Could not update the workspace')
