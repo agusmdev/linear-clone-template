@@ -182,3 +182,12 @@ Bugs found by earlier QA rounds. Do not re-report one unless it still reproduces
 - search: the arrow-key selected result scrolled out of view
 - issue-detail: deleting an issue left stale parent, sub-issue and relation rows on the issues it touched
 - projects-cycles: the project page name field kept an old name after a teammate's rename (leaving the field reverted it); Escape in it saved the typed name
+
+## Round 13 (all fixed)
+
+- auth: an email the backend rejected showed as a raw toast instead of under the Email field
+- search: Cmd+K showed stale results after an issue was created, changed or deleted
+- inbox: a long unbroken title pushed the preview buttons off screen on a phone
+- documents: the formatting toolbar stayed visible after focus left the editor
+- issue-detail: a pasted line break in the title was kept; the full sub-issue form lost the typed title and parent to a saved draft
+- issues-list: Enter on a board card lifted it instead of opening it; + on a No assignee / No project group kept the page default
