@@ -577,6 +577,29 @@ test.describe('search page', () => {
     expect(await identifier.evaluate(el => el.getBoundingClientRect().height)).toBeLessThan(24)
   })
 
+  test('arrow keys keep the selected result on screen', async ({ api, user, authedPage: page }) => {
+    const workspace = await createWorkspace(api, user)
+    const [team] = await listTeams(api, user, workspace.id)
+    for (let n = 1; n <= 25; n++) {
+      await createIssue(api, user, { team_id: team.id, title: `Payment bug ${n}` })
+    }
+
+    await page.setViewportSize({ width: 1280, height: 600 })
+    await page.goto(`/${workspace.url_key}/search?q=payment`)
+    const results = page.getByTestId('search-result')
+    await expect(results).toHaveCount(25)
+    // Newest first: the last row is the first issue, far below the fold.
+    await expect(results.last()).not.toBeInViewport()
+    for (let n = 0; n < 24; n++) await page.keyboard.press('ArrowDown')
+    await expect(results.last()).toBeInViewport()
+    await expect(results.last()).toContainText('Payment bug 1')
+    for (let n = 0; n < 24; n++) await page.keyboard.press('ArrowUp')
+    await expect(results.first()).toBeInViewport()
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('Enter')
+    await expect(page).toHaveURL(`/${workspace.url_key}/issue/ENG-24`)
+  })
+
   test('an empty query shows the search prompt', async ({ api, user, authedPage: page }) => {
     const workspace = await createWorkspace(api, user)
     await page.goto(`/${workspace.url_key}/search`)
