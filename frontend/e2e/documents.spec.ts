@@ -489,6 +489,49 @@ test.describe('document editor', () => {
       .toBeNull()
   })
 
+  test('the formatting toolbar hides when focus leaves the editor after a toolbar click', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const doc = await createDocument(api, user, {
+      workspace_id: workspace.id,
+      title: 'Toolbar',
+      content: '<p>Hello world</p>',
+    })
+    await page.goto(`/${workspace.url_key}/document/${doc.id}`)
+
+    const editor = page.getByRole('textbox', { name: 'Document content' })
+    const bold = page.getByRole('button', { name: 'Bold' })
+    await expect(editor).toHaveAttribute('contenteditable', 'true')
+    await editor.click()
+    await expect(editor).toBeFocused()
+    await page.keyboard.press('End')
+    await page.keyboard.press('Shift+Control+ArrowLeft')
+    await bold.click()
+    await expect(editor.locator('strong')).toHaveText('world')
+    // The toolbar has settled once the edit is saved (a user does not click away at once).
+    await expect(page.getByRole('status')).toHaveText('Saved')
+    await expect(bold).toBeVisible()
+
+    await page.getByRole('button', { name: 'Copy link' }).first().click()
+    await expect(bold).toBeHidden()
+
+    // It shows again for a new selection, and the link input still opens inside it.
+    await editor.click()
+    await expect(editor).toBeFocused()
+    await page.keyboard.press('Home')
+    await page.keyboard.press('Shift+End')
+    await page.getByRole('button', { name: 'Add link' }).click()
+    await page.getByRole('textbox', { name: 'Link URL' }).fill('example.com')
+    await page.keyboard.press('Enter')
+    await expect(editor.getByRole('link', { name: 'Hello world' })).toHaveAttribute(
+      'href',
+      'https://example.com'
+    )
+  })
+
   test('copies the link of the document', async ({ api, user, authedPage: page }) => {
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
     const workspace = await createWorkspace(api, user)
