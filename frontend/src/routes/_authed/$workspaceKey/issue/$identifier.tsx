@@ -392,9 +392,10 @@ function IssueDetail({ issue }: { issue: Issue }) {
               subIssues={subIssuesQuery.data}
               issuePath={issuePath}
               creating={createSubIssue.isPending}
-              onOpenFullForm={() =>
+              onOpenFullForm={title =>
                 openCreateIssue({
                   teamId: issue.team_id,
+                  title,
                   parentId: issue.id,
                   projectId: issue.project_id ?? undefined,
                   cycleId: issue.cycle_id ?? undefined,

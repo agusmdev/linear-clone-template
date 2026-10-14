@@ -100,6 +100,18 @@ test.describe('issue page', () => {
     await title.blur()
     await expect(title).toHaveValue('Fix the sign-in bug')
 
+    // A pasted line break becomes a space, as in the create modal.
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+    await page.evaluate(() => navigator.clipboard.writeText('Fix the sign-in bug\non Safari'))
+    await title.focus()
+    await title.selectText()
+    await page.keyboard.press('ControlOrMeta+v')
+    await expect(title).toHaveValue('Fix the sign-in bug on Safari')
+    await title.press('Enter')
+    await expect
+      .poll(async () => (await getIssue(api, user, issue.id)).title)
+      .toBe('Fix the sign-in bug on Safari')
+
     const description = page.getByRole('textbox', { name: 'Issue description' })
     await expect(description).toContainText('Steps to reproduce')
     await description.click()
@@ -112,7 +124,9 @@ test.describe('issue page', () => {
     // The changes are in the activity timeline.
     const activity = page.getByRole('list', { name: 'Activity' })
     await expect(activity.getByText(/created the issue/)).toBeVisible()
-    await expect(activity.getByText(/changed the title from/)).toContainText('Fix the sign-in bug')
+    await expect(activity.getByText(/changed the title from/).first()).toContainText(
+      'Fix the sign-in bug'
+    )
     await expect(activity.getByText(/updated the description/)).toBeVisible()
   })
 
@@ -487,6 +501,52 @@ test.describe('issue page', () => {
 
     const [child] = (await listSubIssues(api, user, parent.id)).items
     expect(child).toMatchObject({ project_id: project.id, cycle_id: cycle.id })
+  })
+
+  test('the full sub-issue form keeps the typed title and the parent over a saved draft', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const { workspace, team } = await seedWorkspace(api, user)
+    const parent = await createIssue(api, user, { team_id: team.id, title: 'Launch v2' })
+    await openIssue(page, workspace.url_key, parent.identifier)
+
+    // A draft of another issue is saved first.
+    await page.keyboard.press('c')
+    const dialog = page.getByRole('dialog', { name: 'New issue' })
+    await dialog.getByLabel('Issue title').fill('Unrelated idea')
+    await page.keyboard.press('Escape')
+    await page
+      .getByRole('alertdialog', { name: 'Save issue as draft?' })
+      .getByRole('button', { name: 'Save draft' })
+      .click()
+    await expect(dialog).toBeHidden()
+
+    await page.getByRole('button', { name: 'Add sub-issues' }).click()
+    await page.getByRole('textbox', { name: 'Sub-issue title' }).fill('Write the docs')
+    await page.getByRole('button', { name: 'Create sub-issue with all properties' }).click()
+    await expect(dialog.getByLabel('Issue title')).toHaveValue('Write the docs')
+    await expect(
+      dialog.getByRole('button', { name: `Parent issue: ${parent.identifier}` })
+    ).toBeVisible()
+    await dialog.getByLabel('Issue title').press('ControlOrMeta+Enter')
+    await expect(dialog).toBeHidden()
+
+    await expect
+      .poll(async () => (await listSubIssues(api, user, parent.id)).items.map(i => i.title))
+      .toEqual(['Write the docs'])
+
+    // Closing an empty sub-issue form keeps the saved draft too.
+    await page.getByRole('button', { name: 'Add sub-issue', exact: true }).click()
+    await page.getByRole('button', { name: 'Create sub-issue with all properties' }).click()
+    await expect(dialog.getByLabel('Issue title')).toHaveValue('')
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+
+    // The saved draft is still there for the next new issue.
+    await page.keyboard.press('c')
+    await expect(dialog.getByLabel('Issue title')).toHaveValue('Unrelated idea')
   })
 
   test('long label names and long values stay inside the side panel and the timeline', async ({

@@ -15,8 +15,8 @@ interface SubIssuesSectionProps {
   /** Creates a sub-issue with this title. Resolves when it is saved. */
   onCreate: (title: string) => Promise<unknown>
   creating?: boolean
-  /** Opens the full create-issue modal for a sub-issue (all properties). */
-  onOpenFullForm?: () => void
+  /** Opens the full create-issue modal for a sub-issue (all properties) with the typed title. */
+  onOpenFullForm?: (title: string) => void
 }
 
 /** Small ring that fills with the share of completed sub-issues. */
@@ -168,9 +168,10 @@ export function SubIssuesSection({
               icon={<Maximize2 />}
               size="sm"
               onClick={() => {
+                const typed = title.trim()
                 setTitle('')
                 setAdding(false)
-                onOpenFullForm()
+                onOpenFullForm(typed)
               }}
             />
           ) : null}
