@@ -136,7 +136,7 @@ Bugs found by earlier QA rounds. Do not re-report one unless it still reproduces
 - journey: project Issues tab count left out canceled issues; L did nothing on an issue with no labels
 - journey: opening an issue from a "commented" notification did not show the new comment
 - journey: double-clicking Delete in the Delete document dialog showed a false error
-- journey (in progress): keyboard focus after dialogs, G then P/S hijacked by row pickers, Ctrl+K toggle on Windows/Linux, Esc on the issue page
+- journey: keyboard focus after dialogs, G then P/S hijacked by row pickers, Ctrl+K toggle on Windows/Linux, Esc on the issue page
 
 ## Known and accepted (not bugs to re-report)
 
@@ -155,3 +155,12 @@ Bugs found by earlier QA rounds. Do not re-report one unless it still reproduces
 - Search shows a generic box instead of a project's own icon.
 - Search shows at most 25 results per type.
 - Tab inside a code block moves focus out of the editor.
+
+## Round 10 (all fixed)
+
+- create-issue: a description of only empty lines was saved as content
+- create-issue: Cmd/Ctrl+Enter did nothing in the New project dialog
+- inbox: Enter after J/K, or on a focused button, opened the wrong issue
+- issue-detail: Enter in the relation search linked a stale result
+- issues-list: many labels on a row were cut off (now one "N labels" chip)
+- settings: long unbroken names overflowed titles and confirm dialogs
