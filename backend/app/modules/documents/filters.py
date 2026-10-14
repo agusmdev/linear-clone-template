@@ -3,10 +3,8 @@
 import uuid
 from typing import Any
 
-from sqlalchemy import or_
-
 from app.core.filters import ModelFilter
-from app.core.text_search import html_visible_text, like_pattern
+from app.core.text_search import html_visible_text, words_match
 from app.modules.documents.models import Document
 
 
@@ -14,7 +12,8 @@ class DocumentFilter(ModelFilter):  # ?order_by= accepts Document columns only
     """Query parameters of GET /documents (``workspace_id`` is a separate parameter).
 
     ?project_id=  ?team_id=
-    ?search=      title or visible text of the content (ILIKE; % and _ are literal)
+    ?search=      every word in the title or visible text of the content, in any
+                  order (ILIKE; % and _ are literal)
     ?order_by=    default -updated_at; e.g. title, sort_order, -created_at
     """
 
@@ -29,12 +28,12 @@ class DocumentFilter(ModelFilter):  # ?order_by= accepts Document columns only
     def filter(self, query: Any) -> Any:
         plain = self.model_copy(update={"search": None})
         query = super(DocumentFilter, plain).filter(query)
-        if self.search:
-            term = like_pattern(self.search)
+        if self.search and self.search.split():
+            # Every word, in any order, like the search page: "guide onboarding"
+            # finds "Onboarding guide".
             query = query.where(
-                or_(
-                    Document.title.ilike(term),
-                    html_visible_text(Document.content).ilike(term),
+                words_match(
+                    self.search, Document.title, html_visible_text(Document.content)
                 )
             )
         return query

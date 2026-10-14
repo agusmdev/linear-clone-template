@@ -29,7 +29,7 @@ export interface RichTextEditorProps {
   ariaLabel?: string
   /** Turns issue identifiers such as `ENG-123` into links. */
   renderIssueHref?: RenderIssueHref
-  /** Called on a click on an issue link. Without it, Mod+click opens the href in a new tab. */
+  /** Called on a plain click on an issue link. Mod+click opens the href in a new tab. */
   onIssueClick?: (identifier: string, event: MouseEvent) => void
 }
 
@@ -109,7 +109,8 @@ export function RichTextEditor({
         if (!anchor) return false
         const issue = anchor.getAttribute('data-issue-ref')
         const { onIssueClick: handleIssueClick } = callbacks.get()
-        if (issue && handleIssueClick) {
+        // Mod+click opens any link, issue links too, in a new tab (below).
+        if (issue && handleIssueClick && !(event.metaKey || event.ctrlKey)) {
           event.preventDefault()
           handleIssueClick(issue, event)
           return true

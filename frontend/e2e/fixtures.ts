@@ -932,8 +932,15 @@ function watchContext(context: BrowserContext): () => void {
   // Top-level document requests in flight, per page.
   const loading = new Map<Page, Set<Request>>()
 
-  const pageLoad = (request: Request) =>
-    request.isNavigationRequest() && request.frame() === request.frame().page().mainFrame()
+  const pageLoad = (request: Request) => {
+    if (!request.isNavigationRequest()) return false
+    try {
+      return request.frame() === request.frame().page().mainFrame()
+    } catch {
+      // A new tab's first navigation is sent before its frame exists.
+      return false
+    }
+  }
 
   async function reload(page: Page) {
     // The reload itself can be aborted by the next network change: try again.
