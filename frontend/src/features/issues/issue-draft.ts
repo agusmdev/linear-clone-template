@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { isBlankHtml } from '@/lib/html'
 import { createIssueSchema, type CreateIssueFormData } from './issue-schemas'
 
 // A draft may have no title yet (only a description).
@@ -6,9 +7,9 @@ const draftSchema = createIssueSchema.extend({ title: z.string().max(500) })
 
 const draftKey = (workspaceId: string) => `issue-draft:${workspaceId}`
 
-/** True when the form holds text the user would lose on close (title or description). */
+/** True when the form holds text the user would lose on close (title or description; empty lines do not count). */
 export function hasDraftContent(values: Pick<CreateIssueFormData, 'title' | 'description'>) {
-  return values.title.trim() !== '' || values.description.trim() !== ''
+  return values.title.trim() !== '' || !isBlankHtml(values.description)
 }
 
 /** The saved create-issue draft of a workspace ("Save draft" in the close prompt). */
