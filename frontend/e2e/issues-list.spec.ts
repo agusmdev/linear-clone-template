@@ -1031,6 +1031,46 @@ test.describe('issues list', () => {
     expect(items.find(issue => issue.title === 'Prefilled medium')?.priority).toBe(3)
   })
 
+  test('the "+" of the No assignee / No project column drops the page default (ISS-5, ISS-13)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { workspace, team, key } = await seedWorkspace(api, user)
+    const me = await getMe(api, user)
+    await createIssue(api, user, { team_id: team.id, title: 'Mine', assignee_id: me.id })
+    const project = await createProject(api, user, {
+      workspace_id: workspace.id,
+      name: 'Launch',
+      team_ids: [team.id],
+    })
+    const dialog = (page: Page) => page.getByRole('dialog', { name: 'New issue' })
+
+    // My issues > Assigned assigns new issues to me, but not from "No assignee".
+    const page = await loginAs(user)
+    await page.goto(`/${key}/my-issues?layout=board&group=assignee`)
+    await expect(page.locator('[data-issue-card="ENG-1"]')).toBeVisible()
+    await page.getByRole('button', { name: 'Add to No assignee' }).click()
+    await expect(dialog(page).getByRole('button', { name: 'Assignee: Unassigned' })).toBeVisible()
+    await dialog(page).getByLabel('Issue title').fill('Nobody owns this')
+    await page.keyboard.press('ControlOrMeta+Enter')
+    await expect(page.getByText('Created ENG-2')).toBeVisible()
+
+    // A project page sets its project, but not from "No project".
+    await page.goto(`/${key}/project/${project.id}?tab=issues&layout=board&group=project`)
+    await expect(page.getByRole('region', { name: 'No project' })).toBeVisible()
+    await page.getByRole('button', { name: 'Add to No project' }).click()
+    await expect(dialog(page).getByRole('button', { name: 'Project: none' })).toBeVisible()
+    await dialog(page).getByLabel('Issue title').fill('Outside the project')
+    await page.keyboard.press('ControlOrMeta+Enter')
+    await expect(page.getByText('Created ENG-3')).toBeVisible()
+
+    const { items } = await listIssues(api, user, workspace.id)
+    const byTitle = (title: string) => items.find(issue => issue.title === title)
+    expect(byTitle('Nobody owns this')?.assignee_id).toBeNull()
+    expect(byTitle('Outside the project')?.project_id).toBeNull()
+  })
+
   test('drags a card to another status column on the board (ISS-4)', async ({
     api,
     user,
@@ -1060,6 +1100,38 @@ test.describe('issues list', () => {
     await expect
       .poll(async () => (await getIssue(api, user, issue.id)).state.name)
       .toBe('In Progress')
+  })
+
+  test('Enter opens a focused board card; Space lifts it for a keyboard move (ISS-4)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { team, states, key } = await seedWorkspace(api, user)
+    const moved = await createIssue(api, user, {
+      team_id: team.id,
+      title: 'Moved by keyboard',
+      state_id: states['Backlog'].id,
+    })
+    await createIssue(api, user, { team_id: team.id, title: 'Opened by keyboard' })
+
+    const page = await loginAs(user)
+    await page.goto(`/${key}/team/ENG/issues?layout=board`)
+    const board = page.getByRole('region', { name: 'Issue board' })
+    const card = (identifier: string) =>
+      board.locator(`[data-issue-card="${identifier}"]`).locator('..')
+
+    await card('ENG-1').focus()
+    await page.keyboard.press('Space')
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('Enter')
+    await expect(board.getByRole('region', { name: 'Todo' })).toContainText('Moved by keyboard')
+    await expect.poll(async () => (await getIssue(api, user, moved.id)).state.name).toBe('Todo')
+    await expect(page).toHaveURL(`/${key}/team/ENG/issues?layout=board`)
+
+    await card('ENG-2').focus()
+    await page.keyboard.press('Enter')
+    await expect(page).toHaveURL(`/${key}/issue/ENG-2`)
   })
 
   test('a card dropped at the bottom of a column does not tie with another column (ISS-4)', async ({

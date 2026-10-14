@@ -217,8 +217,10 @@ export function IssuesView({
       }
     }
     if (state.grouping === 'priority') detail.priority = Number(groupId) as IssuePriority
-    if (state.grouping === 'assignee' && groupId !== NONE) detail.assigneeId = groupId
-    if (state.grouping === 'project' && groupId !== NONE) detail.projectId = groupId
+    // "No assignee" / "No project" also drop the page default (My issues > Assigned
+    // assigns to me, a project page sets its project).
+    if (state.grouping === 'assignee') detail.assigneeId = groupId === NONE ? undefined : groupId
+    if (state.grouping === 'project') detail.projectId = groupId === NONE ? undefined : groupId
     openCreateIssue(detail)
   }
 
@@ -366,6 +368,7 @@ export function IssuesView({
         }
         onMove={handleMove}
         onAddInColumn={addInGroup}
+        onOpen={openIssue}
       />
     )
   } else {

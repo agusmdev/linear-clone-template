@@ -30,6 +30,7 @@ import { KanbanBoard, GroupedList, BulkActionBar, type MoveEvent } from '@/compo
 | `renderCard`    | `(item: T, { isOverlay }) => ReactNode`          | `isOverlay` = copy in the drag overlay      |
 | `onMove`        | `(e: MoveEvent) => void`                         | On drop, only when column or index changed. |
 | `onAddInColumn` | `(columnId: string) => void`                     | Shows a "+" in each column header           |
+| `onOpen`        | `(item: T) => void`                              | Enter on the focused card                   |
 | `columnWidth`   | `number` (default 348)                           |                                             |
 | `className`     | `string`                                         | Give the board a height (e.g. `h-full`)     |
 
@@ -42,8 +43,8 @@ import { KanbanBoard, GroupedList, BulkActionBar, type MoveEvent } from '@/compo
   when empty); inside it the closest card sets the position. Keyboard drags use closest corners.
 - Auto-scroll only starts with the pointer in the outer 5% of the board's width (20% of a
   column's height), so small sideways drift while reordering does not scroll the board.
-- Keyboard: focus a card with Tab, Space to lift, arrows to move, Space to drop, Escape to
-  cancel. Screen reader announcements come from dnd-kit.
+- Keyboard: focus a card with Tab, Enter to open it (`onOpen`), Space to lift, arrows to
+  move, Space or Enter to drop, Escape to cancel. Screen reader announcements come from dnd-kit.
 
 ```tsx
 <KanbanBoard
