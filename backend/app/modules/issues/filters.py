@@ -20,7 +20,9 @@ from app.modules.teams.models import Team, WorkflowState, WorkflowStateType
 
 ME = "me"
 NONE = "none"
-_IDENTIFIER = re.compile(r"^(?:([A-Za-z]{2,5})-)?(\d+)$")
+# Up to 9 digits: a longer number (a phone or order number) does not fit the
+# integer column, so it is only searched as text.
+_IDENTIFIER = re.compile(r"^(?:([A-Za-z]{2,5})-)?(\d{1,9})$")
 
 
 def _user_refs(values: list[str] | None, *, allow_none: bool) -> list[str] | None:

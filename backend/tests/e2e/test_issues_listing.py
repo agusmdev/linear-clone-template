@@ -200,6 +200,16 @@ def test_search_by_identifier_matches_the_team_key(setup: dict[str, Any]) -> Non
     assert _identifiers(setup, search="2") == ["ENG-2", "DES-2"]
 
 
+@pytest.mark.parametrize("search", ["5551234567", "ENG-99999999999999999999"])
+def test_search_by_a_number_too_long_for_an_identifier_matches_text(
+    setup: dict[str, Any], search: str
+) -> None:
+    client = setup["owner"].client
+    create_issue(client, setup["team"]["id"], f"Customer {search} cannot pay")
+
+    assert _identifiers(setup, search=search) == ["ENG-6"]
+
+
 def test_filters_by_ids(setup: dict[str, Any]) -> None:
     issues, states = setup["issues"], setup["states"]
 
