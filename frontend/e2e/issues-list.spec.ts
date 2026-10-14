@@ -1270,8 +1270,11 @@ test.describe('issues list', () => {
     await page.getByRole('option', { name: /\(you\)/ }).click()
     await expect.poll(async () => (await getIssue(api, user, one.id)).assignee_id).toBe(me.id)
     expect((await getIssue(api, user, two.id)).assignee_id).toBe(me.id)
+    // The next shortcut must not land in the closing assignee picker.
+    await expect(page.getByRole('option', { name: /\(you\)/ })).toBeHidden()
 
     await page.keyboard.press('p')
+    await expect(page.getByRole('option', { name: /^Urgent/ })).toBeVisible()
     await page.keyboard.press('1')
     await expect.poll(async () => (await getIssue(api, user, one.id)).priority).toBe(1)
     expect((await getIssue(api, user, two.id)).priority).toBe(1)
