@@ -589,6 +589,35 @@ test.describe('issue page', () => {
       .toEqual([['blocks', 'outgoing']])
   })
 
+  test('Enter right after pasting an identifier links that issue, not an older result', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const { workspace, team } = await seedWorkspace(api, user)
+    await createIssue(api, user, { team_id: team.id, title: 'Oldest issue' })
+    const target = await createIssue(api, user, { team_id: team.id, title: 'Search target' })
+    const issue = await createIssue(api, user, { team_id: team.id, title: 'Main issue' })
+    await openIssue(page, workspace.url_key, issue.identifier)
+
+    const relations = page.getByRole('region', { name: 'Relations' })
+    await relations.getByRole('button', { name: 'Add relation' }).click()
+    await page.getByRole('option', { name: 'Related to' }).click()
+    // The unfiltered list (oldest issue first) is on screen before the search runs.
+    await expect(page.getByRole('option', { name: /Oldest issue/ })).toBeVisible()
+    await page.keyboard.insertText(target.identifier)
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('option', { name: /Search target/ })).toBeVisible()
+    await page.keyboard.press('Enter')
+
+    await expect(relations.getByRole('group', { name: 'Related to' })).toContainText(
+      target.identifier
+    )
+    await expect
+      .poll(async () => (await listRelations(api, user, issue.id)).map(r => r.issue.identifier))
+      .toEqual([target.identifier])
+  })
+
   test('comments: add with Cmd+Enter, edit, delete, and issue links', async ({
     api,
     user,

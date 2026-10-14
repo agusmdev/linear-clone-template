@@ -171,6 +171,10 @@ function IssueDetail({ issue }: { issue: Issue }) {
   const [relationSearch, setRelationSearch] = React.useState('')
   const debouncedSearch = useDebounce(relationSearch, 200)
   const searchQuery = useIssueSearch(workspace.id, debouncedSearch)
+  // Only results of the text in the box: older ones (still debouncing, or kept on
+  // screen by keepPreviousData) would be preselected and linked by Enter.
+  const searchCurrent =
+    relationSearch.trim() === debouncedSearch.trim() && !searchQuery.isPlaceholderData
   const [openPicker, setOpenPicker] = React.useState<PanelPicker | null>(null)
   const titleRef = React.useRef<HTMLTextAreaElement>(null)
 
@@ -419,8 +423,8 @@ function IssueDetail({ issue }: { issue: Issue }) {
               issuePath={issuePath}
               search={relationSearch}
               onSearchChange={setRelationSearch}
-              searchResults={searchQuery.data?.items ?? []}
-              searching={searchQuery.isFetching}
+              searchResults={searchCurrent ? (searchQuery.data?.items ?? []) : []}
+              searching={!searchCurrent || searchQuery.isFetching}
               onAdd={(type, other) =>
                 createRelation.mutate(
                   { related_issue_id: other.id, type },
