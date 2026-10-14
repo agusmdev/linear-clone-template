@@ -31,7 +31,7 @@ import {
   useWorkspaceByKey,
   useWorkspaces,
 } from '@/hooks/useWorkspace'
-import { openCreateIssue } from '@/lib/issue-events'
+import { openCreateIssueHere } from '@/lib/issue-events'
 import { setLastWorkspaceId } from '@/lib/last-workspace'
 
 /**
@@ -200,7 +200,8 @@ function WorkspaceLayout() {
             label="Compose issue"
             shortcut="C"
             icon={<SquarePen />}
-            onClick={() => openCreateIssue()}
+            // Same as `C`: the open page's team, project, cycle or assignee.
+            onClick={() => openCreateIssueHere()}
           />
         </>
       }

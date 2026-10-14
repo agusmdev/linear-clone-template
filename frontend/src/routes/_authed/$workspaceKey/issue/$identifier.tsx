@@ -71,6 +71,7 @@ import {
   useUpdateIssueDetail,
 } from '@/hooks/useIssueDetail'
 import { useIssueHref } from '@/hooks/useIssueHref'
+import { usePageIssueDefaults } from '@/hooks/usePageIssueDefaults'
 import { useTeamStates } from '@/hooks/useWorkspace'
 import { toastApiError } from '@/lib/error-handler'
 import { openCreateIssue } from '@/lib/issue-events'
@@ -141,6 +142,8 @@ function IssueDetail({ issue }: { issue: Issue }) {
   const router = useRouter()
   const canGoBack = useCanGoBack()
   const issuePath = React.useCallback((identifier: string) => path(`/issue/${identifier}`), [path])
+  // `C`, "Create new issue" and the sidebar compose button create in this issue's team.
+  usePageIssueDefaults({ teamId: issue.team_id })
 
   const statesQuery = useTeamStates(issue.team_id)
   const cyclesQuery = useTeamCycles(issue.team_id)

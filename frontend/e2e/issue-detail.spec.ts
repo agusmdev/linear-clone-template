@@ -130,6 +130,31 @@ test.describe('issue page', () => {
     await expect(activity.getByText(/updated the description/)).toBeVisible()
   })
 
+  test('C and the compose button on the issue page create in the issue team', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    // "Design" sorts before "Engineering": without the page default the modal picks it.
+    const { workspace, team } = await seedWorkspace(api, user)
+    await createTeam(api, user, workspace.id, { name: 'Design', key: 'DES' })
+    const issue = await createIssue(api, user, { team_id: team.id, title: 'Existing issue' })
+
+    await page.goto(`/${workspace.url_key}/issue/${issue.identifier}`)
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('ENG-1')
+    const dialog = page.getByRole('dialog', { name: 'New issue' })
+    await page.keyboard.press('c')
+    await expect(dialog.getByRole('button', { name: 'Team: Engineering' })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+
+    await page.getByRole('button', { name: 'Compose issue' }).click()
+    await expect(dialog.getByRole('button', { name: 'Team: Engineering' })).toBeVisible()
+    await dialog.getByLabel('Issue title').fill('Filed from the issue page')
+    await dialog.getByRole('button', { name: /Create issue/ }).click()
+    await expect(page.getByText('Created ENG-2')).toBeVisible()
+  })
+
   test('saves a description typed just before a reload (keepalive flush on pagehide)', async ({
     api,
     user,

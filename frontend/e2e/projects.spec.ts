@@ -545,6 +545,12 @@ test('C on the project page creates the issue in the project', async ({
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
 
+  // The sidebar compose button (its tooltip says C) prefills the project too.
+  await page.getByRole('button', { name: 'Compose issue' }).click()
+  await expect(dialog.getByRole('button', { name: 'Project: Shortcut target' })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+
   await page.getByRole('tab', { name: /Issues/ }).click()
   await expect(page.getByText('No issues in this project')).toBeVisible()
   await page.keyboard.press('c')
