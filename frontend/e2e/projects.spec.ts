@@ -446,7 +446,7 @@ test('deletes a project after confirmation and keeps its issues', async ({
   await expect(page.getByText('Project not found')).toBeVisible()
 })
 
-test('the sidebar favorite follows a project rename and goes away on delete', async ({
+test('the sidebar favorite follows a project rename and icon, and goes away on delete', async ({
   authedPage: page,
   api,
   user,
@@ -469,6 +469,14 @@ test('the sidebar favorite follows a project rename and goes away on delete', as
   await name.fill('Launch plan')
   await name.press('Enter')
   await expect(favorites.first()).toHaveText('Launch plan')
+
+  // A new icon: the favorite shows the project's icon, not the default box.
+  await expect(favorites.first().locator('svg.lucide-box')).toBeVisible()
+  await page.getByRole('button', { name: 'Change project icon' }).click()
+  await page.getByRole('button', { name: 'Icon target' }).click()
+  await page.keyboard.press('Escape')
+  await expect(favorites.first().locator('svg.lucide-target')).toBeVisible()
+  await expect(favorites.first().locator('svg.lucide-box')).toHaveCount(0)
 
   // Delete: the favorite goes away without a reload, and the deleted project
   // is not fetched again (no 404 in the console).
