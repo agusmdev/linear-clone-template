@@ -26,7 +26,7 @@ Features:
 
 - Headings 1-3, bold, italic, strike, inline code, bullet / numbered / task lists, quote, code block, divider, link.
 - Markdown input rules: `# `, `## `, `### `, `- `, `1. `, `[ ] `, `> `, ```` ``` ````, `---`, `**bold**`, `*italic*`, `~~strike~~`, `` `code` ``.
-- Links: typed and pasted URLs become links. Paste a URL on selected text to link it. Mod+click opens a link in a new tab.
+- Links: typed and pasted URLs become links. Paste a URL on selected text to link it. Mod+click opens a link (issue links too) in a new tab.
 - Slash menu: type `/` at the start of a line or after a space. Type to filter, ↑/↓ to move, Enter or Tab to insert, Esc to close.
 - Bubble toolbar on a text selection: H1-H3, bold, italic, strike, code, link (inline URL input; empty URL removes the link).
 - Issue identifiers (`/\b[A-Z]{2,5}-\d+\b/`) are shown as links with a decoration. The stored HTML does not change. Text in code and inside existing links is skipped.

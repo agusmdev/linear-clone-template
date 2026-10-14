@@ -430,6 +430,20 @@ test.describe('document editor', () => {
 
     const link = page.getByLabel('Document content').getByRole('link', { name: issue.identifier })
     await expect(link).toHaveAttribute('href', `/${workspace.url_key}/issue/${issue.identifier}`)
+
+    // Mod+click opens the issue in a new tab and keeps the document open.
+    const [tab] = await Promise.all([
+      page.context().waitForEvent('page'),
+      link.click({ modifiers: ['ControlOrMeta'] }),
+    ])
+    await expect(tab).toHaveURL(new RegExp(`/issue/${issue.identifier}$`))
+    await expect(page).toHaveURL(new RegExp(`/document/${doc.id}$`))
+    await tab.close()
+
+    // A fresh page: a second click within 500 ms is a double click to the editor.
+    await page.reload()
+    await link.click()
+    await expect(page).toHaveURL(new RegExp(`/issue/${issue.identifier}$`))
   })
 
   test('text that only looks like an identifier (no such team key) is not a link', async ({
