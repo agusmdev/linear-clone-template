@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useIsMutating } from '@tanstack/react-query'
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, useCanGoBack, useNavigate, useRouter } from '@tanstack/react-router'
 import {
   Archive,
   ArchiveRestore,
@@ -138,6 +138,8 @@ function lastValue(activity: IssueActivity[] | undefined, field: string): string
 function IssueDetail({ issue }: { issue: Issue }) {
   const { workspace, members, labels, me, path } = useCurrentWorkspace()
   const navigate = useNavigate()
+  const router = useRouter()
+  const canGoBack = useCanGoBack()
   const issuePath = React.useCallback((identifier: string) => path(`/issue/${identifier}`), [path])
 
   const statesQuery = useTeamStates(issue.team_id)
@@ -242,6 +244,12 @@ function IssueDetail({ issue }: { issue: Issue }) {
   useShortcut('shift+s', toggleSubscribe, { enabled: !!subscribersQuery.data })
   useShortcut('mod+.', () => void copyId())
   useShortcut('mod+backspace', () => setDeleteOpen(true))
+  // Esc goes back to where the issue was opened from (the team list on a direct link).
+  // Open pickers, dialogs and fields handle Esc themselves first.
+  useShortcut('esc', () => {
+    if (canGoBack) router.history.back()
+    else void navigate({ to: path(`/team/${issue.team.key}/issues`) as '/' })
+  })
 
   const parent = parentQuery.data
   const currentProject = projectsQuery.data?.find(project => project.id === issue.project_id)

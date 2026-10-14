@@ -38,6 +38,7 @@ import {
   type CreateIssueFormData,
 } from '@/features/issues/issue-schemas'
 import type { NamedRef } from '@/hooks/useIssueRefs'
+import { useReturnFocus } from '@/hooks/useReturnFocus'
 import { cn } from '@/lib/utils'
 import type { CreateIssueData, CreateIssueEventDetail, Issue, IssuePriority } from '@/types/issue'
 import type { Label } from '@/types/label'
@@ -141,6 +142,7 @@ export function CreateIssueDialog({
   const [confirmClose, setConfirmClose] = useState(false)
   const saveDraftRef = useRef<HTMLButtonElement>(null)
 
+  const returnFocus = useReturnFocus(open)
   const form = useForm<CreateIssueFormData>({
     resolver: zodResolver(createIssueSchema),
     defaultValues: draft
@@ -276,6 +278,7 @@ export function CreateIssueDialog({
         <DialogContent
           showCloseButton={false}
           aria-label="New issue"
+          {...returnFocus}
           className="top-[10%] translate-y-0 gap-0 p-0 sm:max-w-[760px]"
           onKeyDown={event => {
             if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {

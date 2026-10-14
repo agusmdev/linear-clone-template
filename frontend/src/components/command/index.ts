@@ -17,6 +17,7 @@ export {
   ShortcutsProvider,
   useShortcut,
   useShortcutScope,
+  useShortcutSequencePending,
   type ShortcutsProviderProps,
   type UseShortcutOptions,
 } from './ShortcutsProvider'

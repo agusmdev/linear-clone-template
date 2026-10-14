@@ -2,6 +2,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { Command } from 'cmdk'
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 
+import { useReturnFocus } from '@/hooks/useReturnFocus'
 import { cn } from '@/lib/utils'
 
 import { Kbd } from './Kbd'
@@ -110,6 +111,7 @@ export function CommandPalette({
   const [selected, setSelected] = useState('')
   const [wasOpen, setWasOpen] = useState(open)
   const listRef = useRef<HTMLDivElement>(null)
+  const returnFocus = useReturnFocus(open)
 
   // Reset the pages, the search text and the highlight each time the palette closes.
   if (open !== wasOpen) {
@@ -172,6 +174,7 @@ export function CommandPalette({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50" />
         <DialogPrimitive.Content
+          {...returnFocus}
           onEscapeKeyDown={event => {
             if (pages.length > 0) {
               event.preventDefault()
@@ -187,12 +190,14 @@ export function CommandPalette({
           <DialogPrimitive.Description className="sr-only">
             Search for a command to run.
           </DialogPrimitive.Description>
+          {/* No vim bindings: Ctrl+K must reach the mod+k toggle, not move up to "Log out". */}
           <Command
             label="Command menu"
             filter={filterItems}
             loop
             value={selected}
             onValueChange={setSelected}
+            vimBindings={false}
             onKeyDown={handleKeyDown}
           >
             {pages.length > 0 && (

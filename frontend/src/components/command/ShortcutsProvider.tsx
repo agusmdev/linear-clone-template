@@ -28,6 +28,7 @@ interface Registration {
 interface ShortcutsContextValue {
   register: (registration: Omit<Registration, 'id'>) => () => void
   activateScope: (scope: string) => () => void
+  isSequencePending: () => boolean
 }
 
 const ShortcutsContext = createContext<ShortcutsContextValue | null>(null)
@@ -133,6 +134,7 @@ export function ShortcutsProvider({ children, disabled = false }: ShortcutsProvi
           else counts.set(scope, next)
         }
       },
+      isSequencePending: () => buffer.current.length > 0,
     }),
     []
   )
@@ -199,6 +201,16 @@ export function useShortcut(
       )
     return () => unregisters.forEach(unregister => unregister())
   }, [register, keyList, enabled, scope, allowInInputs, preventDefault])
+}
+
+/**
+ * Returns a function that tells whether the first keys of a sequence ("g" of
+ * "g p") were pressed and the next key may complete it. A component with its
+ * own key handling (e.g. a list where P opens a picker) leaves that key to the
+ * sequence then.
+ */
+export function useShortcutSequencePending(): () => boolean {
+  return useShortcutsContext('useShortcutSequencePending').isSequencePending
 }
 
 /**

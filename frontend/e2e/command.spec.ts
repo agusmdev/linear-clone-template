@@ -315,6 +315,29 @@ test.describe('command palette', () => {
     await page.keyboard.press('Enter')
     await expect(page).toHaveURL(/\/login/)
   })
+
+  test('Cmd/Ctrl+K again closes the palette and Enter then does nothing', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    await page.goto(`/${workspace.url_key}/views`)
+    await expect(page.getByRole('heading', { level: 1, name: 'Views' })).toBeVisible()
+    for (let round = 0; round < 2; round++) {
+      await page.keyboard.press('ControlOrMeta+k')
+      await expect(palette(page)).toBeVisible()
+      await expect(palette(page).getByRole('option', { name: 'Log out' })).not.toHaveAttribute(
+        'aria-selected',
+        'true'
+      )
+      await page.keyboard.press('ControlOrMeta+k')
+      await expect(palette(page)).toBeHidden()
+    }
+    await page.keyboard.press('Enter')
+    await expect(page).toHaveURL(`/${workspace.url_key}/views`)
+    await expect(page.getByRole('heading', { level: 1, name: 'Views' })).toBeVisible()
+  })
 })
 
 test.describe('global shortcuts', () => {

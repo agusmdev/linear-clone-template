@@ -860,6 +860,40 @@ test.describe('issue page', () => {
     await page.keyboard.press('Escape')
   })
 
+  test('Esc goes back to the list the issue was opened from', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const { workspace, team } = await seedWorkspace(api, user)
+    const issue = await createIssue(api, user, { team_id: team.id, title: 'Esc back' })
+    const listUrl = `/${workspace.url_key}/team/${team.key}/issues`
+    const list = page.getByRole('listbox', { name: 'Issues' })
+
+    await page.goto(listUrl)
+    await expect(list).toBeFocused()
+    await page.keyboard.press('j')
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(issue.identifier)
+    await expect(
+      page.getByRole('region', { name: 'Activity' }).getByRole('button', { name: 'Unsubscribe' })
+    ).toBeEnabled()
+    // Esc closes an open picker first and stays on the issue.
+    await page.keyboard.press('s')
+    await expect(page.getByPlaceholder('Change status...')).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(page.getByPlaceholder('Change status...')).toBeHidden()
+    await expect(page).toHaveURL(issueUrl(workspace.url_key, issue.identifier))
+    await page.keyboard.press('Escape')
+    await expect(page).toHaveURL(new RegExp(`${listUrl}($|\\?)`))
+    await expect(list).toBeFocused()
+
+    // Opened from a link (no page to go back to): Esc goes to the team's issues.
+    await openIssue(page, workspace.url_key, issue.identifier)
+    await page.keyboard.press('Escape')
+    await expect(page).toHaveURL(new RegExp(`/${workspace.url_key}/team/${team.key}/issues`))
+  })
+
   test('adds the issue to favorites', async ({ api, user, authedPage: page }) => {
     const { workspace, team } = await seedWorkspace(api, user)
     const issue = await createIssue(api, user, { team_id: team.id, title: 'Starred issue' })
