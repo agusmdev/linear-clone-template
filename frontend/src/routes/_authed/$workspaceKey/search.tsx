@@ -162,14 +162,22 @@ function SearchPage() {
       ? sections.reduce((n, s) => n + s.rows.length, 0)
       : (sections.find(s => s.tab === t)?.rows.length ?? 0)
   const selected = Math.min(activeIndex, Math.max(rows.length - 1, 0))
+  const resultsRef = useRef<HTMLDivElement>(null)
+
+  /** Arrow keys move the selection: keep its row on screen. */
+  const moveTo = (index: number) => {
+    setActiveIndex(index)
+    const items = resultsRef.current?.querySelectorAll('[data-testid="search-result"]')
+    items?.[index]?.scrollIntoView({ block: 'nearest' })
+  }
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'ArrowDown') {
       event.preventDefault()
-      setActiveIndex(Math.min(selected + 1, rows.length - 1))
+      moveTo(Math.min(selected + 1, rows.length - 1))
     } else if (event.key === 'ArrowUp') {
       event.preventDefault()
-      setActiveIndex(Math.max(selected - 1, 0))
+      moveTo(Math.max(selected - 1, 0))
     } else if (event.key === 'Enter' && rows[selected]) {
       event.preventDefault()
       navigate({ to: rows[selected].to as '/' })
@@ -225,7 +233,12 @@ function SearchPage() {
         />
         {isFetching ? <span className="text-mini text-text-tertiary">Searching…</span> : null}
       </div>
-      <div className="flex-1 overflow-y-auto" role="region" aria-label="Search results">
+      <div
+        ref={resultsRef}
+        className="flex-1 overflow-y-auto"
+        role="region"
+        aria-label="Search results"
+      >
         {!hasQuery ? (
           <EmptyState
             icon={<Search />}

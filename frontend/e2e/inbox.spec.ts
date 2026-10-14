@@ -443,4 +443,32 @@ test.describe('inbox', () => {
     await page.keyboard.press('Enter')
     await expect(page).toHaveURL(new RegExp(`/${workspace.url_key}/issue/${newer.identifier}$`))
   })
+
+  test('Enter after J opens the issue even when a header button was clicked last', async ({
+    api,
+    user: owner,
+    loginAs,
+  }) => {
+    const { workspace, memberUser, member, team } = await setUp(api, owner)
+    const issue = await createIssue(api, owner, {
+      team_id: team.id,
+      title: 'Filtered task',
+      assignee_id: memberUser.id,
+    })
+
+    const page = await loginAs(member)
+    await page.goto(`/${workspace.url_key}/inbox`)
+    await expect(rows(page)).toHaveCount(1)
+    // The mouse toggles the unread filter on and off: that button keeps the focus.
+    await page.getByRole('button', { name: 'Show unread only' }).click()
+    await page.getByRole('button', { name: 'Show all notifications' }).click()
+    await expect(page.getByRole('button', { name: 'Show unread only' })).toBeFocused()
+
+    // J selects the notification and takes the focus, so Enter opens its issue
+    // instead of toggling the filter again.
+    await page.keyboard.press('j')
+    await expect(rows(page).nth(0)).toHaveAttribute('data-selected', 'true')
+    await page.keyboard.press('Enter')
+    await expect(page).toHaveURL(new RegExp(`/${workspace.url_key}/issue/${issue.identifier}$`))
+  })
 })
