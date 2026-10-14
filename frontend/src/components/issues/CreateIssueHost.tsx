@@ -54,7 +54,9 @@ export function CreateIssueHost() {
   useEffect(() => {
     const show = (detail: CreateIssueEventDetail) => {
       if (openRef.current) return
-      const draft = readIssueDraft(workspaceId)
+      // A sub-issue request starts from its parent: a saved draft of another issue
+      // would drop the parent (the draft stays saved for the next modal).
+      const draft = detail.parentId ? null : readIssueDraft(workspaceId)
       setSession(prev => ({ id: (prev?.id ?? 0) + 1, detail, draft }))
       setTeamId(undefined)
       setParentSearch('')
@@ -112,7 +114,8 @@ export function CreateIssueHost() {
   const onCreate = async (data: CreateIssueData) => {
     try {
       const issue = await create.mutateAsync(data)
-      clearIssueDraft(workspaceId)
+      // The draft is used up only when this modal restored it (not for a sub-issue).
+      if (session?.draft) clearIssueDraft(workspaceId)
       toast.success(`Created ${issue.identifier}`, {
         description: issue.title,
         action: {
@@ -136,7 +139,9 @@ export function CreateIssueHost() {
       defaults={{ ...session.detail, teamId: defaultTeamId }}
       draft={draft}
       onSaveDraft={values => saveIssueDraft(workspaceId, values)}
-      onDiscardDraft={() => clearIssueDraft(workspaceId)}
+      onDiscardDraft={() => {
+        if (session.draft) clearIssueDraft(workspaceId)
+      }}
       teams={teams}
       states={states}
       members={ws.members}

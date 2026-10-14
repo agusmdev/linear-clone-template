@@ -149,7 +149,7 @@ export function CreateIssueDialog({
       ? { ...draft, team_id: defaults.teamId }
       : {
           team_id: defaults.teamId,
-          title: '',
+          title: defaults.title ?? '',
           description: '',
           state_id: defaults.stateId ?? null,
           priority: defaults.priority ?? 0,

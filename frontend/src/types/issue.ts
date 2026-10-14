@@ -171,6 +171,8 @@ export interface BulkDeleteIssuesData {
 /** Detail of the `linear:create-issue` window event: defaults of the create-issue modal. */
 export interface CreateIssueEventDetail {
   teamId?: string
+  /** The title typed so far (e.g. in the inline sub-issue input). */
+  title?: string
   stateId?: string
   /** Without `stateId`: the team's first state of this type (Backlog tab: `backlog`). */
   stateType?: WorkflowStateType
