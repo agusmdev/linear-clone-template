@@ -1,4 +1,4 @@
-import { NodeSelection } from '@tiptap/pm/state'
+import { NodeSelection, PluginKey } from '@tiptap/pm/state'
 import { useEditorState, type Editor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
 import {
@@ -12,7 +12,7 @@ import {
   Strikethrough,
   type LucideIcon,
 } from 'lucide-react'
-import { useState, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 
 export interface BubbleToolbarProps {
   editor: Editor
@@ -106,6 +106,8 @@ function LinkInput({ editor, initialHref, onDone }: LinkInputProps) {
 /** Formatting toolbar that floats above a non-empty text selection. */
 export function BubbleToolbar({ editor }: BubbleToolbarProps) {
   const [linkOpen, setLinkOpen] = useState(false)
+  const [pluginKey] = useState(() => new PluginKey('bubbleToolbar'))
+  const menuRef = useRef<HTMLDivElement>(null)
   const active = useEditorState({
     editor,
     selector: ({ editor: current }) => ({
@@ -123,9 +125,31 @@ export function BubbleToolbar({ editor }: BubbleToolbarProps) {
 
   const chain = () => editor.chain().focus()
 
+  // Hide when focus leaves the editor for anything but the toolbar. TipTap's own
+  // blur handling skips the first blur after a mousedown on the menu, and the
+  // buttons keep the editor focused on mousedown, so after a button click the
+  // toolbar would stay up over the page once the user clicks elsewhere.
+  useEffect(() => {
+    const onBlur = ({ event }: { event: FocusEvent }) => {
+      const next = event.relatedTarget
+      if (next instanceof Node && menuRef.current?.contains(next)) return
+      // TipTap emits blur while it dispatches a transaction: hide just after.
+      queueMicrotask(() => {
+        if (editor.isDestroyed || editor.isFocused) return
+        editor.view.dispatch(editor.state.tr.setMeta(pluginKey, 'hide'))
+      })
+    }
+    editor.on('blur', onBlur)
+    return () => {
+      editor.off('blur', onBlur)
+    }
+  }, [editor, pluginKey])
+
   return (
     <BubbleMenu
+      ref={menuRef}
       editor={editor}
+      pluginKey={pluginKey}
       className="rte-root rte-menu z-50 flex items-center gap-0.5 p-1"
       options={{
         placement: 'top',
