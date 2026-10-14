@@ -38,7 +38,7 @@ from app.modules.issues.models import (
     IssueSubscriber,
 )
 from app.modules.issues.schemas import IssueResponse
-from app.modules.issues.service import IssueService
+from app.modules.issues.service import RELATION_FIELDS, IssueService
 from app.modules.teams.models import WorkflowStateType
 from app.modules.workspaces.exceptions import InvalidReferenceError
 from app.repositories.exceptions import DuplicateError, NotFoundError
@@ -98,14 +98,6 @@ class CommentService(BaseService[Comment]):
         await self.repo.delete(comment.id)
 
 
-# Activity field of a relation, as seen from (source, target) of the stored row.
-_RELATION_FIELDS: dict[IssueRelationType, tuple[str, str]] = {
-    IssueRelationType.blocks: ("relation_blocks", "relation_blocked_by"),
-    IssueRelationType.related: ("relation_related", "relation_related"),
-    IssueRelationType.duplicate: ("relation_duplicate_of", "relation_duplicated_by"),
-}
-
-
 def relation_activities(
     source: Issue,
     target: Issue,
@@ -119,7 +111,7 @@ def relation_activities(
     The value is the other issue's identifier: ``to_value`` when added,
     ``from_value`` when removed.
     """
-    source_field, target_field = _RELATION_FIELDS[relation_type]
+    source_field, target_field = RELATION_FIELDS[relation_type]
     key = "to_value" if added else "from_value"
     return [
         {

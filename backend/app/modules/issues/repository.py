@@ -12,6 +12,7 @@ from app.modules.issues.models import (
     Issue,
     IssueActivity,
     IssueLabel,
+    IssueRelation,
     IssueSubscriber,
 )
 from app.modules.projects.models import Project
@@ -194,8 +195,35 @@ class IssueRepository(SQLAlchemyRepository[Issue]):
         found = {i.id: i for i in (await self._session.execute(query)).scalars()}
         return [found[issue_id] for issue_id in issue_ids if issue_id in found]
 
+    async def children_of(self, issue_ids: list[uuid.UUID]) -> list[Issue]:
+        """The sub-issues of these issues that are not in the list themselves."""
+        query = select(Issue).where(
+            Issue.parent_id.in_(issue_ids), Issue.id.not_in(issue_ids)
+        )
+        return list((await self._session.execute(query)).scalars())
+
+    async def relations_of(self, issue_ids: list[uuid.UUID]) -> list[IssueRelation]:
+        """The relations with one of these issues on either side, both sides loaded."""
+        query = (
+            select(IssueRelation)
+            .where(
+                IssueRelation.issue_id.in_(issue_ids)
+                | IssueRelation.related_issue_id.in_(issue_ids)
+            )
+            .options(
+                selectinload(IssueRelation.issue).selectinload(Issue.team),
+                selectinload(IssueRelation.related_issue).selectinload(Issue.team),
+            )
+        )
+        return list((await self._session.execute(query)).scalars())
+
     @SQLAlchemyRepository.translate_commit_errors
-    async def delete_many(self, issue_ids: list[uuid.UUID]) -> None:
+    async def delete_many(
+        self, issue_ids: list[uuid.UUID], *, activities: list[dict[str, Any]]
+    ) -> None:
+        """Delete the issues and log the activity of the issues they touched: one commit."""
+        if activities:
+            await self._session.execute(insert(IssueActivity), activities)
         await self._session.execute(delete(Issue).where(Issue.id.in_(issue_ids)))
         await self._session.commit()
 
