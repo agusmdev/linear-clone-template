@@ -259,6 +259,37 @@ test.describe('command palette', () => {
     expect([loose.project_id, loose.team_id]).toEqual([null, null])
   })
 
+  test('an issue created right after a search shows up when searching again', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    const [team] = await listTeams(api, user, workspace.id)
+    const old = await createIssue(api, user, { team_id: team.id, title: 'Payment retry' })
+    await page.goto(`/${workspace.url_key}/views`)
+    await expect(page.getByRole('heading', { level: 1, name: 'Views' })).toBeVisible()
+
+    await page.keyboard.press('ControlOrMeta+k')
+    await palette(page).getByRole('combobox').fill('payment')
+    await expect(palette(page).getByRole('option', { name: /Payment retry/ })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(palette(page)).toBeHidden()
+
+    await page.keyboard.press('c')
+    const modal = page.getByRole('dialog', { name: 'New issue' })
+    await modal.getByLabel('Issue title').fill('Payment refund')
+    await page.keyboard.press('ControlOrMeta+Enter')
+    await expect(modal).toBeHidden()
+
+    await page.keyboard.press('ControlOrMeta+k')
+    await palette(page).getByRole('combobox').fill('payment')
+    await expect(palette(page).getByRole('option', { name: /Payment refund/ })).toBeVisible()
+    await expect(
+      palette(page).getByRole('option', { name: `${old.identifier} Payment retry` })
+    ).toBeVisible()
+  })
+
   test('create new issue while the issue modal is open keeps what is typed', async ({
     api,
     user,
