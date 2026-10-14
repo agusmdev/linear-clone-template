@@ -74,6 +74,14 @@ test.describe('documents list', () => {
     await expect(rows).toHaveCount(1)
     await expect(rows.first()).toContainText('Release plan')
 
+    // Every word, in any order, across the title and the content.
+    await search.fill('needle plan')
+    await expect(rows).toHaveCount(1)
+    await expect(rows.first()).toContainText('Release plan')
+    await search.fill('guide onboarding')
+    await expect(rows).toHaveCount(1)
+    await expect(rows.first()).toContainText('Onboarding guide')
+
     await search.fill('nothing matches this')
     await expect(page.getByText('No documents found')).toBeVisible()
 

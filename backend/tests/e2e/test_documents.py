@@ -179,7 +179,7 @@ def test_search_matches_visible_text_only(
             "<p>Tom &amp; Jerry &lt;3</p><p>wo<em>rd</em></p><p>last</p>"
         ),
     )
-    create_document(owner.client, wid, "Plain", content="<p>plain text</p>")
+    plain = create_document(owner.client, wid, "Plain", content="<p>plain text</p>")
 
     def ids(search: str) -> list[str]:
         return [d["id"] for d in _list(owner.client, wid, search=search)["items"]]
@@ -196,6 +196,11 @@ def test_search_matches_visible_text_only(
     # Block tags separate words.
     assert ids("donetom") == []
     assert ids("jerry <3 word last") == [rich["id"]]
+    # Every word, in any order, across the title and the content.
+    assert ids("last jerry") == [rich["id"]]
+    assert ids("text Plain") == [plain["id"]]
+    assert ids("rich plain") == []
+    assert sorted(ids("   ")) == sorted([rich["id"], plain["id"]])
 
 
 def test_list_rejects_unknown_order_field(

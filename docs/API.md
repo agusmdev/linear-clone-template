@@ -326,7 +326,7 @@ No extra endpoints. My issues: `assignee_id=me` / `creator_id=me` /
 
 | Status | Method | Path | Body | Response |
 |---|---|---|---|---|
-| IMPLEMENTED | GET | `/documents?workspace_id=..&project_id=&team_id=&search=&order_by=-updated_at` | – | `Page<DocumentSummary>` (search: title and content ILIKE) |
+| IMPLEMENTED | GET | `/documents?workspace_id=..&project_id=&team_id=&search=&order_by=-updated_at` | – | `Page<DocumentSummary>` (search: every word, in any order, in the title or the visible text of the content) |
 | IMPLEMENTED | POST | `/documents` | `{workspace_id, title, content?, icon?, project_id?, team_id?}` | 201 `Document` |
 | IMPLEMENTED | GET | `/documents/{document_id}` | – | `Document` |
 | IMPLEMENTED | PATCH | `/documents/{document_id}` | `{title?, content?, icon?, project_id?, team_id?, sort_order?}` | `Document` (`last_edited_by_id = me`) |
