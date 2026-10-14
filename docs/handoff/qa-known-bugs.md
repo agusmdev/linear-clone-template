@@ -174,3 +174,10 @@ Bugs found by earlier QA rounds. Do not re-report one unless it still reproduces
 - create-issue: Cmd+Enter in an open property picker re-picked the highlighted option
 - settings: after a refused save, Esc left settings instead of cancelling
 - documents: list search needed the words in order; Ctrl/Cmd+click on an issue link did not open a new tab
+
+## Round 12 (all fixed)
+
+- auth: an emoji at the start of a workspace or display name showed a broken glyph in logo and avatar initials
+- inbox: J/K did not move focus, so Enter after a header button opened the wrong issue
+- search: the arrow-key selected result scrolled out of view
+- issue-detail: deleting an issue left stale parent, sub-issue and relation rows on the issues it touched
