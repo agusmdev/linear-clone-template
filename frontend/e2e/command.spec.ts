@@ -306,6 +306,28 @@ test.describe('command palette', () => {
     await expect(palette(page).getByRole('option', { name: 'Moonshot' })).toBeVisible()
   })
 
+  test('Cmd/Ctrl+Enter in the new project dialog creates the project', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const workspace = await createWorkspace(api, user)
+    await page.goto(`/${workspace.url_key}/views`)
+    await expect(page.getByRole('heading', { level: 1, name: 'Views' })).toBeVisible()
+    await page.keyboard.press('ControlOrMeta+k')
+    await palette(page).getByRole('combobox').fill('create new project')
+    await page.keyboard.press('Enter')
+    const dialog = page.getByRole('dialog', { name: 'New project' })
+    await expect(dialog.getByLabel('Project name')).toBeFocused()
+    await page.keyboard.type('Keyboard launch')
+    await dialog.getByRole('textbox', { name: 'Project description' }).click()
+    await page.keyboard.type('Created without the mouse')
+    await page.keyboard.press('ControlOrMeta+Enter')
+    await expect(page).toHaveURL(new RegExp(`/${workspace.url_key}/project/[0-9a-f-]{36}$`))
+    const [project] = (await searchWorkspace(api, user, workspace.id, 'keyboard launch')).projects
+    expect(page.url()).toContain(project.id)
+  })
+
   test('log out from the palette signs the user out', async ({ api, user, authedPage: page }) => {
     const workspace = await createWorkspace(api, user)
     await page.goto(`/${workspace.url_key}/views`)
