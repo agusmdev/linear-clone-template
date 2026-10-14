@@ -118,7 +118,7 @@ function restore(queryClient: QueryClient, snapshot: [readonly unknown[], unknow
 
 /**
  * Refreshes every cache an issue change can touch: issue lists and details,
- * the project and cycle progress counts, and the sidebar favorites.
+ * the project and cycle progress counts, the sidebar favorites and search results.
  */
 export function invalidateIssueCaches(queryClient: QueryClient) {
   return Promise.all([
@@ -127,6 +127,8 @@ export function invalidateIssueCaches(queryClient: QueryClient) {
     queryClient.invalidateQueries({ queryKey: queryKeys.cycles.all }),
     // Sidebar favorites show the issue title and drop deleted issues.
     queryClient.invalidateQueries({ queryKey: queryKeys.favorites.all }),
+    // Cmd+K and the search page: a new, renamed or deleted issue (cached 10 s).
+    queryClient.invalidateQueries({ queryKey: queryKeys.search.all }),
   ])
 }
 
