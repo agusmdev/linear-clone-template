@@ -46,11 +46,12 @@ function rowIdOf(element: Element | null): string | null {
   return element?.closest('[data-notification-id]')?.getAttribute('data-notification-id') ?? null
 }
 
-function scrollRowIntoView(id: string) {
+function scrollRowIntoView(id: string, focusRow: boolean) {
   const row = document.querySelector(`[data-notification-id="${CSS.escape(id)}"]`)
   row?.scrollIntoView({ block: 'nearest' })
   // Keyboard focus on a row follows the selection, so Enter opens the selected one.
-  if (rowIdOf(document.activeElement) !== null) {
+  // J/K always take the focus there: else Enter clicks the header button last used.
+  if (focusRow || rowIdOf(document.activeElement) !== null) {
     row?.querySelector<HTMLElement>('button')?.focus({ preventScroll: true })
   }
 }
@@ -106,11 +107,11 @@ function InboxPage() {
     )
   }
 
-  function select(n: Notification) {
+  function select(n: Notification, { focusRow = false } = {}) {
     setSelectedId(n.id)
     setSticky(n.read_at ? n : { ...n, read_at: new Date().toISOString() })
     refreshIssue(n.issue_id)
-    scrollRowIntoView(n.id)
+    scrollRowIntoView(n.id, focusRow)
     if (!n.read_at) change(n, { read: true }, 'Could not mark the notification as read')
   }
 
@@ -185,7 +186,7 @@ function InboxPage() {
           const next = index < 0 ? items[0] : items[Math.min(index + 1, items.length - 1)]
           if (next) {
             event.preventDefault()
-            select(next)
+            select(next, { focusRow: true })
           }
           return
         }
@@ -195,7 +196,7 @@ function InboxPage() {
           const previous = index < 0 ? items[0] : items[Math.max(index - 1, 0)]
           if (previous) {
             event.preventDefault()
-            select(previous)
+            select(previous, { focusRow: true })
           }
           return
         }
