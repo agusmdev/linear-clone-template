@@ -41,13 +41,15 @@ function CyclePage() {
   const cycleQuery = useCycle(cycleId)
   const cycle = cycleQuery.data
 
-  const cyclesPath = path(`/team/${team?.key ?? teamKey}/cycles`)
+  // An unknown key (e.g. an old link after the team key changed) still links to the cycle's team.
+  const cycleTeam = cycle ? teams.find(t => t.id === cycle.team_id) : undefined
+  const cyclesPath = path(`/team/${(team ?? cycleTeam)?.key ?? teamKey}/cycles`)
   const breadcrumbs = [
     ...(team ? [{ label: team.name, to: path(`/team/${team.key}/issues`) }] : []),
     { label: 'Cycles', to: cyclesPath },
   ]
 
-  if (cycleQuery.isError || (cycle && team && cycle.team_id !== team.id)) {
+  if (cycleQuery.isError || (cycle && (!team || cycle.team_id !== team.id))) {
     return (
       <>
         <PageHeader breadcrumbs={breadcrumbs} title="Cycle not found" />

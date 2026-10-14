@@ -520,6 +520,24 @@ test.describe('cycle page', () => {
     await page.getByRole('link', { name: 'Back to cycles' }).click()
     await expect(page).toHaveURL(`/${workspace.url_key}/team/${team.key}/cycles`)
   })
+
+  test('a cycle link with an unknown team key shows a message', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const { workspace, team } = await seedWorkspace(api, user)
+    const cycle = await createCycle(api, user, team.id, {
+      starts_at: isoDay(0),
+      ends_at: isoDay(13),
+    })
+    // E.g. an old link after the team key changed.
+    await page.goto(`/${workspace.url_key}/team/OLDKEY/cycle/${cycle.id}`)
+    await expect(page.getByText('This cycle does not exist or was deleted.')).toBeVisible()
+    await page.getByRole('link', { name: 'Back to cycles' }).click()
+    await expect(page).toHaveURL(`/${workspace.url_key}/team/${team.key}/cycles`)
+    await expect(cycleRow(page, 'Cycle 1')).toBeVisible()
+  })
 })
 
 test('an unknown workspace shows a message', async ({ authedPage: page }) => {
