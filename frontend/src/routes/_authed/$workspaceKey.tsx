@@ -237,6 +237,7 @@ function WorkspaceLayout() {
     <WorkspaceContext.Provider value={value}>
       <ShortcutsProvider>
         <AppShell
+          menuBadge={unreadCountQuery.data?.count}
           sidebar={
             inSettings ? (
               <SettingsSidebar

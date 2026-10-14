@@ -10,10 +10,12 @@ interface AppShellProps {
   header?: React.ReactNode
   /** Page content; it scrolls inside the panel. */
   children: React.ReactNode
+  /** Unread notifications: a dot on the "Open menu" button, the sidebar badge being hidden. */
+  menuBadge?: number
 }
 
 /** App layout: sidebar on the left, an inset rounded main panel with a header and content. */
-export function AppShell({ sidebar, header, children }: AppShellProps) {
+export function AppShell({ sidebar, header, children, menuBadge }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = React.useState(false)
   return (
     <div className="flex h-dvh w-full overflow-hidden bg-sidebar text-foreground">
@@ -31,12 +33,20 @@ export function AppShell({ sidebar, header, children }: AppShellProps) {
       <div className="flex min-w-0 flex-1 flex-col md:py-2 md:pr-2">
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-border-subtle bg-surface md:rounded-lg md:border">
           <div className="flex shrink-0 items-center md:block">
-            <IconButton
-              label="Open menu"
-              icon={<Menu />}
-              className="ml-2 md:hidden"
-              onClick={() => setMobileOpen(true)}
-            />
+            <div className="relative ml-2 md:hidden">
+              <IconButton
+                label={menuBadge ? `Open menu (${menuBadge} unread notifications)` : 'Open menu'}
+                icon={<Menu />}
+                onClick={() => setMobileOpen(true)}
+              />
+              {menuBadge ? (
+                <span
+                  aria-hidden
+                  data-testid="menu-unread-dot"
+                  className="pointer-events-none absolute top-0.5 right-0.5 size-2 rounded-full bg-primary ring-2 ring-surface"
+                />
+              ) : null}
+            </div>
             <div className="min-w-0 flex-1">{header}</div>
           </div>
           <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>

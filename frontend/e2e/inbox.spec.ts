@@ -346,6 +346,12 @@ test.describe('inbox', () => {
     const preview = page.getByRole('region', { name: 'Notification preview' })
     await expect(rows(page)).toHaveCount(1)
     await expect(page.getByRole('button', { name: 'Back to inbox' })).toHaveCount(0)
+    // The sidebar (and its Inbox badge) is behind the menu: the menu button shows the unread dot.
+    await expect(
+      page.getByRole('button', { name: 'Open menu (1 unread notifications)' })
+    ).toBeVisible()
+    await expect(page.getByTestId('menu-unread-dot')).toBeVisible()
+
     await rows(page).first().getByRole('button').first().click()
     await expect(preview.getByRole('heading', { name: 'Mobile task' })).toBeVisible()
     await expect(preview.getByRole('link', { name: 'Open issue' })).toBeVisible()
@@ -354,6 +360,9 @@ test.describe('inbox', () => {
     await preview.getByRole('button', { name: 'Back to inbox' }).click()
     await expect(list).toBeVisible()
     await expect(preview).toHaveCount(0)
+    // Opening it read it: no dot left.
+    await expect(page.getByRole('button', { name: 'Open menu', exact: true })).toBeVisible()
+    await expect(page.getByTestId('menu-unread-dot')).toHaveCount(0)
   })
 
   test('a teammate deleting the issue closes its preview instead of failing on it', async ({

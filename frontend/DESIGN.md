@@ -86,6 +86,7 @@ function WorkspaceLayout() {
 | `sidebar`  | `ReactNode` | Usually `<Sidebar />`. 240px column on `md+`; a left `Sheet` on small screens (opened by an "Open menu" IconButton). |
 | `header?`  | `ReactNode` | Top of the main panel, usually `<PageHeader />`. Pages may also render `PageHeader` as the first child instead.      |
 | `children` | `ReactNode` | Content. It scrolls inside the rounded main panel (`<main>`).                                                        |
+| `menuBadge?` | `number` | Unread notifications. Below `md` the sidebar (and its Inbox badge) is hidden, so a dot on "Open menu" shows them. |
 
 ### `Sidebar` (`components/Sidebar.tsx`)
 
