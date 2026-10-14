@@ -919,6 +919,9 @@ test.describe('issue page', () => {
 
     // Opened from a link (no page to go back to): Esc goes to the team's issues.
     await openIssue(page, workspace.url_key, issue.identifier)
+    await expect(
+      page.getByRole('region', { name: 'Activity' }).getByRole('button', { name: 'Unsubscribe' })
+    ).toBeEnabled()
     await page.keyboard.press('Escape')
     await expect(page).toHaveURL(new RegExp(`/${workspace.url_key}/team/${team.key}/issues`))
   })
