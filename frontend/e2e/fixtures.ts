@@ -73,6 +73,7 @@ import type {
   CreateTeamData,
   Team,
   TeamMember,
+  UpdateTeamData,
   UpdateWorkflowStateData,
   WorkflowState,
 } from '../src/types/team'
@@ -558,6 +559,18 @@ export async function getTeam(
 ): Promise<Team> {
   const response = await api.get(`/teams/${teamId}`, { headers: authHeaders(user) })
   await expectOk(response, 'GET /teams/{id}')
+  return (await response.json()) as Team
+}
+
+/** PATCH /teams/{id}: a new key changes every identifier of the team. */
+export async function updateTeam(
+  api: APIRequestContext,
+  user: TestUser,
+  teamId: string,
+  data: UpdateTeamData
+): Promise<Team> {
+  const response = await api.patch(`/teams/${teamId}`, { data, headers: authHeaders(user) })
+  await expectOk(response, 'PATCH /teams/{id}')
   return (await response.json()) as Team
 }
 

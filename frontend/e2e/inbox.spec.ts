@@ -19,6 +19,7 @@ import {
   test,
   updateIssue,
   updateNotification,
+  updateTeam,
   type Page,
   type TestUser,
 } from './fixtures'
@@ -325,6 +326,36 @@ test.describe('inbox', () => {
     await expect(preview.getByRole('heading', { name: 'Renamed title' })).toBeVisible()
     await expect(preview.getByText('Urgent')).toBeVisible()
     await expect(preview.getByTestId('preview-status')).toHaveText('Done')
+  })
+
+  test('Open issue follows a team key change made while the inbox was open', async ({
+    api,
+    user: owner,
+    loginAs,
+  }) => {
+    const { workspace, member, memberUser, team } = await setUp(api, owner)
+    await createIssue(api, owner, {
+      team_id: team.id,
+      title: 'Rekeyed task',
+      assignee_id: memberUser.id,
+    })
+    // Already read: opening it changes nothing, so nothing refetches the list.
+    const [notification] = await listNotifications(api, member, workspace.id)
+    await updateNotification(api, member, notification.id, { read: true })
+
+    const page = await loginAs(member)
+    await page.goto(`/${workspace.url_key}/inbox`)
+    await expect(rows(page)).toHaveCount(1)
+
+    // A teammate renames the team key: ENG-1 is now RKY-1, the list still says ENG-1.
+    await updateTeam(api, owner, team.id, { key: 'RKY' })
+    const preview = page.getByRole('region', { name: 'Notification preview' })
+    await rows(page).first().getByRole('button').first().click()
+    await expect(preview.getByText('RKY-1', { exact: true })).toBeVisible()
+    await preview.getByRole('link', { name: 'Open issue' }).click()
+    await expect(page).toHaveURL(new RegExp(`/${workspace.url_key}/issue/RKY-1$`))
+    await expect(page.getByText('Issue not found')).toHaveCount(0)
+    await expect(page.getByRole('textbox', { name: 'Issue title' })).toHaveValue('Rekeyed task')
   })
 
   test('on a phone the preview replaces the list, with a way back', async ({

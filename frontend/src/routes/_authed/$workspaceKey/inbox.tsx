@@ -92,7 +92,13 @@ function InboxPage() {
   const markAllRead = useMarkAllNotificationsRead()
   const remove = useDeleteNotification()
 
-  const issueHref = (n: Notification) => (n.issue ? path(`/issue/${n.issue.identifier}`) : null)
+  // The previewed issue is fresher than the notification: a teammate may have
+  // changed the team key since, and the old identifier no longer resolves.
+  const issueHref = (n: Notification) => {
+    if (!n.issue) return null
+    const fresh = issueQuery.data?.id === n.issue_id ? issueQuery.data : null
+    return path(`/issue/${fresh?.identifier ?? n.issue.identifier}`)
+  }
 
   function change(n: Notification, data: UpdateNotificationData, failure: string) {
     update.mutate(

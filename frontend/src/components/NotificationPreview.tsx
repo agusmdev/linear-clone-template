@@ -61,7 +61,7 @@ export function NotificationPreview({
           className="-ml-1.5 md:hidden"
         />
         <span className="min-w-0 flex-1 truncate text-ui text-text-secondary">
-          {ref ? ref.identifier : 'Deleted issue'}
+          {ref ? (issue?.identifier ?? ref.identifier) : 'Deleted issue'}
         </span>
         <IconButton
           label={unread ? 'Mark as read' : 'Mark as unread'}
