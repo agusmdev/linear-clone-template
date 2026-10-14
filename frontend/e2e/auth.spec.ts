@@ -10,6 +10,7 @@ import {
   registerUser,
   storedToken,
   uniqueEmail,
+  uniqueUrlKey,
 } from './fixtures'
 
 async function fillRegisterForm(
@@ -79,6 +80,24 @@ test.describe('register', () => {
     // The name from the form is the display name.
     const me = await api.get('/users/me', { headers: authHeaders({ token }) })
     expect((await me.json()).display_name).toBe('Ada Lovelace')
+  })
+
+  test('emoji names show whole emoji initials, not broken glyphs', async ({ page }) => {
+    await page.goto('/register')
+    await fillRegisterForm(page, uniqueEmail('register-emoji'), PASSWORD, PASSWORD, '😀 Smiley')
+    await page.getByRole('button', { name: 'Create account' }).click()
+    await expect(onboardingHeading(page)).toBeVisible()
+    await page.getByLabel('Workspace name').fill('🚀 Rocket')
+    const urlKey = uniqueUrlKey('rocket')
+    await page.getByLabel('Workspace URL').fill(urlKey)
+    await page.getByRole('button', { name: 'Create workspace' }).click()
+    await expect(page).toHaveURL(`/${urlKey}/my-issues`)
+
+    // The workspace logo and the user avatar take the emoji, not half of its UTF-16 pair.
+    await expect(page.getByRole('button', { name: /🚀 Rocket/ }).first()).toContainText('🚀R')
+    await expect(page.getByText('😀S', { exact: true })).toBeVisible()
+    const body = await page.locator('body').innerText()
+    expect(body).not.toMatch(/�|[\uD800-\uDBFF](?![\uDC00-\uDFFF])/)
   })
 
   test('Back after sign-up does not reopen the register form', async ({ page }) => {

@@ -26,15 +26,22 @@ const PALETTE = [
   '#6b7a8f',
 ]
 
-/** Up to two initials: "Ada Lovelace" -> "AL", "ada@example.com" -> "A". */
+const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
+
+/** The first character as the user sees it: a whole emoji, not half of its UTF-16 pair. */
+function firstChar(word: string): string {
+  return graphemes.segment(word)[Symbol.iterator]().next().value?.segment ?? ''
+}
+
+/** Up to two initials: "Ada Lovelace" -> "AL", "ada@example.com" -> "A", "🚀 Rocket" -> "🚀R". */
 export function initialsOf(name: string): string {
   const words = name
     .trim()
     .split(/[\s@._-]+/)
     .filter(Boolean)
   if (words.length === 0) return '?'
-  if (name.includes('@') || words.length === 1) return words[0][0].toUpperCase()
-  return (words[0][0] + words[words.length - 1][0]).toUpperCase()
+  if (name.includes('@') || words.length === 1) return firstChar(words[0]).toUpperCase()
+  return (firstChar(words[0]) + firstChar(words[words.length - 1])).toUpperCase()
 }
 
 /** A stable color per name, so a user keeps the same color everywhere. */
