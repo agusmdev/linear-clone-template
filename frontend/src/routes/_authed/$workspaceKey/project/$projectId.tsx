@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useIsMutating } from '@tanstack/react-query'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { Box, FileText, ListTodo, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
@@ -236,7 +236,12 @@ function ProjectPage() {
 function ProjectOverview({ project }: { project: Project }) {
   const { teams, members } = useCurrentWorkspace()
   const updateProject = useUpdateProject(project.id)
-  const [name, setName] = useState(project.name)
+  // The typed name while the field has focus; otherwise it follows the project
+  // (a teammate's rename arrives with any refetch and must not be reverted).
+  const [draftName, setDraftName] = useState<string | null>(null)
+  const name = draftName ?? project.name
+  // Set by Escape: the blur that follows drops the draft instead of saving it.
+  const cancelName = useRef(false)
   const [description, setDescription] = useState(project.description ?? '')
 
   const update = (data: UpdateProjectData) =>
@@ -250,11 +255,20 @@ function ProjectOverview({ project }: { project: Project }) {
 
   const saveName = () => {
     const trimmed = name.trim()
-    if (!trimmed) {
-      setName(project.name)
+    const cancelled = cancelName.current
+    cancelName.current = false
+    if (cancelled || !trimmed || trimmed === project.name) {
+      setDraftName(null)
       return
     }
-    if (trimmed !== project.name) update({ name: trimmed })
+    // Keep showing the new name until the save settles (no flash of the old one).
+    // A promise, not `mutate` callbacks: those only run for the latest call of the hook.
+    setDraftName(trimmed)
+    updateProject
+      .mutateAsync({ name: trimmed })
+      .catch(error => toastApiError(error, 'Could not update project'))
+      // Unless the user is typing a newer name by now.
+      .finally(() => setDraftName(draft => (draft === trimmed ? null : draft)))
   }
 
   const { total, completed, percentage } = project.progress
@@ -273,12 +287,12 @@ function ProjectOverview({ project }: { project: Project }) {
         value={name}
         maxLength={255}
         placeholder="Project name"
-        onChange={event => setName(event.target.value)}
+        onChange={event => setDraftName(event.target.value)}
         onBlur={saveName}
         onKeyDown={event => {
           if (event.key === 'Enter') event.currentTarget.blur()
           if (event.key === 'Escape') {
-            setName(project.name)
+            cancelName.current = true
             event.currentTarget.blur()
           }
         }}

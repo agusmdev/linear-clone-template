@@ -181,3 +181,4 @@ Bugs found by earlier QA rounds. Do not re-report one unless it still reproduces
 - inbox: J/K did not move focus, so Enter after a header button opened the wrong issue
 - search: the arrow-key selected result scrolled out of view
 - issue-detail: deleting an issue left stale parent, sub-issue and relation rows on the issues it touched
+- projects-cycles: the project page name field kept an old name after a teammate's rename (leaving the field reverted it); Escape in it saved the typed name
