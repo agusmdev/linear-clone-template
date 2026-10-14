@@ -23,7 +23,7 @@ Then say: "Continue from HANDOFF.md".
 ## 2. Where things are
 
 - **Repo:** `git@github.com:agusmdev/linear-clone-template.git` (private).
-  - `main` is green: `make check` and `make test` pass (about 445 backend tests and 217 Playwright tests).
+  - `main` is green: `make check` and `make test` pass (449 backend tests and 257 Playwright tests).
 - **Feature spec:** `FEATURES.md`. All 41 feature IDs are marked `done`.
 - **API contract:** `docs/API.md`.
 - **UX reference:** `docs/LINEAR_UX.md`.
@@ -45,10 +45,11 @@ Then say: "Continue from HANDOFF.md".
 ### QA status
 
 - All QA round 1 fix branches (`fix/r1-*`, 34 bugs) are merged into `main`.
-- QA rounds 2, 3 and 4 found and fixed about 60 more bugs (`fix/r2-*` .. `fix/r4-*`, all merged).
+- QA rounds 2 to 10 and a cross-area user-journey pass found and fixed about 110 more bugs (`fix/r2-*` .. `fix/r10-*`, `fix/journey-*`, all merged). Bugs per round: r2 ~19, r3 ~29, r4 ~13, r5 5, r6 3, r7 ~6, r8 5, r9 4, journey 15, r10 6.
 - Every bug found so far, and the few accepted edge cases, are in `docs/handoff/qa-known-bugs.md`.
 - A browser acceptance pass checked all 41 FEATURES.md items; all work.
-- `make check`, the backend suite (~445 tests) and the Playwright suite (~217 tests) pass on `main`.
+- `make check`, the backend suite (449 tests) and the Playwright suite (257 tests) pass on `main`.
+- Round 11 is the next QA round (see section 3); QA is done after two dry rounds in a row.
 
 ## 3. How to continue QA
 
