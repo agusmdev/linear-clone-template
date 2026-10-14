@@ -18,6 +18,16 @@ import {
 
 const EMAIL_TAKEN = 'An account with this email already exists'
 
+/**
+ * The backend checks an email more strictly than the form (reserved domains
+ * such as `.local`, two dots in a row). Its message reads "value is not a
+ * valid email address: <reason>": keep only the reason.
+ */
+function invalidEmailMessage(messages: string[]): string {
+  const reason = messages[0]?.split('valid email address: ')[1]
+  return reason ? `Invalid email address. ${reason}` : 'Invalid email address'
+}
+
 export const Route = createFileRoute('/register')({
   component: Register,
 })
@@ -34,10 +44,17 @@ function Register() {
     'Account created successfully',
     'Registration failed',
     {
-      // The email is the only unique field: show the clash under it, not in a toast.
+      // Show email problems under the field, not in a toast.
       handleError: error => {
-        if (!(error instanceof ApiError) || error.code !== 'duplicate_item') return false
-        form.setError('email', { type: 'server', message: EMAIL_TAKEN })
+        if (!(error instanceof ApiError)) return false
+        // The email is the only unique field.
+        if (error.code === 'duplicate_item') {
+          form.setError('email', { type: 'server', message: EMAIL_TAKEN })
+          return true
+        }
+        const emailErrors = error.fields?.['email']
+        if (!emailErrors) return false
+        form.setError('email', { type: 'invalid', message: invalidEmailMessage(emailErrors) })
         return true
       },
     }

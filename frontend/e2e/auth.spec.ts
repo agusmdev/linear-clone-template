@@ -169,7 +169,9 @@ test.describe('register', () => {
     expect(registerCalls).toEqual([])
   })
 
-  test('shows backend validation errors (422) as a readable message', async ({ page }) => {
+  test('shows an email the backend rejects (422) under Email, not as raw text', async ({
+    page,
+  }) => {
     // The form accepts this address; the backend rejects reserved TLDs such as .test.
     await page.goto('/register')
     await fillRegisterForm(page, `e2e-${Date.now()}@example.test`, PASSWORD)
@@ -177,9 +179,21 @@ test.describe('register', () => {
     await page.getByRole('button', { name: 'Create account' }).click()
 
     expect((await responsePromise).status()).toBe(422)
-    await expect(errorToast(page)).toContainText('Registration failed')
-    await expect(errorToast(page)).toContainText('email: value is not a valid email address')
+    const emailField = page.getByLabel('Email')
+    await expect(emailField).toHaveAttribute('aria-invalid', 'true')
+    await expect(
+      page.getByText('Invalid email address. The part after the @-sign is a special-use')
+    ).toBeVisible()
+    await expect(page.getByText(/value is not a valid email address/)).toHaveCount(0)
+    await expect(errorToast(page)).toHaveCount(0)
+    // Not a taken email: no "Sign in instead" link.
+    await expect(signInInstead(page)).toHaveCount(0)
     await expect(page).toHaveURL('/register')
+
+    // A valid address then signs up.
+    await emailField.fill(uniqueEmail('register-valid'))
+    await page.getByRole('button', { name: 'Create account' }).click()
+    await expect(onboardingHeading(page)).toBeVisible()
   })
 })
 
