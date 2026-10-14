@@ -164,3 +164,13 @@ Bugs found by earlier QA rounds. Do not re-report one unless it still reproduces
 - issue-detail: Enter in the relation search linked a stale result
 - issues-list: many labels on a row were cut off (now one "N labels" chip)
 - settings: long unbroken names overflowed titles and confirm dialogs
+
+## Round 11 (all fixed)
+
+- auth: Back reopened the login/register form after signing in
+- projects: the sidebar favorite ignored the project's own icon
+- issues-list: long label names overflowed board card chips
+- inbox: the preview stayed open after a teammate deleted the issue; no unread dot on the phone menu button
+- create-issue: Cmd+Enter in an open property picker re-picked the highlighted option
+- settings: after a refused save, Esc left settings instead of cancelling
+- documents: list search needed the words in order; Ctrl/Cmd+click on an issue link did not open a new tab
