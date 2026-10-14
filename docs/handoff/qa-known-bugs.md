@@ -174,3 +174,7 @@ Bugs found by earlier QA rounds. Do not re-report one unless it still reproduces
 - create-issue: Cmd+Enter in an open property picker re-picked the highlighted option
 - settings: after a refused save, Esc left settings instead of cancelling
 - documents: list search needed the words in order; Ctrl/Cmd+click on an issue link did not open a new tab
+
+## Round 12 (all fixed)
+
+- projects-cycles: the project page name field kept an old name after a teammate's rename (leaving the field reverted it); Escape in it saved the typed name

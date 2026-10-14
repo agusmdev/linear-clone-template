@@ -696,3 +696,58 @@ test('reopening a project shows a teammate description edit made since, and typi
     .poll(async () => (await getProject(api, user, project.id))?.description)
     .toBe('<p>Teammate rewrote this and I added this</p>')
 })
+
+test('the project name follows a teammate rename, and leaving the field keeps it', async ({
+  authedPage: page,
+  api,
+  user,
+}) => {
+  const workspace = await createWorkspace(api, user)
+  const project = await createProject(api, user, { workspace_id: workspace.id, name: 'Mine' })
+  const teammate = await registerUser(api)
+  await addWorkspaceMember(api, user, workspace.id, teammate)
+  await page.goto(`/${workspace.url_key}/project/${project.id}`)
+  const name = page.getByLabel('Project name')
+  await expect(name).toHaveValue('Mine')
+
+  await updateProject(api, teammate, project.id, { name: 'Teammate name' })
+  // Any other change refetches the project, with the teammate's name.
+  await page.getByRole('button', { name: 'Status: Planned' }).click()
+  await page.getByRole('option', { name: 'In Progress' }).click()
+  await expect(name).toHaveValue('Teammate name')
+
+  await name.click()
+  await name.press('Enter')
+  await expect(page.getByRole('button', { name: 'Status: In Progress' })).toBeVisible()
+  await expect.poll(async () => (await getProject(api, user, project.id))?.status).toBe('started')
+  expect((await getProject(api, user, project.id))?.name).toBe('Teammate name')
+})
+
+test('Escape in the project name restores it without saving', async ({
+  authedPage: page,
+  api,
+  user,
+}) => {
+  const workspace = await createWorkspace(api, user)
+  const project = await createProject(api, user, { workspace_id: workspace.id, name: 'Keep me' })
+  await page.goto(`/${workspace.url_key}/project/${project.id}`)
+
+  const name = page.getByLabel('Project name')
+  await name.fill('Typed by mistake')
+  await name.press('Escape')
+  await expect(name).toHaveValue('Keep me')
+  await expect(name).not.toBeFocused()
+  // A later change saves after any name PATCH would have: the name is untouched.
+  await page.getByRole('button', { name: 'Status: Planned' }).click()
+  await page.getByRole('option', { name: 'Paused' }).click()
+  await expect.poll(async () => (await getProject(api, user, project.id))?.status).toBe('paused')
+  expect((await getProject(api, user, project.id))?.name).toBe('Keep me')
+
+  // A real rename still saves.
+  await name.fill('Renamed')
+  await name.press('Enter')
+  await expect.poll(async () => (await getProject(api, user, project.id))?.name).toBe('Renamed')
+  await page.reload()
+  await expect(name).toHaveValue('Renamed')
+  expect((await getProject(api, user, project.id))?.name).toBe('Renamed')
+})
