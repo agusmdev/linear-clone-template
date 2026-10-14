@@ -122,6 +122,33 @@ test.describe('issues list', () => {
     }
   })
 
+  test('a long label name stays inside its chip and the card on the board (ISS-4)', async ({
+    api,
+    user,
+    authedPage: page,
+  }) => {
+    const { workspace, team, key } = await seedWorkspace(api, user)
+    const long = await createLabel(api, user, workspace.id, {
+      name: 'Needs design review from the platform and infrastructure team',
+      color: '#4ea7fc',
+    })
+    await createIssue(api, user, { team_id: team.id, title: 'Card label', label_ids: [long.id] })
+
+    await page.goto(`/${key}/team/${team.key}/issues?layout=board`)
+    const card = page.locator('[data-issue-card]', { hasText: 'Card label' })
+    const chip = card.locator('[data-label-chip]')
+    await expect(chip).toHaveAttribute('title', long.name)
+
+    // One line (the chip keeps its height), the name ends with an ellipsis,
+    // and the chip ends inside the card.
+    const text = chip.getByText(long.name, { exact: true })
+    expect(await text.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true)
+    expect(await text.evaluate(el => getComputedStyle(el).textOverflow)).toBe('ellipsis')
+    expect(await chip.evaluate(el => el.scrollHeight <= el.clientHeight)).toBe(true)
+    const [chipBox, cardBox] = [await chip.boundingBox(), await card.boundingBox()]
+    expect(chipBox!.x + chipBox!.width).toBeLessThanOrEqual(cardBox!.x + cardBox!.width)
+  })
+
   test('creates an issue with properties from the modal (ISS-1)', async ({
     api,
     user,
