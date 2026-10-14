@@ -100,6 +100,18 @@ test.describe('issue page', () => {
     await title.blur()
     await expect(title).toHaveValue('Fix the sign-in bug')
 
+    // A pasted line break becomes a space, as in the create modal.
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+    await page.evaluate(() => navigator.clipboard.writeText('Fix the sign-in bug\non Safari'))
+    await title.focus()
+    await title.selectText()
+    await page.keyboard.press('ControlOrMeta+v')
+    await expect(title).toHaveValue('Fix the sign-in bug on Safari')
+    await title.press('Enter')
+    await expect
+      .poll(async () => (await getIssue(api, user, issue.id)).title)
+      .toBe('Fix the sign-in bug on Safari')
+
     const description = page.getByRole('textbox', { name: 'Issue description' })
     await expect(description).toContainText('Steps to reproduce')
     await description.click()
@@ -112,7 +124,9 @@ test.describe('issue page', () => {
     // The changes are in the activity timeline.
     const activity = page.getByRole('list', { name: 'Activity' })
     await expect(activity.getByText(/created the issue/)).toBeVisible()
-    await expect(activity.getByText(/changed the title from/)).toContainText('Fix the sign-in bug')
+    await expect(activity.getByText(/changed the title from/).first()).toContainText(
+      'Fix the sign-in bug'
+    )
     await expect(activity.getByText(/updated the description/)).toBeVisible()
   })
 

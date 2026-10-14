@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { singleLineTitle } from '@/features/issues/issue-schemas'
 import { cn } from '@/lib/utils'
 
 interface IssueTitleInputProps {
@@ -68,7 +69,8 @@ export function IssueTitleInput({ value, onSave, className, ref: outerRef }: Iss
         setDraft(value)
         setEditing(true)
       }}
-      onChange={event => setDraft(event.target.value.replace(/\n/g, ''))}
+      // Titles are one line: a pasted line break becomes a space.
+      onChange={event => setDraft(singleLineTitle(event.target.value))}
       onBlur={commit}
       onKeyDown={event => {
         if (event.key === 'Enter') {
