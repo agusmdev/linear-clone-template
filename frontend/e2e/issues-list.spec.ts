@@ -288,6 +288,45 @@ test.describe('issues list', () => {
     expect(titles).toEqual(['Create more twice', 'Double click', 'Double submit'])
   })
 
+  test('Cmd+Enter with a property picker open creates what the chips show (ISS-1)', async ({
+    api,
+    user,
+    loginAs,
+  }) => {
+    const { workspace, key } = await seedWorkspace(api, user)
+    const page = await loginAs(user)
+    await page.goto(`/${key}/team/ENG/issues`)
+    await expect(page.getByText('No issues yet')).toBeVisible()
+    const dialog = page.getByRole('dialog', { name: 'New issue' })
+
+    // The label picker stays open after a pick: Cmd+Enter there must not
+    // toggle the highlighted label (the one just added) off again.
+    await page.locator('body').click()
+    await page.keyboard.press('c')
+    await dialog.getByLabel('Issue title').fill('Label then submit')
+    await dialog.getByRole('button', { name: /^Labels:/ }).click()
+    await page.keyboard.type('Bug')
+    await page.keyboard.press('Enter')
+    await expect(dialog.getByRole('button', { name: 'Labels: Bug' })).toBeVisible()
+    await page.keyboard.press('ControlOrMeta+Enter')
+    await expect(page.getByText('Created ENG-1')).toBeVisible()
+
+    // Cmd+Enter right after a pick, while the closing picker still has focus.
+    await page.locator('body').click()
+    await page.keyboard.press('c')
+    await dialog.getByLabel('Issue title').fill('Priority then submit')
+    await dialog.getByRole('button', { name: /^Priority:/ }).click()
+    await page.keyboard.type('High')
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('ControlOrMeta+Enter')
+    await expect(page.getByText('Created ENG-2')).toBeVisible()
+
+    const issues = (await listIssues(api, user, workspace.id)).items
+    const byTitle = Object.fromEntries(issues.map(issue => [issue.title, issue]))
+    expect(byTitle['Label then submit'].labels.map(l => l.name)).toEqual(['Bug'])
+    expect(byTitle['Priority then submit'].priority).toBe(2)
+  })
+
   test('the parent picker searches every issue of the team, not only the latest 100 (ISS-1)', async ({
     api,
     user,

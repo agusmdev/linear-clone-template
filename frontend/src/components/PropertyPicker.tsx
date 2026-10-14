@@ -160,7 +160,17 @@ export function PropertyPicker<V extends string = string>(props: PropertyPickerP
         onKeyDown={onKeyDown}
         onCloseAutoFocus={onCloseAutoFocus}
       >
-        <Command filter={filterOption} label={label} loop>
+        <Command
+          filter={filterOption}
+          label={label}
+          loop
+          // Cmd/Ctrl+Enter submits the form around the picker (e.g. "Create issue"):
+          // cmdk must not also pick the highlighted option (that toggled off a label
+          // just added, or changed the value the chip shows right before the submit).
+          onKeyDown={event => {
+            if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) event.preventDefault()
+          }}
+        >
           <CommandInput placeholder={placeholder} value={search} onValueChange={changeSearch} />
           <CommandList>
             <CommandEmpty>{emptyText}</CommandEmpty>
