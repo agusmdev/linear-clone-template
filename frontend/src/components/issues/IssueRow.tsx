@@ -207,7 +207,7 @@ export function IssueCard({ issue, onOpen }: { issue: Issue; onOpen: (issue: Iss
           />
           <span
             className={cn(
-              'line-clamp-2 min-w-0 flex-1 text-foreground',
+              'line-clamp-2 min-w-0 flex-1 [overflow-wrap:anywhere] text-foreground',
               completed && 'text-text-secondary'
             )}
           >
@@ -231,10 +231,12 @@ export function IssueCard({ issue, onOpen }: { issue: Issue; onOpen: (issue: Iss
           {issue.labels.map(label => (
             <span
               key={label.id}
-              className="inline-flex h-5 items-center gap-1.5 rounded-full border border-border px-2 text-micro text-text-secondary"
+              title={label.name}
+              data-label-chip=""
+              className="inline-flex h-5 max-w-full min-w-0 items-center gap-1.5 rounded-full border border-border px-2 text-micro whitespace-nowrap text-text-secondary"
             >
               <LabelDot color={label.color} />
-              {label.name}
+              <span className="truncate">{label.name}</span>
             </span>
           ))}
           {issue.due_date ? (
