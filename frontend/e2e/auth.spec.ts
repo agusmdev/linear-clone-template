@@ -81,6 +81,20 @@ test.describe('register', () => {
     expect((await me.json()).display_name).toBe('Ada Lovelace')
   })
 
+  test('Back after sign-up does not reopen the register form', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('link', { name: 'Get Started' }).click()
+    await expect(page).toHaveURL('/register')
+    await fillRegisterForm(page, uniqueEmail('register-back'), PASSWORD)
+    await page.getByRole('button', { name: 'Create account' }).click()
+    await expect(onboardingHeading(page)).toBeVisible()
+
+    // Back skips the form: "/" sends the signed-in user on to onboarding again.
+    await page.goBack()
+    await expect(page).toHaveURL('/onboarding')
+    await expect(onboardingHeading(page)).toBeVisible()
+  })
+
   test('shows a clear error under Email when the email is already registered', async ({
     page,
     user,
@@ -380,6 +394,19 @@ test.describe('session', () => {
     await page.getByRole('button', { name: 'Sign in' }).click()
     await expect(page).toHaveURL('/items')
     await expect(page.getByRole('heading', { name: 'Items' })).toBeVisible()
+  })
+
+  test('Back after sign-in does not reopen the login form', async ({ page, user }) => {
+    await page.goto('/')
+    await page.getByRole('link', { name: 'Sign In', exact: true }).first().click()
+    await expect(page).toHaveURL('/login')
+    await fillLoginForm(page, user.email, user.password)
+    await page.getByRole('button', { name: 'Sign in' }).click()
+    await expect(onboardingHeading(page)).toBeVisible()
+
+    await page.goBack()
+    await expect(page).toHaveURL('/onboarding')
+    await expect(page.getByRole('button', { name: 'Sign in' })).toHaveCount(0)
   })
 
   test('survives a page reload', async ({ authedPage: page }) => {
