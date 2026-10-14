@@ -567,3 +567,63 @@ def test_issue_detail_routes_need_authentication(
     response = api.request(method, path, json={})
 
     assert_error(response, 403, "http_error", "Not authenticated")
+
+
+def test_deleting_an_issue_is_logged_on_the_issues_it_touched(
+    owner: RegisteredUser, ws: dict[str, Any]
+) -> None:
+    team_id = ws["team"]["id"]
+    parent = create_issue(owner.client, team_id, "Parent")
+    doomed = create_issue(owner.client, team_id, "Doomed", parent_id=parent["id"])
+    child = create_issue(owner.client, team_id, "Child", parent_id=doomed["id"])
+    blocked = create_issue(owner.client, team_id, "Blocked")
+    duplicate = create_issue(owner.client, team_id, "Duplicate")
+    for source, target, kind in (
+        (doomed, blocked, "blocks"),
+        (duplicate, doomed, "duplicate"),
+    ):
+        response = owner.client.post(
+            f"/issues/{source['id']}/relations",
+            json={"related_issue_id": target["id"], "type": kind},
+        )
+        assert response.status_code == 201, response.text
+
+    assert owner.client.delete(f"/issues/{doomed['id']}").status_code == 204
+
+    gone = doomed["identifier"]
+    assert _changes(owner.client, parent["id"])[-1] == ("sub_issue", gone, None)
+    assert _changes(owner.client, child["id"])[-1] == ("parent", gone, None)
+    assert _changes(owner.client, blocked["id"])[-1] == (
+        "relation_blocked_by",
+        gone,
+        None,
+    )
+    assert _changes(owner.client, duplicate["id"])[-1] == (
+        "relation_duplicate_of",
+        gone,
+        None,
+    )
+
+
+def test_bulk_delete_logs_only_on_the_issues_that_stay(
+    owner: RegisteredUser, ws: dict[str, Any]
+) -> None:
+    team_id = ws["team"]["id"]
+    parent = create_issue(owner.client, team_id, "Parent")
+    child = create_issue(owner.client, team_id, "Child", parent_id=parent["id"])
+    kept = create_issue(owner.client, team_id, "Kept")
+    response = owner.client.post(
+        f"/issues/{parent['id']}/relations",
+        json={"related_issue_id": kept["id"], "type": "related"},
+    )
+    assert response.status_code == 201, response.text
+
+    response = owner.client.post(
+        "/issues/bulk-delete", json={"issue_ids": [parent["id"], child["id"]]}
+    )
+
+    assert response.status_code == 204
+    assert _changes(owner.client, kept["id"]) == [
+        ("relation_related", None, parent["identifier"]),
+        ("relation_related", parent["identifier"], None),
+    ]

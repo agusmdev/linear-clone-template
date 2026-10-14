@@ -15,7 +15,7 @@ from fastapi_pagination import Page, Params
 
 from app.core.logging import log_entities
 from app.modules.issues.filters import IssueFilter
-from app.modules.issues.models import Issue, IssueActivityAction
+from app.modules.issues.models import Issue, IssueActivityAction, IssueRelationType
 from app.modules.issues.repository import IssueRepository
 from app.modules.issues.schemas import IssueBulkUpdate, IssueCreate, IssueUpdate
 from app.modules.labels.models import Label
@@ -31,6 +31,13 @@ from app.services.base_crud_service import BaseService
 from app.user.models import User
 
 _IDENTIFIER = re.compile(r"^([A-Za-z]{2,5})-(\d{1,9})$")
+
+# Activity field of a relation, as seen from (source, target) of the stored row.
+RELATION_FIELDS: dict[IssueRelationType, tuple[str, str]] = {
+    IssueRelationType.blocks: ("relation_blocks", "relation_blocked_by"),
+    IssueRelationType.related: ("relation_related", "relation_related"),
+    IssueRelationType.duplicate: ("relation_duplicate_of", "relation_duplicated_by"),
+}
 
 # Fields copied to the issue as they are, with their activity value.
 _PLAIN_FIELDS = ("title", "priority", "estimate", "due_date")
@@ -449,9 +456,64 @@ class IssueService(BaseService[Issue]):
         }
 
     async def delete_issue(self, issue_id: uuid.UUID, *, user_id: uuid.UUID) -> None:
-        await self.get_for_member(issue_id, user_id=user_id)
-        await self.repo.delete(issue_id)
+        issue = await self.get_for_member(issue_id, user_id=user_id)
+        await self.repo.delete_many(
+            [issue.id],
+            activities=await self._deletion_activities([issue], user_id=user_id),
+        )
         self._log_entity(issue_id)
+
+    async def _deletion_activities(
+        self, issues: list[Issue], *, user_id: uuid.UUID
+    ) -> list[dict[str, Any]]:
+        """The rows the issues that stay get when these issues are deleted.
+
+        Their sub-issues lose the parent, their parent loses the sub-issue and
+        every related issue loses the relation, like the explicit changes do.
+        """
+        deleted = {issue.id: issue for issue in issues}
+        rows: list[dict[str, Any]] = []
+        for issue in issues:
+            if issue.parent_id is not None and issue.parent_id not in deleted:
+                rows.append(
+                    _change(
+                        user_id,
+                        "sub_issue",
+                        issue.identifier,
+                        None,
+                        issue_id=issue.parent_id,
+                    )
+                )
+        for child in await self.repo.children_of(list(deleted)):
+            if child.parent_id is None:
+                continue
+            parent = deleted[child.parent_id]
+            rows.append(
+                _change(user_id, "parent", parent.identifier, None, issue_id=child.id)
+            )
+        for relation in await self.repo.relations_of(list(deleted)):
+            source_field, target_field = RELATION_FIELDS[relation.type]
+            if relation.issue_id not in deleted:
+                rows.append(
+                    _change(
+                        user_id,
+                        source_field,
+                        relation.related_issue.identifier,
+                        None,
+                        issue_id=relation.issue_id,
+                    )
+                )
+            elif relation.related_issue_id not in deleted:
+                rows.append(
+                    _change(
+                        user_id,
+                        target_field,
+                        relation.issue.identifier,
+                        None,
+                        issue_id=relation.related_issue_id,
+                    )
+                )
+        return rows
 
     # --- bulk --------------------------------------------------------------
 
@@ -509,5 +571,8 @@ class IssueService(BaseService[Issue]):
         self, issue_ids: list[uuid.UUID], *, user_id: uuid.UUID
     ) -> None:
         issues = await self._issues_for_member(issue_ids, user_id=user_id)
-        await self.repo.delete_many([issue.id for issue in issues])
+        await self.repo.delete_many(
+            [issue.id for issue in issues],
+            activities=await self._deletion_activities(issues, user_id=user_id),
+        )
         log_entities("issue", [issue.id for issue in issues])
