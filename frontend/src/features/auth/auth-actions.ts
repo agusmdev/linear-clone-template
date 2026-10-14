@@ -31,7 +31,8 @@ export async function executeAuthSubmit(
     const result = await api.post<AuthSessionResponse>(endpoint, payload)
     deps.login(result.id)
     toast.success(deps.successMessage)
-    deps.navigate(deps.redirect)
+    // Replace the form in the history: Back must not show it again to a signed-in user.
+    deps.navigate({ ...deps.redirect, replace: true })
   } catch (err) {
     if (!deps.handleError?.(err)) toastApiError(err, deps.errorMessage)
     throw err
