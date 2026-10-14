@@ -1,4 +1,4 @@
-import { useId, useMemo, useState, type ReactNode } from 'react'
+import { useId, useMemo, useState, type KeyboardEvent, type ReactNode } from 'react'
 import {
   closestCenter,
   closestCorners,
@@ -49,6 +49,8 @@ export interface KanbanBoardProps<T> {
   onMove?: (event: MoveEvent) => void
   /** Shows a "+" button in each column header. */
   onAddInColumn?: (columnId: string) => void
+  /** Enter on the focused card (Space lifts it for a keyboard drag). */
+  onOpen?: (item: T) => void
   /** Column width in px. Default 348. */
   columnWidth?: number
   className?: string
@@ -64,6 +66,9 @@ type DragData = { type: 'column'; columnId: string } | { type: 'card' }
  * so a few pixels of drift inside the leftmost visible column scrolled the board).
  */
 const AUTO_SCROLL = { threshold: { x: 0.05, y: 0.2 } }
+
+/** Only Space lifts a card, so Enter can open it (dnd-kit's default lifts on Enter too). */
+const KEYBOARD_CODES = { start: ['Space'], cancel: ['Escape'], end: ['Space', 'Enter'] }
 
 /**
  * The column under the pointer (or the nearest one when the pointer is in a gap) is the target,
@@ -104,6 +109,7 @@ export function KanbanBoard<T>({
   renderCard,
   onMove,
   onAddInColumn,
+  onOpen,
   columnWidth = 348,
   className,
   'aria-label': ariaLabel = 'Board',
@@ -111,7 +117,10 @@ export function KanbanBoard<T>({
   const dndId = useId()
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+      keyboardCodes: KEYBOARD_CODES,
+    })
   )
 
   const propIds = useMemo(() => toIdMap(columns, items, getItemId), [columns, items, getItemId])
@@ -232,6 +241,7 @@ export function KanbanBoard<T>({
             itemById={itemById}
             renderCard={renderCard}
             onAdd={onAddInColumn}
+            onOpen={onOpen}
             width={columnWidth}
             disabled={!onMove}
           />
@@ -254,6 +264,7 @@ interface KanbanColumnProps<T> {
   itemById: Map<string, T>
   renderCard: (item: T, state: KanbanCardState) => ReactNode
   onAdd?: (columnId: string) => void
+  onOpen?: (item: T) => void
   width: number
   disabled: boolean
 }
@@ -264,6 +275,7 @@ function KanbanColumn<T>({
   itemById,
   renderCard,
   onAdd,
+  onOpen,
   width,
   disabled,
 }: KanbanColumnProps<T>) {
@@ -308,7 +320,12 @@ function KanbanColumn<T>({
             const item = itemById.get(id)
             if (item === undefined) return null
             return (
-              <SortableCard key={id} id={id} disabled={disabled}>
+              <SortableCard
+                key={id}
+                id={id}
+                disabled={disabled}
+                onOpen={onOpen ? () => onOpen(item) : undefined}
+              >
                 {renderCard(item, { isOverlay: false })}
               </SortableCard>
             )
@@ -322,10 +339,12 @@ function KanbanColumn<T>({
 function SortableCard({
   id,
   disabled,
+  onOpen,
   children,
 }: {
   id: string
   disabled: boolean
+  onOpen?: () => void
   children: ReactNode
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -335,6 +354,8 @@ function SortableCard({
   })
 
   return (
+    // role="button" and tabIndex come from dnd-kit's `attributes`.
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), transition }}
@@ -345,6 +366,15 @@ function SortableCard({
       )}
       {...attributes}
       {...listeners}
+      onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
+        // Enter on the card itself (not on a picker inside it) opens it, unless a drag runs.
+        if (event.key === 'Enter' && event.target === event.currentTarget && !isDragging) {
+          event.preventDefault()
+          onOpen?.()
+          return
+        }
+        listeners?.onKeyDown?.(event)
+      }}
     >
       {children}
     </div>
