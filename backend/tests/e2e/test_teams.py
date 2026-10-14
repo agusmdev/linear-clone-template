@@ -506,6 +506,13 @@ def test_delete_a_used_state_needs_a_target_and_moves_the_issues(
     moved = auth_client.get(f"/issues/{issue['id']}").json()
     assert moved["state"]["name"] == "Done"
     assert moved["completed_at"] is not None
+    # The history tells why the status changed.
+    rows = auth_client.get(f"/issues/{issue['id']}/activity").json()
+    assert [
+        (r["field"], r["from_value"], r["to_value"])
+        for r in rows
+        if r["action"] == "updated"
+    ] == [("state", "Todo", "Done")]
 
 
 def test_the_last_state_of_a_team_cannot_be_deleted(auth_client: httpx.Client) -> None:

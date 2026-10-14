@@ -6,7 +6,7 @@ from typing import Any
 from sqlalchemy import delete, func, insert, select, update
 from sqlalchemy.orm import selectinload
 
-from app.modules.issues.models import Issue
+from app.modules.issues.models import Issue, IssueActivity, IssueActivityAction
 from app.modules.teams.models import (
     Team,
     TeamMember,
@@ -135,13 +135,19 @@ class WorkflowStateRepository(SQLAlchemyRepository[WorkflowState]):
 
     @SQLAlchemyRepository.translate_commit_errors
     async def delete_state(
-        self, state_id: uuid.UUID, *, move_to: WorkflowState | None = None
+        self,
+        state: WorkflowState,
+        *,
+        actor_id: uuid.UUID,
+        move_to: WorkflowState | None = None,
     ) -> None:
         """Move the state's issues to ``move_to`` (if given), then delete the state.
 
         The moved issues get the started/completed/canceled timestamps of the
-        new state's type, as a status change through PATCH /issues would.
+        new state's type and a status history row, as a status change through
+        PATCH /issues would. One commit.
         """
+        state_id = state.id
         if move_to is not None:
             now = func.now()
             values: dict[str, Any] = {"state_id": move_to.id}
@@ -167,9 +173,28 @@ class WorkflowStateRepository(SQLAlchemyRepository[WorkflowState]):
                     "canceled_at": func.coalesce(Issue.canceled_at, now),
                     "completed_at": None,
                 }
-            await self._session.execute(
-                update(Issue).where(Issue.state_id == state_id).values(**values)
+            result = await self._session.execute(
+                update(Issue)
+                .where(Issue.state_id == state_id)
+                .values(**values)
+                .returning(Issue.id)
             )
+            moved_ids = list(result.scalars().all())
+            if moved_ids:
+                await self._session.execute(
+                    insert(IssueActivity),
+                    [
+                        {
+                            "issue_id": issue_id,
+                            "actor_id": actor_id,
+                            "action": IssueActivityAction.updated,
+                            "field": "state",
+                            "from_value": state.name,
+                            "to_value": move_to.name,
+                        }
+                        for issue_id in moved_ids
+                    ],
+                )
         await self._session.execute(
             delete(WorkflowState).where(WorkflowState.id == state_id)
         )

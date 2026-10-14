@@ -276,7 +276,7 @@ class TeamService(BaseService[Team]):
                 detail="Issues use this workflow state: move them to another "
                 "state first (move_to_state_id)"
             )
-        await self.state_repo.delete_state(state_id, move_to=move_to)
+        await self.state_repo.delete_state(state, actor_id=user_id, move_to=move_to)
 
     async def default_state(self, team_id: uuid.UUID) -> WorkflowState:
         """The state of a new issue: the first "unstarted" state (Todo), else the first."""

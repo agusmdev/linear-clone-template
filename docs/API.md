@@ -144,7 +144,7 @@ POST `/workspaces` (WS-1), in one transaction:
 | IMPLEMENTED | GET | `/teams/{team_id}/states` | – | `WorkflowState[]` (by `position`) |
 | IMPLEMENTED | POST | `/teams/{team_id}/states` | `{name, type, color, position?}` | 201 `WorkflowState` |
 | IMPLEMENTED | PATCH | `/workflow-states/{state_id}` | `{name?, color?, position?, type?}` | `WorkflowState` |
-| IMPLEMENTED | DELETE | `/workflow-states/{state_id}?move_to_state_id=` | – | 204. With issues and no `move_to_state_id`: 400 `referenced_item`. The target must be another state of the same team, else 400 `invalid_reference`; moved issues get the started/completed/canceled timestamps of the new state type. The last state of a team: 400 `last_state` |
+| IMPLEMENTED | DELETE | `/workflow-states/{state_id}?move_to_state_id=` | – | 204. With issues and no `move_to_state_id`: 400 `referenced_item`. The target must be another state of the same team, else 400 `invalid_reference`; moved issues get the started/completed/canceled timestamps of the new state type and a `state` history row. The last state of a team: 400 `last_state` |
 
 ### Labels (WS-6)
 
