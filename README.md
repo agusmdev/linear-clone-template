@@ -20,31 +20,31 @@ Recorded against the Docker stack with [playwright-cli](https://github.com/micro
 
 Create an issue with `C`, drag it across the board, filter by priority and search.
 
-[Watch `01-issues.mp4`](docs/media/01-issues.mp4)
+https://github.com/user-attachments/assets/4de45260-7fa5-40b0-a350-e97af85e4b83
 
 ### Issue detail
 
 Change properties, add a sub-issue, comment, and watch the activity timeline.
 
-[Watch `02-issue-detail.mp4`](docs/media/02-issue-detail.mp4)
+https://github.com/user-attachments/assets/bf2f8947-3ce3-485e-9cb9-ab8fd8a7c180
 
 ### Command menu and documents
 
 Jump anywhere with `Cmd/Ctrl+K`, write a document with slash commands and issue mentions, switch the theme.
 
-[Watch `03-docs-command.mp4`](docs/media/03-docs-command.mp4)
+https://github.com/user-attachments/assets/70428a7d-a50e-47ac-9a96-ba5cf3cd3383
 
 ### Projects and cycles
 
 Create a project, follow its progress, and open the current cycle.
 
-[Watch `04-projects-cycles.mp4`](docs/media/04-projects-cycles.mp4)
+https://github.com/user-attachments/assets/13842123-eb48-4f82-91c4-275d49737714
 
 ### Sign up and collaborate
 
 Register, create a workspace, invite a teammate, assign them an issue, and see it in their inbox.
 
-[Watch `05-onboarding-team.mp4`](docs/media/05-onboarding-team.mp4)
+https://github.com/user-attachments/assets/0c2eef47-c44d-48bd-afbd-32f30bb0082b
 
 ## 1. Prerequisites
 
