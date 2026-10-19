@@ -12,6 +12,40 @@ Included: session auth (register, login, logout, password reset, email verificat
 
 **Working with an AI agent?** It starts at [AGENTS.md](AGENTS.md). Code standards for agents and people: `.claude/skills/project-standards/SKILL.md`.
 
+## See it in action
+
+Recorded against the Docker stack with [playwright-cli](https://github.com/microsoft/playwright-cli) (1440×900, 60 fps). The MP4 files are in [`docs/media/`](docs/media/).
+
+### Issues: create, board, filters
+
+Create an issue with `C`, drag it across the board, filter by priority and search.
+
+[Watch `01-issues.mp4`](docs/media/01-issues.mp4)
+
+### Issue detail
+
+Change properties, add a sub-issue, comment, and watch the activity timeline.
+
+[Watch `02-issue-detail.mp4`](docs/media/02-issue-detail.mp4)
+
+### Command menu and documents
+
+Jump anywhere with `Cmd/Ctrl+K`, write a document with slash commands and issue mentions, switch the theme.
+
+[Watch `03-docs-command.mp4`](docs/media/03-docs-command.mp4)
+
+### Projects and cycles
+
+Create a project, follow its progress, and open the current cycle.
+
+[Watch `04-projects-cycles.mp4`](docs/media/04-projects-cycles.mp4)
+
+### Sign up and collaborate
+
+Register, create a workspace, invite a teammate, assign them an issue, and see it in their inbox.
+
+[Watch `05-onboarding-team.mp4`](docs/media/05-onboarding-team.mp4)
+
 ## 1. Prerequisites
 
 - Docker with Compose v2
